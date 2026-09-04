@@ -382,3 +382,21 @@ def test_apertura_con_activofijo_y_cxp_y_periodo():
     db.query(LineaAsientoContable).filter(LineaAsientoContable.asiento_id.in_(ids)).delete(synchronize_session=False)
     db.query(AsientoContable).filter(AsientoContable.id.in_(ids)).delete(synchronize_session=False)
     db.commit(); db.close()
+
+
+def test_init_production_db_idempotente_y_health_db():
+    from app.core import startup as st
+    from fastapi.testclient import TestClient
+    from app.main import app
+    status = st.init_production_db()
+    assert set(status) >= {"migrations", "tables", "pcge", "admin"}
+    assert status["tables"] == []
+    assert status["admin"] in ("exists", "created")
+    # segunda corrida: totalmente idempotente
+    status2 = st.init_production_db()
+    assert status2["tables"] == []
+    c = TestClient(app, follow_redirects=False)
+    r = c.get("/health/db")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "ok" and body["usuarios"] >= 1 and body["cuentas_pcge"] > 0

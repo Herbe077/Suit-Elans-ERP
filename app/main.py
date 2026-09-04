@@ -23,26 +23,9 @@ async def lifespan(app: FastAPI):
     if settings.is_sqlite:
         Base.metadata.create_all(bind=engine)
     else:
-        import logging
-        from alembic import command
-        from alembic.config import Config
-        try:
-            cfg = Config(str(BASE_DIR / "alembic.ini"))
-            cfg.set_main_option("sqlalchemy.url", settings.database_url_normalized)
-            command.upgrade(cfg, "head")
-            logging.getLogger("suitelans").info("migraciones aplicadas (head)")
-        except Exception as e:
-            # Multi-worker (gunicorn x2) puede colisionar; el otro worker la aplica.
-            logging.getLogger("suitelans").warning("migración en arranque omitida: %s", e)
-        # Seed admin inicial solo si la BD está vacía de usuarios (primer arranque).
-        try:
-            import sys
-            if str(BASE_DIR) not in sys.path:
-                sys.path.insert(0, str(BASE_DIR))
-            from seed_admin import ensure_admin
-            ensure_admin()
-        except Exception as e:
-            logging.getLogger("suitelans").warning("seed admin omitido: %s", e)
+        # Prod: pipeline auto-reparable (migraciones + PCGE + admin). Nunca tumba el boot.
+        from app.core.startup import init_production_db
+        app.state.db_init = init_production_db()
     print(f"[SuitElans] DB en uso: {_safe_db_label()}")
     yield
 
@@ -68,6 +51,36 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 @app.get("/health")
 def health():
     return {"status": "ok", "app": settings.APP_NAME, "env": settings.ENV}
+
+
+@app.get("/health/db")
+def health_db(request: Request):
+    """Diagnóstico de BD (conteos, sin datos sensibles). Nunca 500."""
+    out: dict = {"status": "ok"}
+    try:
+        from app.core.database import SessionLocal
+        from app.models.finanzas import CuentaContable
+        from app.models.user import User
+        db = SessionLocal()
+        try:
+            out["usuarios"] = db.query(User).count()
+            out["cuentas_pcge"] = db.query(CuentaContable).count()
+        finally:
+            db.close()
+        try:
+            from alembic.migration import MigrationContext
+            from app.core.database import engine
+            with engine.connect() as conn:
+                ctx = MigrationContext.configure(conn)
+                out["alembic"] = ctx.get_current_heads()
+        except Exception as e:
+            out["alembic"] = f"?: {e}"
+        init = getattr(request.app.state, "db_init", None)
+        if init:
+            out["init"] = init
+    except Exception as e:
+        out = {"status": "error", "detail": str(e)[:200]}
+    return out
 
 
 @app.middleware("http")
