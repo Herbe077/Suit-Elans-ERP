@@ -13,3 +13,9 @@ services:
         generateValue: true
       - key: ENVIRONMENT
         value: production
+      - key: COOKIE_SECURE
+        value: true
+      - key: ADMIN_EMAIL
+        value: admin@suitelans.mx
+      - key: ADMIN_PASSWORD
+        generateValue: true

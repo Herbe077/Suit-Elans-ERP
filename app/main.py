@@ -34,6 +34,15 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             # Multi-worker (gunicorn x2) puede colisionar; el otro worker la aplica.
             logging.getLogger("suitelans").warning("migración en arranque omitida: %s", e)
+        # Seed admin inicial solo si la BD está vacía de usuarios (primer arranque).
+        try:
+            import sys
+            if str(BASE_DIR) not in sys.path:
+                sys.path.insert(0, str(BASE_DIR))
+            from seed_admin import ensure_admin
+            ensure_admin()
+        except Exception as e:
+            logging.getLogger("suitelans").warning("seed admin omitido: %s", e)
     print(f"[SuitElans] DB en uso: {_safe_db_label()}")
     yield
 
