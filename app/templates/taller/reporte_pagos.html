@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Reporte de pagos — Taller{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-1 font-serif">💰 Liquidaciones por taller</h1>
+<p class="text-sm text-slate-500 mb-4">{% if user.role|lower == 'admin' %}Consola de pagos: filtra por período y empleado.{% else %}Tus liquidaciones del período seleccionado.{% endif %}</p>
+
+<form method="get" action="/taller/reporte-pagos" class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-2 text-sm items-end">
+  <div>
+    <label class="text-xs text-slate-500">Período</label><br>
+    <select name="preset" class="border rounded px-2 py-1">
+      {% for p in ['diario','semanal','mensual','personalizado'] %}<option value="{{ p }}" {% if preset==p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+    </select>
+  </div>
+  <div><label class="text-xs text-slate-500">Desde</label><br><input name="desde" type="date" value="{{ desde }}" class="border rounded px-2 py-1"></div>
+  <div><label class="text-xs text-slate-500">Hasta</label><br><input name="hasta" type="date" value="{{ hasta }}" class="border rounded px-2 py-1"></div>
+  {% if user.role|lower == 'admin' %}
+  <div><label class="text-xs text-slate-500">Empleado</label><br>
+    <select name="empleado" class="border rounded px-2 py-1"><option value="">— Todos —</option>{% for e in empleados %}<option value="{{ e.id }}" {% if empleado==e.id|string %}selected{% endif %}>{{ e.full_name }} ({{ e.role }})</option>{% endfor %}</select>
+  </div>
+  {% endif %}
+  <button class="bg-borgo text-white rounded px-4 py-1.5">Filtrar</button>
+</form>
+
+<div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+  <div class="bg-borgo text-white rounded-xl p-4 shadow"><p class="text-xs text-laton">Total por pagar</p><p class="text-2xl font-bold">S/ {{ "%.2f"|format(rep.total) }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Jornadas registradas</p><p class="text-2xl font-bold">{{ n_jornadas }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Trabajadores</p><p class="text-2xl font-bold">{{ rep.por_trabajador|length }}</p></div>
+</div>
+
+<div class="bg-white rounded-xl shadow p-4 mb-4">
+  <h2 class="font-bold mb-2 text-sm">Acumulado por trabajador</h2>
+  {% for t in rep.por_trabajador %}
+  <div class="text-sm border-b py-2 flex justify-between"><span><b>{{ t.nombre }}</b> · {{ t.jornadas }} jornada(s)</span><b>S/ {{ "%.2f"|format(t.total) }}</b></div>
+  {% else %}<p class="text-sm text-slate-500">Sin registros en el período.</p>{% endfor %}
+</div>
+
+<div class="bg-white rounded-xl shadow p-4">
+  <h2 class="font-bold mb-2 text-sm">Desglose por día / actividad</h2>
+  <div class="overflow-x-auto"><table class="w-full text-xs">
+    <tr class="text-left text-slate-500 border-b"><th class="py-1">Fecha</th><th>Trabajador</th><th>Producto</th><th>Actividad</th><th class="text-right">Tarifa</th></tr>
+    {% for d in rep.detalle %}
+    <tr class="border-b"><td class="py-1 whitespace-nowrap">{{ d.fecha }}</td><td>{{ d.trabajador }}</td><td>{{ d.producto }}</td><td>{{ d.tarea }}</td><td class="text-right font-bold">S/ {{ "%.2f"|format(d.tarifa) }}</td></tr>
+    {% else %}<tr><td colspan="5" class="py-2 text-slate-500">Sin detalle.</td></tr>{% endfor %}
+  </table></div>
+</div>
+{% endblock %}

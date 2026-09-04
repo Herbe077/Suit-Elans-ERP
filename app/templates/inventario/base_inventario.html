@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex gap-2 mb-4 text-sm border-b border-[#C5A880]/40 pb-2 overflow-x-auto">
+  <a href="/inventario/catalogo" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if request.url.path.startswith('/inventario/catalogo') else 'hover:bg-white' }} font-bold">🧵 Catálogo</a>
+  <a href="/inventario/almacen" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if request.url.path.startswith('/inventario/almacen') else 'hover:bg-white' }} font-bold">📦 Almacén</a>
+  <a href="/inventario/compras" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if request.url.path.startswith('/inventario/compras') else 'hover:bg-white' }} font-bold">🧾 Compras</a>
+</div>
+{% block inventario %}{% endblock %}
+{% endblock %}

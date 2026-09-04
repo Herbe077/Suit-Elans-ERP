@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acceso — Suit Elans</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { theme: { extend: { colors: { borgo: '#370003', marfil: '#FAF8F5', laton: '#C5A880' }, fontFamily: { serif: ['Georgia', 'Times New Roman', 'serif'], sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'] } } } }</script>
+<style>body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; } h1 { font-family: Georgia, 'Times New Roman', serif; }</style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4" style="background-color:#370003">
+<form method="post" action="/auth/login" class="rounded-2xl p-8 w-full max-w-sm shadow-2xl" style="background-color:#FAF8F5">
+  <h1 class="font-serif text-2xl text-center" style="color:#370003">SUIT <span style="color:#C5A880">ELANS</span></h1>
+  <p class="text-center text-sm text-slate-500 mb-6">Sastrería, diseño y confección · ERP</p>
+  {% if error %}<p class="bg-red-100 text-red-700 text-sm rounded p-2 mb-4">{{ error }}</p>{% endif %}
+  <label class="text-sm font-medium">Email</label>
+  <input name="username" type="email" required class="w-full border rounded-lg px-3 py-2 mb-3" placeholder="elans@tunombre">
+  <label class="text-sm font-medium">Contraseña</label>
+  <input name="password" type="password" required class="w-full border rounded-lg px-3 py-2 mb-5">
+  <button class="w-full text-white rounded-lg py-2.5" style="background-color:#370003">Entrar</button>
+  <p class="text-xs text-slate-400 mt-4 text-center">Seed dev: admin@suitelans.mx / admin123</p>
+</form>
+</body>
+</html>

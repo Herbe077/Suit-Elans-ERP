@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% from "components/badge.html" import badge %}
+{% block title %}Caja — Arqueo{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-3">
+  <h1 class="text-2xl font-bold">💰 Caja — Arqueo y Turno</h1>
+  <a href="/ventas/pos" class="bg-[#C5A880] text-[#1F1112] rounded-full px-4 py-1.5 text-sm font-bold shadow hover:bg-[#370003] hover:text-white border" style="border-color:#C5A880">← Volver a Punto de Venta</a>
+</div>
+{% if error == 'turno' %}<div class="bg-amber-50 border border-amber-300 text-amber-900 rounded-xl p-3 mb-4 text-sm">⚠️ Necesitas un <b>turno abierto</b> para cobrar. Abre tu turno abajo.</div>{% endif %}
+{% if error == 'monto' %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ Monto inválido.</div>{% endif %}
+{% if error.startswith('cierre_') %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-4 text-sm">✓ Turno cerrado. Diferencia de arqueo: <b>S/ {{ error[7:] }}</b> (0.00 = exacto).</div>{% endif %}
+<div class="bg-white rounded-xl shadow p-4 mb-4">
+  <h2 class="font-bold mb-2 text-sm">🕘 Mi turno de caja</h2>
+  {% if turno %}
+  <div class="flex items-center gap-3 text-sm flex-wrap">
+    {{ badge("ABIERTA desde " ~ turno.fecha_apertura, "success") }}
+    <span>Apertura: <b>S/ {{ "%.2f"|format(turno.saldo_apertura) }}</b></span>
+    <span>Teórico actual: <b>S/ {{ "%.2f"|format(teorico) }}</b></span>
+    <form method="post" action="/ventas/caja/cerrar" class="flex gap-1 items-end">
+      <label>Conteo real S/<input name="saldo_real" type="number" step="0.01" required placeholder="0.00" class="border rounded px-2 py-1 w-32 text-sm block mt-0.5"></label>
+      <button class="bg-borgo text-white rounded px-3 py-1 text-sm font-semibold self-end" onclick="return confirm('¿Cerrar turno?')">Cerrar turno</button>
+    </form>
+  </div>
+  {% else %}
+  <form method="post" action="/ventas/caja/abrir" class="flex gap-2 text-sm items-end flex-wrap">
+    {{ badge("Sin turno abierto", "info") }}
+    <label>Saldo apertura S/<input name="saldo_apertura" type="number" step="0.01" value="0" class="border rounded px-2 py-1 w-32 block mt-0.5"></label>
+    <button class="bg-borgo text-white rounded px-3 py-1 font-semibold self-end">Abrir turno</button>
+  </form>
+  {% endif %}
+  {% if turnos %}
+  <details class="mt-2 text-xs"><summary class="cursor-pointer text-laton-dark">Últimos turnos</summary>
+    {% for t in turnos %}<div class="border-b py-1 flex justify-between"><span>#{{ t.id }} · {{ t.fecha_apertura }} → {{ t.fecha_cierre or '…' }} · {{ t.estado }}</span><span>Ap: S/ {{ "%.2f"|format(t.saldo_apertura) }} · Teo: {{ t.saldo_cierre_teorico if t.saldo_cierre_teorico is not none else '—' }} · Real: {{ t.saldo_cierre_real if t.saldo_cierre_real is not none else '—' }}</span></div>{% endfor %}
+  </details>
+  {% endif %}
+</div>
+<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Ingresos</p><p class="text-xl font-bold text-emerald-700">S/ {{ "%.2f"|format(bal.ingresos) }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Egresos</p><p class="text-xl font-bold text-red-700">S/ {{ "%.2f"|format(bal.egresos) }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Saldo</p><p class="text-xl font-bold">S/ {{ "%.2f"|format(bal.saldo) }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Por cobrar</p><p class="text-xl font-bold text-laton-dark">S/ {{ "%.2f"|format(bal.por_cobrar) }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Por pagar</p><p class="text-xl font-bold text-red-500">S/ {{ "%.2f"|format(bal.por_pagar) }}</p></div>
+</div>
+<div class="grid md:grid-cols-2 gap-4">
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">Cobrar pedido (saldo pendiente)</h2>
+    <form method="post" action="/ventas/caja/cobrar" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs items-end mb-3">
+      <label class="block md:col-span-2">Pedido con saldo
+        <select name="order_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for o in con_saldo %}<option value="{{ o.id }}">{{ o.folio }} · saldo S/ {{ "%.2f"|format(o.saldo) }}</option>{% endfor %}</select>
+      </label>
+      <label class="block">Monto S/
+        <input name="monto" type="number" step="0.01" min="0.01" required placeholder="0.00" class="border rounded px-2 py-1.5 w-full mt-0.5">
+      </label>
+      <div class="flex gap-1">
+        <label class="block flex-1">Método
+          <select name="metodo" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option>efectivo</option><option>transferencia</option><option>tarjeta</option><option>yape</option><option>plin</option></select>
+        </label>
+        <button class="bg-borgo text-white rounded px-3 font-semibold self-end py-1.5">Cobrar</button>
+      </div>
+    </form>
+    <h2 class="font-bold mb-2 text-sm">Movimiento manual</h2>
+    <form method="post" action="/ventas/caja/movimiento" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs items-end">
+      <label class="block">Tipo
+        <select name="tipo" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select>
+      </label>
+      <label class="block md:col-span-2">Concepto
+        <input name="concepto" required placeholder="Ej. caja chica — hilos" class="border rounded px-2 py-1.5 w-full mt-0.5">
+      </label>
+      <div class="flex gap-1">
+        <label class="block flex-1">Monto S/
+          <input name="monto" type="number" step="0.01" min="0.01" required placeholder="0.00" class="border rounded px-2 py-1.5 w-full mt-0.5">
+        </label>
+        <button class="bg-slate-800 text-white rounded px-3 font-semibold self-end py-1.5">OK</button>
+      </div>
+    </form>
+    <h2 class="font-bold mb-1 mt-3 text-sm">Cuentas por pagar (OC abiertas)</h2>
+    {% for p in por_pagar %}<div class="text-xs border-b py-1">{{ p.folio }} · {{ p.estado }} · <b>S/ {{ "%.2f"|format(p.total) }}</b></div>{% else %}<p class="text-xs text-slate-400">Sin OC pendientes.</p>{% endfor %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">Últimos movimientos</h2>
+    {% for m in movs %}
+    <div class="text-xs border-b py-1 flex justify-between"><span>{{ m.created_at }} · {{ m.concepto }} <span class="text-slate-400">({{ m.metodo }})</span></span><b class="{% if m.tipo=='ingreso' %}text-emerald-700{% else %}text-red-700{% endif %}">{{ '+' if m.tipo=='ingreso' else '-' }}S/ {{ "%.2f"|format(m.monto) }}</b></div>
+    {% else %}<p class="text-xs text-slate-500">Sin movimientos.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

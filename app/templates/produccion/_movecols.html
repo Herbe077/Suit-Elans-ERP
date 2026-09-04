@@ -1,0 +1,6 @@
+{# Respuesta del PATCH: refresca solo columnas origen y destino vía OOB. #}
+{% for key, label in kanban if key in (col_src, col_dst) %}
+{% set cards = cols[key] %}
+{% set oob = true %}
+{% include "produccion/_column.html" %}
+{% endfor %}

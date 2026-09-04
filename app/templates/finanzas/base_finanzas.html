@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex gap-2 mb-4 text-sm border-b border-[#C5A880]/40 pb-2 overflow-x-auto">
+  <a href="/finanzas/cuentas-por-cobrar" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='cxc' else 'hover:bg-white' }} font-bold">💳 CxC</a>
+  <a href="/finanzas/cuentas-por-pagar" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='cxp' else 'hover:bg-white' }} font-bold">🏦 CxP</a>
+  <a href="/finanzas/gastos" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='gastos' else 'hover:bg-white' }} font-bold">🧾 Gastos</a>
+  <a href="/finanzas/flujo-caja" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='flujo' else 'hover:bg-white' }} font-bold">💹 Flujo</a>
+  <a href="/finanzas/plan-contable" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='plan' else 'hover:bg-white' }} font-bold">📘 PCGE</a>
+  <a href="/finanzas/diario" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='diario' else 'hover:bg-white' }} font-bold">📖 Diario</a>
+  <a href="/finanzas/mayor" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='mayor' else 'hover:bg-white' }} font-bold">📘 Mayor</a>
+  <a href="/finanzas/balance" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='balance' else 'hover:bg-white' }} font-bold">⚖️ Balance</a>
+  <a href="/finanzas/apertura" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='apertura' else 'hover:bg-white' }} font-bold">🏁 Apertura</a>
+  <a href="/finanzas/periodos" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='periodos' else 'hover:bg-white' }} font-bold">🗓️ Periodos</a>
+  <a href="/finanzas/rentabilidad" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='rentabilidad' else 'hover:bg-white' }} font-bold">📈 Rentabilidad</a>
+  <a href="/finanzas/reportes-contables" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='reportes' else 'hover:bg-white' }} font-bold">📑 Reportes</a>
+</div>
+{% block finanzas %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends "produccion/base_produccion.html" %}
+{% block title %}{{ c.nombre }} {{ c.apellidos }} — Ficha{% endblock %}
+{% block produccion %}
+<a href="/produccion/fichas" class="text-sm text-slate-500">← Fichas</a>
+{% if error == 'movimientos' %}
+<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mt-3 mb-3 text-sm">
+  <p class="font-bold">⚠️ No se puede eliminar: este historial bloquea el borrado:</p>
+  <ul class="list-disc ml-5 mt-1">{% for b in bloqueos %}<li>{{ b }}</li>{% endfor %}</ul>
+  <p class="mt-1">Anula los pedidos (botón “Anular” en cada pedido activo sin pagos) y vuelve a intentarlo. Los comprobantes emitidos y pagos no se pueden borrar.</p>
+</div>
+{% endif %}
+{% if error == 'con_pagos' %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mt-3 mb-3 text-sm">⚠️ No se puede anular: el pedido tiene pagos registrados.</div>{% endif %}
+<div class="flex items-center justify-between mt-1 flex-wrap gap-2">
+<h1 class="text-2xl font-bold">{{ c.nombre }} {{ c.apellidos }}</h1>
+{% if user.role|lower == 'admin' and c %}
+<form method="post" action="/produccion/fichas/{{ c.id }}/eliminar" onsubmit="return confirm('¿Eliminar la ficha de {{ c.nombre }} {{ c.apellidos }}? Se borrarán sus medidas y citas. No se puede si tiene pedidos, cotizaciones o comprobantes.')">
+  <button class="text-xs bg-red-700 text-white rounded-lg px-3 py-1.5">🗑 Eliminar ficha</button>
+</form>
+{% endif %}
+</div>
+<p class="text-sm text-slate-500 mb-4">{{ c.doc_label }} · {{ c.telefono or '' }} · {{ c.email or '' }} · {{ c.distrito or '' }}</p>
+
+<div class="grid md:grid-cols-2 gap-4">
+<div class="bg-white rounded-xl shadow p-4" x-data="{ tab: 'saco' }">
+  <div class="flex items-center justify-between mb-2">
+    <h2 class="font-bold">📏 Toma de medidas</h2>
+    {% if ultima %}
+    <span class="text-xs bg-[#C5A880] text-[#370003] rounded px-2 py-0.5">Autollenado v{{ ultima.version }} · {{ ultima.created_at }}</span>
+    {% else %}
+    <span class="text-xs bg-slate-200 rounded px-2 py-0.5">Sin medidas previas</span>
+    {% endif %}
+  </div>
+  {% if ultima %}<p class="text-xs text-slate-500 mb-2">Campos llenados con la última toma. Modifica lo necesario y guarda: se crea una <b>nueva versión</b>, el historial se conserva.</p>{% endif %}
+  <div class="flex gap-2 mb-3 text-sm">
+    <button @click="tab='saco'" :class="tab==='saco' ? 'bg-borgo text-white' : 'bg-slate-200'" class="rounded px-3 py-1">Saco</button>
+    <button @click="tab='pantalon'" :class="tab==='pantalon' ? 'bg-borgo text-white' : 'bg-slate-200'" class="rounded px-3 py-1">Pantalón</button>
+  </div>
+  <form method="post" action="/produccion/fichas/{{ c.id }}/medidas" class="grid grid-cols-2 gap-2 text-sm">
+    <input type="hidden" name="tipo_prenda" :value="tab">
+    <div x-show="tab==='saco'" class="contents">
+      {% for f in ['cuello','hombro','sisa','pecho','cintura_saco','cadera','largo_manga','ancho_manga','largo_espalda','largo_saco','caida_hombro'] %}
+      {% set v = ultima[f] if ultima else none %}
+      <label>{{ f }} (cm)<input name="{{ f }}" type="number" step="0.1" value="{{ v if v is not none else '' }}" class="w-full border rounded px-2 py-1"></label>
+      {% endfor %}
+    </div>
+    <div x-show="tab==='pantalon'" class="contents">
+      {% for f in ['cintura_pantalon','cadera_pantalon','tiro','muslo','rodilla','tobillo','largo_pantalon'] %}
+      {% set v = ultima[f] if ultima else none %}
+      <label>{{ f }} (cm)<input name="{{ f }}" type="number" step="0.1" value="{{ v if v is not none else '' }}" class="w-full border rounded px-2 py-1"></label>
+      {% endfor %}
+    </div>
+    <input name="postura" placeholder="Postura" value="{{ ultima.postura if ultima and ultima.postura else '' }}" class="col-span-2 border rounded px-2 py-1">
+    <textarea name="observaciones" placeholder="Observaciones" class="col-span-2 border rounded px-2 py-1">{{ ultima.observaciones if ultima and ultima.observaciones else '' }}</textarea>
+    <button class="col-span-2 bg-borgo text-white rounded-lg py-2">Guardar como nueva versión</button>
+  </form>
+  <h3 class="font-bold mt-4 mb-1 text-sm">Historial ({{ medidas|length }})</h3>
+  {% for m in medidas %}
+  <div class="text-xs border-b py-1 flex justify-between"><span>v{{ m.version }} · {{ m.tipo_prenda }} · {{ m.created_at }}</span><a class="text-laton-dark underline" href="/reportes/medidas/{{ m.id }}.pdf" target="_blank">PDF ficha</a></div>
+  {% endfor %}
+</div>
+
+<div class="space-y-4">
+<div class="bg-white rounded-xl shadow p-4">
+  <h2 class="font-bold mb-2">🧾 Nuevo pedido / prenda</h2>
+  {% if ultima %}
+  <p class="text-xs text-slate-500 mb-2">Se usará la toma <b>v{{ ultima.version }}</b> salvo que elijas otra versión.</p>
+  {% else %}
+  <p class="text-xs text-amber-700 mb-2">⚠️ El cliente aún no tiene medidas registradas.</p>
+  {% endif %}
+  <form method="post" action="/produccion/fichas/{{ c.id }}/pedidos" class="grid gap-2 text-sm">
+    <select name="tipo" class="border rounded px-2 py-1">{% for t in tipos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select>
+    <select name="measurement_id" class="border rounded px-2 py-1">
+      {% for m in medidas %}<option value="{{ m.id }}" {% if ultima and m.id == ultima.id %}selected{% endif %}>Medidas v{{ m.version }} · {{ m.created_at }}</option>{% endfor %}
+      {% if not medidas %}<option value="">— Sin medidas —</option>{% endif %}
+    </select>
+    <select name="tela_id" class="border rounded px-2 py-1"><option value="">— Tela —</option>{% for t in telas %}<option value="{{ t.id }}">{{ t.codigo }} · {{ t.nombre }} ({{ t.stock_metros }} m)</option>{% endfor %}</select>
+    <input name="precio" type="number" step="0.01" placeholder="Precio S/" class="border rounded px-2 py-1">
+    <input name="fecha_entrega" type="date" class="border rounded px-2 py-1">
+    <button class="bg-[#C5A880] text-[#370003] font-bold rounded-lg py-2">Crear pedido</button>
+  </form>
+  <h3 class="font-bold mt-4 mb-1 text-sm">Pedidos</h3>
+  {% for o in pedidos %}
+  <div class="text-xs border-b py-1 flex justify-between items-center"><span class="font-mono">{{ o.folio }} · {{ o.estado }}</span><span>S/ {{ "%.2f"|format(o.total) }}</span>
+    <span class="flex gap-2 items-center">
+      <a class="text-laton-dark underline" href="/reportes/pedido/{{ o.id }}.pdf" target="_blank">Ticket</a>
+      {% if user.role|lower == 'admin' and o.estado != 'cancelado' %}
+      <form method="post" action="/produccion/fichas/{{ c.id }}/pedidos/{{ o.id }}/cancelar" onsubmit="return confirm('¿Anular el pedido {{ o.folio }}?')"><button class="text-red-700 underline">Anular</button></form>
+      {% endif %}
+    </span>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="bg-white rounded-xl shadow p-4">
+  <h2 class="font-bold mb-2">📅 Agendar prueba / cita</h2>
+  <form method="post" action="/produccion/fichas/{{ c.id }}/citas" class="grid grid-cols-2 gap-2 text-sm">
+    <select name="tipo" class="border rounded px-2 py-1 col-span-2">
+      <option value="TOMA_MEDIDAS">Toma de medidas</option>
+      <option value="PRIMERA_PRUEBA" selected>1ª prueba</option>
+      <option value="SEGUNDA_PRUEBA">2ª prueba</option>
+      <option value="ENTREGA_FINAL">Entrega final</option>
+      <option value="AJUSTE">Ajuste</option>
+    </select>
+    <input name="inicio" type="datetime-local" required class="border rounded px-2 py-1">
+    <input name="fin" type="datetime-local" required class="border rounded px-2 py-1">
+    <button class="col-span-2 bg-borgo text-white rounded-lg py-2">Agendar</button>
+  </form>
+</div>
+</div>
+</div>
+{% endblock %}

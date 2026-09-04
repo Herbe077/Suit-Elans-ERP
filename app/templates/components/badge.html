@@ -1,0 +1,35 @@
+{# Badge color por estado — reemplaza texto plano #}
+{% macro badge(text, tone="default") -%}
+{% set cls = {
+  "success": "bg-emerald-100 text-emerald-800 border-emerald-200",
+  "warning": "bg-amber-100 text-amber-800 border-amber-200",
+  "danger": "bg-red-100 text-red-800 border-red-200",
+  "info": "bg-slate-100 text-slate-700 border-slate-200",
+  "borgo": "bg-[#370003] text-white border-[#370003]",
+  "laton": "bg-[#C5A880] text-[#1F1112] border-[#C5A880]"
+}.get(tone, "bg-white text-slate-700 border-slate-200") %}
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border {{ cls }}">{{ text }}</span>
+{%- endmacro %}
+
+{# Table unificada #}
+{% macro table(headers=[]) -%}
+<div class="bg-white rounded-xl shadow overflow-x-auto border" style="border-color:#C5A880/20">
+  <table class="w-full text-sm">
+    <thead class="bg-[#FAF8F5] text-slate-500 text-xs">
+      <tr>{% for h in headers %}<th class="text-left p-2 font-medium">{{ h }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody class="divide-y">
+      {{ caller() }}
+    </tbody>
+  </table>
+</div>
+{%- endmacro %}
+
+{% macro empty_state(icon="📭", title="Sin registros", desc="", action_href="", action_label="") -%}
+<div class="bg-white rounded-xl shadow p-8 text-center border border-dashed" style="border-color:#C5A880/40">
+  <div class="text-4xl mb-2">{{ icon }}</div>
+  <h3 class="font-bold" style="color:#370003">{{ title }}</h3>
+  {% if desc %}<p class="text-sm text-slate-500 mb-3">{{ desc }}</p>{% endif %}
+  {% if action_href and action_label %}<a href="{{ action_href }}" class="inline-flex bg-[#370003] text-white rounded-full px-4 py-1.5 text-sm font-bold">{{ action_label }}</a>{% endif %}
+</div>
+{%- endmacro %}

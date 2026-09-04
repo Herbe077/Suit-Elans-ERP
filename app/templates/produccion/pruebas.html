@@ -1,0 +1,26 @@
+{% extends "produccion/base_produccion.html" %}
+{% from "components/badge.html" import badge %}
+{% block title %}Fit Tests — Pruebas de entalle{% endblock %}
+{% block produccion %}
+<h1 class="text-2xl font-bold mb-1 font-serif">📏 Pruebas y entalles</h1>
+<p class="text-sm text-slate-500 mb-4">Las notas habilitan el pase a <b>En Confección</b> (costura final).</p>
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+{% for it in items %}
+<div class="bg-white rounded-xl shadow p-4">
+  <p class="font-bold text-sm">{{ it.g.tipo|capitalize }} #{{ it.g.id }} <span class="font-mono font-normal text-slate-500">{{ it.folio }}</span></p>
+  <p class="text-xs mb-2">👤 {{ it.dueno or '—' }} · {{ badge(it.g.estado_taller, "warning" if it.g.estado_taller=='EN_PRUEBA' else "info") }}</p>
+  <form method="post" action="/produccion/prueba-entalle" enctype="multipart/form-data" class="grid gap-1.5 text-xs">
+    <input type="hidden" name="garment_id" value="{{ it.g.id }}">
+    <select name="numero_prueba" class="border rounded px-2 py-1"><option value="1">1ra prueba (estructura/hilvanado)</option><option value="2">2da prueba (ajuste fino)</option><option value="3">3ra prueba (verificación)</option></select>
+    {% for k, label in it.zonas %}
+    <label>{{ label }}<input name="zona_{{ k }}" placeholder="Corrección (vacío = ok)" class="w-full border rounded px-2 py-1"></label>
+    {% endfor %}
+    <textarea name="observaciones_ajuste" placeholder="Observaciones generales" class="border rounded px-2 py-1"></textarea>
+    <textarea name="notas_sastre" placeholder="Notas del sastre" class="border rounded px-2 py-1"></textarea>
+    <label>Fotos/diagrama (opc., máx 3)<input name="fotos" type="file" accept=".jpg,.jpeg,.png,.webp" multiple class="w-full text-xs"></label>
+    <button class="bg-borgo text-white rounded-lg py-1.5">Registrar prueba</button>
+  </form>
+</div>
+{% else %}<p class="text-slate-500 text-sm">Sin prendas en confección o prueba.</p>{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex gap-2 mb-4 text-sm border-b border-[#C5A880]/40 pb-2">
+  <a href="/comercial/clientes" class="px-3 py-1.5 rounded-lg {{ 'bg-borgo text-white' if tab=='personas' or tab=='empresas' else 'hover:bg-white' }} font-bold">🤝 Clientes</a>
+  <a href="/comercial/citas" class="px-3 py-1.5 rounded-lg {{ 'bg-borgo text-white' if tab=='citas' else 'hover:bg-white' }} font-bold">📅 Citas</a>
+  <a href="/comercial/crm" class="px-3 py-1.5 rounded-lg {{ 'bg-borgo text-white' if tab=='crm' else 'hover:bg-white' }} font-bold">📇 CRM</a>
+</div>
+{% block comercial %}{% endblock %}
+{% endblock %}

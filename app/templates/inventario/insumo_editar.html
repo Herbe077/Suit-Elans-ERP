@@ -1,0 +1,50 @@
+{% extends "inventario/base_inventario.html" %}
+{% block title %}Editar insumo {{ ins.sku }}{% endblock %}
+{% block inventario %}
+<a href="/inventario/catalogo" class="text-sm text-slate-500">← Catálogo</a>
+{% if error %}<div class="bg-red-50 border border-red-300 text-red-700 text-xs rounded px-3 py-2 mt-2">{{ error }}</div>{% endif %}
+<h1 class="text-2xl font-bold mt-1 font-serif" style="color:#370003">Editar materia prima</h1>
+<p class="text-xs text-slate-500">SKU <span class="font-mono font-bold">{{ ins.sku }}</span> (no editable: es la clave del espejo con almacén) · Stock y costo promedio solo se mueven vía Kardex.</p>
+
+<div class="grid md:grid-cols-3 gap-3 mt-3">
+  <form method="post" action="/inventario/catalogo/insumo/{{ ins.id }}/guardar" class="md:col-span-2 bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880] grid grid-cols-2 gap-2 text-xs items-end">
+    <label class="block col-span-2">Nombre *
+      <input name="nombre" required value="{{ ins.nombre }}" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Categoría
+      <select name="categoria" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for c in categorias %}<option value="{{ c }}" {% if ins.categoria==c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+    </label>
+    <label class="block">Unidad
+      <select name="unidad_medida" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for u in ['METROS','UNIDADES','ROLLO','KG','PZA'] %}<option {% if ins.unidad_medida==u %}selected{% endif %}>{{ u }}</option>{% endfor %}</select>
+    </label>
+    <label class="block">Composición
+      <input name="composicion" value="{{ ins.composicion or '' }}" placeholder="100% Lana" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Color
+      <input name="color" value="{{ ins.color or '' }}" placeholder="Azul" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Ancho de paño (cm)
+      <input name="ancho_cm" type="number" step="1" min="0" value="{{ ins.ancho_cm or '' }}" placeholder="150cm (siempre en cm: 1.50m → 150)" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Precio referencial S/
+      <input name="precio_metro" type="number" step="0.01" min="0" value="{{ ins.precio_metro or 0 }}" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Stock mínimo
+      <input name="stock_minimo" type="number" step="0.1" min="0" value="{{ ins.stock_minimo or 0 }}" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Proveedor habitual
+      <select name="proveedor_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="">— Sin asignar —</option>{% for s in proveedores %}<option value="{{ s.id }}" {% if ins.proveedor_id==s.id %}selected{% endif %}>{{ s.nombre }}</option>{% endfor %}</select>
+    </label>
+    <div class="col-span-2 flex gap-2">
+      <button class="bg-borgo text-white rounded px-4 py-1.5 font-semibold">Guardar cambios</button>
+      <a href="/inventario/catalogo" class="border rounded px-4 py-1.5">Cancelar</a>
+    </div>
+  </form>
+  <div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880] text-xs space-y-1">
+    <h2 class="font-bold text-sm">Existencias (solo lectura)</h2>
+    <p>Físico: <b>{{ "%.1f"|format(ins.stock_fisico) }}</b> · Reservado: <b>{{ "%.1f"|format(ins.stock_reservado or 0) }}</b> · Disponible: <b>{{ "%.1f"|format(ins.stock_disponible) }}</b></p>
+    <p>Costo promedio (CPP): <b>S/ {{ "%.2f"|format(ins.costo_promedio or ins.costo_unitario or 0) }}</b> · Último costo: <b>S/ {{ "%.2f"|format(ins.ultimo_costo or 0) }}</b></p>
+    <p class="text-slate-400">El stock se ajusta en Almacén → Kardex; el costo, en la recepción de compras.</p>
+  </div>
+</div>
+{% endblock %}

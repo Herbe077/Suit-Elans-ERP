@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ c.nombre_comercial }}{% endblock %}
+{% block content %}
+<a href="/comercial/clientes" class="text-sm text-slate-500">← Empresas</a>
+<h1 class="text-2xl font-bold mt-1">{{ c.nombre_comercial }}</h1>
+<p class="text-sm text-slate-500 mb-4">{{ c.doc_label }} · {{ c.telefono or '' }} · {{ c.email or '' }} · {{ c.distrito or '' }} · Desc. {{ c.descuento_pct }}%</p>
+<div class="grid md:grid-cols-2 gap-4">
+<div class="bg-white rounded-xl shadow p-4">
+  <h2 class="font-bold mb-2 text-sm">Contactos</h2>
+  <form method="post" action="/comercial/clientes/empresa/{{ c.id }}/contactos" class="grid grid-cols-2 gap-1 text-xs mb-3">
+    <input name="nombre" required placeholder="Nombre *" class="border rounded px-2 py-1">
+    <input name="cargo" placeholder="Cargo" class="border rounded px-2 py-1">
+    <input name="telefono" placeholder="Teléfono" class="border rounded px-2 py-1">
+    <input name="email" placeholder="Email" class="border rounded px-2 py-1">
+    <button class="col-span-2 bg-borgo text-white rounded py-1">+ Contacto</button>
+  </form>
+  {% for t in contactos %}
+  <div class="text-xs border-b py-1"><b>{{ t.nombre }}</b> {{ t.cargo or '' }} {% if t.es_principal %}<span class="text-[#C5A880]">★ principal</span>{% endif %}<br><span class="text-slate-500">{{ t.telefono or '' }} {{ t.email or '' }}</span></div>
+  {% endfor %}
+</div>
+<div class="bg-white rounded-xl shadow p-4">
+  <h2 class="font-bold mb-2 text-sm">Pedidos corporativos</h2>
+  {% for o in pedidos %}
+  <div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ o.folio }} · {{ o.estado }}</span><b>S/ {{ "%.2f"|format(o.total) }}</b></div>
+  {% else %}<p class="text-xs text-slate-500">Sin pedidos. Cotiza desde CRM y convierte.</p>{% endfor %}
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,1935 @@
+
+====================================================================================================
+================================= AUDITORÍA COMPLETA DEL PROYECTO ==================================
+====================================================================================================
+Raíz: /home/herbias/Projects/Suit-Elans-ERP
+
+====================================================================================================
+==================================== 1. ESTRUCTURA DEL PROYECTO ====================================
+====================================================================================================
+Raíz detectada: /home/herbias/Projects/Suit-Elans-ERP
+Archivos analizados: 161
+Directorios detectados: 25
+Archivos Python: 91
+Templates: 58
+
+DISTRIBUCIÓN POR EXTENSIÓN:
+  .py                 91
+  .html               58
+  .txt                 2
+  [sin extensión]      2
+  .example             1
+  .yml                 1
+  .md                  1
+  .ini                 1
+  .db                  1
+  .json                1
+  .js                  1
+  .mako                1
+
+ÁRBOL DEL PROYECTO:
+📁 alembic
+    📁 versions
+        📄 0aa114401beb_produccion_7_fases_qr_limite.py
+        📄 3f8c2d91a6e4_fk_caja_turno_batch.py
+        📄 43e95b0f14bc_modulo_aislado_cierre_jornada_taller.py
+        📄 60288cb5be04_configuracion_sede_6_ambitos.py
+        📄 66330a0d74a9_taller_prod_ficha_pruebas_calidad.py
+        📄 7b058dc99ab3_frontoffice_turnos_caja.py
+        📄 7d1e9a02c4b5_fk_cita_prenda_batch.py
+        📄 9c2ab41f0e77_fk_artesano_batch.py
+        📄 c076bc9cb82e_localizacion_peru_docs_identidad.py
+        📄 df3f2939eea3_comercial_unificado_pipeline.py
+        📄 f5030ae14a8e_baseline_erp_ampliado.py
+    📄 env.py
+    📄 script.py.mako
+📁 app
+    📁 api
+        📄 __init__.py
+        📄 v1.py
+    📁 core
+        📄 __init__.py
+        📄 config.py
+        📄 constants.py
+        📄 database.py
+        📄 deps.py
+        📄 rbac.py
+        📄 security.py
+    📁 models
+        📄 __init__.py
+        📄 appointment.py
+        📄 billing.py
+        📄 catalog.py
+        📄 client.py
+        📄 company.py
+        📄 config.py
+        📄 crm.py
+        📄 finanzas.py
+        📄 inventario.py
+        📄 inventory.py
+        📄 measurement.py
+        📄 order.py
+        📄 produccion.py
+        📄 purchasing.py
+        📄 taller.py
+        📄 user.py
+        📄 ventas.py
+    📁 modules
+        📁 rendimiento
+            📄 __init__.py
+            📄 models.py
+            📄 router.py
+        📄 __init__.py
+    📁 routers
+        📄 __init__.py
+        📄 admin.py
+        📄 auth.py
+        📄 comercial.py
+        📄 dashboard.py
+        📄 finanzas.py
+        📄 inventario.py
+        📄 legacy.py
+        📄 produccion.py
+        📄 rendimiento.py
+        📄 reportes.py
+        📄 taller_cierre.py
+        📄 ventas.py
+    📁 schemas
+        📄 __init__.py
+        📄 api.py
+    📁 services
+        📄 __init__.py
+        📄 billing.py
+        📄 cash.py
+        📄 config.py
+        📄 crm.py
+        📄 inventory.py
+        📄 orders.py
+        📄 peru.py
+        📄 purchasing.py
+        📄 reports.py
+        📄 sam.py
+        📄 taller.py
+        📄 taller_cierre.py
+        📄 ventas.py
+    📁 static
+        📁 css
+        📁 icons
+        📁 js
+        📁 uploads
+            📁 fit
+        📄 manifest.json
+        📄 service-worker.js
+    📁 templates
+        📁 admin
+            📄 configuracion.html
+            📄 usuarios.html
+        📁 comercial
+            📄 base_comercial.html
+            📄 citas.html
+            📄 cliente_detalle.html
+            📄 cliente_empresa.html
+            📄 clientes.html
+            📄 cotizacion.html
+            📄 crm.html
+        📁 components
+            📄 badge.html
+            📄 modal.html
+            📄 navbar.html
+            📄 page_header.html
+            📄 sidebar.html
+            📄 stats_card.html
+            📄 topbar.html
+        📁 dashboard
+            📄 panel.html
+        📁 finanzas
+            📄 base_finanzas.html
+            📄 cuentas_por_cobrar.html
+            📄 cuentas_por_pagar.html
+            📄 flujo_caja.html
+            📄 rentabilidad.html
+            📄 reportes_contables.html
+        📁 inventario
+            📄 almacen.html
+            📄 almacen_kardex.html
+            📄 base_inventario.html
+            📄 catalogo.html
+            📄 compras.html
+            📄 compras_listado.html
+            📄 oc.html
+            📄 orden_compra_form.html
+        📁 partials
+        📁 produccion
+            📄 _board.html
+            📄 _card.html
+            📄 _column.html
+            📄 _movecols.html
+            📄 base_produccion.html
+            📄 control_calidad.html
+            📄 ficha_tecnica.html
+            📄 kanban.html
+            📄 prueba_entalle_modal.html
+            📄 pruebas.html
+        📁 rendimiento
+            📄 base_rendimiento.html
+            📄 calculadora_destajo.html
+            📄 registro_diario.html
+            📄 tarifario.html
+        📁 taller
+            📄 cierre.html
+            📄 ficha_detalle.html
+            📄 fichas.html
+            📄 reporte_pagos.html
+        📁 ventas
+            📄 caja.html
+            📄 caja_arqueo.html
+            📄 comprobantes.html
+            📄 facturacion.html
+            📄 ordenes.html
+            📄 ordenes_listado.html
+            📄 pos.html
+        📄 base.html
+        📄 login.html
+    📄 __init__.py
+    📄 inspect_project.py
+    📄 main.py
+    📄 reporte.txt
+📁 tests
+    📄 __init__.py
+    📄 conftest.py
+    📄 test_api.py
+    📄 test_comercial.py
+    📄 test_ficha_eliminar.py
+    📄 test_flujo_comercial.py
+    📄 test_health.py
+    📄 test_medidas_autollenado.py
+    📄 test_pedidos.py
+    📄 test_peru.py
+    📄 test_rbac.py
+    📄 test_taller_cierre.py
+    📄 test_taller_prod.py
+    📄 test_usuarios_admin.py
+    📄 test_ventas_front.py
+📄 .env.example
+📄 .gitignore
+📄 alembic.ini
+📄 docker-compose.yml
+📄 Dockerfile
+📄 README.md
+📄 requirements.txt
+📄 seed.py
+📄 suitelans.db
+
+====================================================================================================
+================================== 2. ANÁLISIS ESTÁTICO DE PYTHON ==================================
+====================================================================================================
+Archivos Python analizados: 91
+
+====================================================================================================
+=================================== 3. MAPA ORM / BASE DE DATOS ====================================
+====================================================================================================
+Modelos ORM detectados: 80
+
+MODEL: Settings
+  Archivo: app/core/config.py
+  Línea: 14
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Base
+  Archivo: app/core/database.py
+  Línea: 12
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: User
+  Archivo: app/models/user.py
+  Línea: 7
+  Tabla: users
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Client
+  Archivo: app/models/client.py
+  Línea: 8
+  Tabla: clients
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Measurement
+  Archivo: app/models/measurement.py
+  Línea: 9
+  Tabla: measurements
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Fabric
+  Archivo: app/models/inventory.py
+  Línea: 8
+  Tabla: fabrics
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Supply
+  Archivo: app/models/inventory.py
+  Línea: 36
+  Tabla: supplies
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: StockMovement
+  Archivo: app/models/inventory.py
+  Línea: 60
+  Tabla: stock_movements
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Order
+  Archivo: app/models/order.py
+  Línea: 8
+  Tabla: orders
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Garment
+  Archivo: app/models/order.py
+  Línea: 33
+  Tabla: garments
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Operation
+  Archivo: app/models/order.py
+  Línea: 59
+  Tabla: operations
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: WorkLog
+  Archivo: app/models/order.py
+  Línea: 71
+  Tabla: work_logs
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Payment
+  Archivo: app/models/order.py
+  Línea: 86
+  Tabla: payments
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: PruebaEntalle
+  Archivo: app/models/order.py
+  Línea: 97
+  Tabla: pruebas_entalle
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: ControlCalidad
+  Archivo: app/models/order.py
+  Línea: 115
+  Tabla: controles_calidad
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Appointment
+  Archivo: app/models/appointment.py
+  Línea: 8
+  Tabla: appointments
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Lead
+  Archivo: app/models/crm.py
+  Línea: 9
+  Tabla: leads
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Interaccion
+  Archivo: app/models/crm.py
+  Línea: 28
+  Tabla: interacciones
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Quotation
+  Archivo: app/models/crm.py
+  Línea: 46
+  Tabla: quotations
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: QuotationLine
+  Archivo: app/models/crm.py
+  Línea: 64
+  Tabla: quotation_lines
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Company
+  Archivo: app/models/company.py
+  Línea: 9
+  Tabla: companies
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Contact
+  Archivo: app/models/company.py
+  Línea: 31
+  Tabla: contacts
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: PriceList
+  Archivo: app/models/company.py
+  Línea: 43
+  Tabla: price_lists
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Collection
+  Archivo: app/models/catalog.py
+  Línea: 8
+  Tabla: collections
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Product
+  Archivo: app/models/catalog.py
+  Línea: 17
+  Tabla: products
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: ProductVariant
+  Archivo: app/models/catalog.py
+  Línea: 28
+  Tabla: product_variants
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Supplier
+  Archivo: app/models/purchasing.py
+  Línea: 9
+  Tabla: suppliers
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: PurchaseOrder
+  Archivo: app/models/purchasing.py
+  Línea: 19
+  Tabla: purchase_orders
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: PurchaseLine
+  Archivo: app/models/purchasing.py
+  Línea: 31
+  Tabla: purchase_lines
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: CashMovement
+  Archivo: app/models/billing.py
+  Línea: 9
+  Tabla: cash_movements
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: CajaTurno
+  Archivo: app/models/billing.py
+  Línea: 25
+  Tabla: caja_turnos
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Invoice
+  Archivo: app/models/billing.py
+  Línea: 46
+  Tabla: invoices
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: TallerTarea
+  Archivo: app/models/taller.py
+  Línea: 13
+  Tabla: taller_tareas
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: TallerCierreJornada
+  Archivo: app/models/taller.py
+  Línea: 24
+  Tabla: taller_cierres_jornada
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: TallerCierreDetalle
+  Archivo: app/models/taller.py
+  Línea: 36
+  Tabla: taller_cierre_detalle
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: Configuracion
+  Archivo: app/models/config.py
+  Línea: 8
+  Tabla: configuracion
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: OrdenProduccion
+  Archivo: app/models/produccion.py
+  Línea: 23
+  Tabla: orden_produccion
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: FichaMedidas
+  Archivo: app/models/produccion.py
+  Línea: 43
+  Tabla: fichas_medidas
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: PruebaEntalle
+  Archivo: app/models/produccion.py
+  Línea: 60
+  Tabla: prueba_entalle_produccion
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: ControlCalidad
+  Archivo: app/models/produccion.py
+  Línea: 81
+  Tabla: control_calidad_produccion
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: ProductoInsumo
+  Archivo: app/models/inventario.py
+  Línea: 22
+  Tabla: productos_insumo
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: MovimientoKardex
+  Archivo: app/models/inventario.py
+  Línea: 53
+  Tabla: movimientos_kardex
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: OrdenCompra
+  Archivo: app/models/inventario.py
+  Línea: 68
+  Tabla: ordenes_compra
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: DetalleOrdenCompra
+  Archivo: app/models/inventario.py
+  Línea: 83
+  Tabla: detalles_orden_compra
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: OrdenVenta
+  Archivo: app/models/ventas.py
+  Línea: 44
+  Tabla: ordenes_venta
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: PagoOrden
+  Archivo: app/models/ventas.py
+  Línea: 67
+  Tabla: pagos_orden
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: ComprobanteVenta
+  Archivo: app/models/ventas.py
+  Línea: 81
+  Tabla: comprobantes_venta
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: CuentaPorCobrar
+  Archivo: app/models/finanzas.py
+  Línea: 14
+  Tabla: cuentas_por_cobrar
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: CuentaPorPagar
+  Archivo: app/models/finanzas.py
+  Línea: 31
+  Tabla: cuentas_por_pagar
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: MovimientoFinanciero
+  Archivo: app/models/finanzas.py
+  Línea: 49
+  Tabla: movimientos_financieros
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: UserCreate
+  Archivo: app/schemas/__init__.py
+  Línea: 5
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: UserOut
+  Archivo: app/schemas/__init__.py
+  Línea: 12
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: ClientIn
+  Archivo: app/schemas/__init__.py
+  Línea: 22
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: MeasurementIn
+  Archivo: app/schemas/__init__.py
+  Línea: 33
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: FabricIn
+  Archivo: app/schemas/__init__.py
+  Línea: 58
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: SupplyIn
+  Archivo: app/schemas/__init__.py
+  Línea: 70
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: MovementIn
+  Archivo: app/schemas/__init__.py
+  Línea: 80
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: OrderIn
+  Archivo: app/schemas/__init__.py
+  Línea: 88
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: GarmentIn
+  Archivo: app/schemas/__init__.py
+  Línea: 96
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: WorkLogIn
+  Archivo: app/schemas/__init__.py
+  Línea: 104
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: AppointmentIn
+  Archivo: app/schemas/__init__.py
+  Línea: 111
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: PaymentIn
+  Archivo: app/schemas/__init__.py
+  Línea: 120
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: TokenOut
+  Archivo: app/schemas/api.py
+  Línea: 6
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: LeadIn
+  Archivo: app/schemas/api.py
+  Línea: 11
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: LeadPatch
+  Archivo: app/schemas/api.py
+  Línea: 30
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: QuotationLineIn
+  Archivo: app/schemas/api.py
+  Línea: 35
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: QuotationIn
+  Archivo: app/schemas/api.py
+  Línea: 44
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: QuotationOut
+  Archivo: app/schemas/api.py
+  Línea: 54
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: CompanyIn
+  Archivo: app/schemas/api.py
+  Línea: 65
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: ContactIn
+  Archivo: app/schemas/api.py
+  Línea: 91
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: ProductIn
+  Archivo: app/schemas/api.py
+  Línea: 99
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: VariantIn
+  Archivo: app/schemas/api.py
+  Línea: 107
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: StockAdjustIn
+  Archivo: app/schemas/api.py
+  Línea: 122
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: AppointmentApiIn
+  Archivo: app/schemas/api.py
+  Línea: 128
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: OrderOut
+  Archivo: app/schemas/api.py
+  Línea: 136
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: InvoiceIn
+  Archivo: app/schemas/api.py
+  Línea: 147
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: InvoiceOut
+  Archivo: app/schemas/api.py
+  Línea: 155
+  Tabla: [no detectada]
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: CatalogoOperacion
+  Archivo: app/modules/rendimiento/models.py
+  Línea: 14
+  Tabla: rendimiento_catalogo
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: RegistroJornada
+  Archivo: app/modules/rendimiento/models.py
+  Línea: 23
+  Tabla: rendimiento_registros
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+MODEL: DetalleJornada
+  Archivo: app/modules/rendimiento/models.py
+  Línea: 34
+  Tabla: rendimiento_detalles
+  Columnas: 0
+  Foreign Keys: 0
+  Relaciones: 0
+
+
+====================================================================================================
+============================= 4. ENDPOINTS FASTAPI - ANÁLISIS ESTÁTICO =============================
+====================================================================================================
+Endpoints detectados estáticamente: 167
+
+DISTRIBUCIÓN POR MÉTODO:
+  GET        75
+  PATCH      2
+  POST       88
+  PUT        2
+
+ENDPOINTS:
+  GET                                                         kanban_root                    app/routers/produccion.py:88
+  GET                                                         finanzas_root                  app/routers/finanzas.py:77
+  GET                                                         root                           app/modules/rendimiento/router.py:71
+  GET      /                                                  dashboard                      app/routers/dashboard.py:24
+  GET      /                                                  finanzas_root                  app/routers/finanzas.py:77
+  GET      /almacen                                           almacen                        app/routers/inventario.py:166
+  POST     /almacen/avio                                      alta_avio                      app/routers/inventario.py:216
+  GET      /almacen/kardex                                    almacen_kardex                 app/routers/inventario.py:180
+  POST     /almacen/kardex                                    kardex_mov                     app/routers/inventario.py:293
+  POST     /almacen/movimiento                                movimiento                     app/routers/inventario.py:234
+  POST     /almacen/tela                                      alta_tela                      app/routers/inventario.py:186
+  GET      /appointments                                      list_appointments              app/api/v1.py:240
+  POST     /auth/token                                        token                          app/api/v1.py:50
+  GET      /buscar                                            buscar                         app/routers/comercial.py:199
+  GET      /caja                                              caja                           app/routers/ventas.py:300
+  POST     /caja/abrir                                        abrir                          app/routers/ventas.py:321
+  POST     /caja/cerrar                                       cerrar                         app/routers/ventas.py:330
+  POST     /caja/cobrar                                       cobrar                         app/routers/ventas.py:354
+  POST     /caja/movimiento                                   movimiento                     app/routers/ventas.py:342
+  GET      /calculadora                                       calculadora                    app/modules/rendimiento/router.py:148
+  POST     /calculadora/aprobar                               aprobar_registro               app/modules/rendimiento/router.py:252
+  GET      /calculadora/export                                export_liquidacion             app/modules/rendimiento/router.py:227
+  POST     /calculadora/liquidar                              liquidar_registro              app/modules/rendimiento/router.py:261
+  GET      /calidad                                           calidad                        app/routers/produccion.py:645
+  GET      /calidad/{gid}                                     calidad_una                    app/routers/produccion.py:656
+  POST     /calidad/{gid}                                     aprobar                        app/routers/produccion.py:670
+  GET      /catalogo                                          catalogo                       app/routers/inventario.py:32
+  POST     /catalogo/colecciones                              crear_coleccion                app/routers/inventario.py:68
+  POST     /catalogo/insumo                                   crear_insumo                   app/routers/inventario.py:112
+  POST     /catalogo/productos                                crear_producto                 app/routers/inventario.py:76
+  POST     /catalogo/productos/{pid}/variantes                crear_variante                 app/routers/inventario.py:89
+  POST     /catalogo/stock                                    ajustar_stock                  app/routers/inventario.py:99
+  GET      /cierre-jornada                                    form_cierre                    app/routers/taller_cierre.py:25
+  POST     /cierre-jornada                                    guardar_cierre                 app/routers/taller_cierre.py:46
+  GET      /citas                                             agenda                         app/routers/comercial.py:227
+  POST     /citas                                             crear_cita                     app/routers/comercial.py:289
+  POST     /citas/{cid}/cotizar                               cotizar_cita                   app/routers/comercial.py:317
+  POST     /citas/{cid}/estado                                estado_cita                    app/routers/comercial.py:305
+  GET      /clientes                                          clientes                       app/routers/comercial.py:39
+  GET      /clientes/detalle                                  cliente_detalle                app/routers/comercial.py:142
+  POST     /clientes/empresa                                  crear_empresa                  app/routers/comercial.py:101
+  GET      /clientes/empresa/{cid}                            ficha_empresa                  app/routers/comercial.py:122
+  POST     /clientes/empresa/{cid}/contactos                  add_contacto                   app/routers/comercial.py:131
+  POST     /clientes/persona                                  crear_persona                  app/routers/comercial.py:63
+  POST     /clientes/persona-rapido                           crear_persona_rapido           app/routers/comercial.py:84
+  POST     /cobro                                             cobro                          app/routers/ventas.py:280
+  GET      /companies                                         list_companies                 app/api/v1.py:153
+  POST     /companies                                         create_company                 app/api/v1.py:158
+  POST     /companies/{cid}/contacts                          add_contact                    app/api/v1.py:167
+  GET      /compras                                           compras                        app/routers/inventario.py:335
+  POST     /compras/linea/{lid}/recibir                       recibir                        app/routers/inventario.py:542
+  GET      /compras/listado                                   compras_listado                app/routers/inventario.py:346
+  POST     /compras/oc                                        crear_oc                       app/routers/inventario.py:363
+  GET      /compras/oc/{pid}                                  ver_oc                         app/routers/inventario.py:410
+  GET      /compras/oc/{pid}                                  r_oc                           app/routers/legacy.py:51
+  POST     /compras/oc/{pid}/estado                           cambiar_estado_legacy          app/routers/inventario.py:678
+  POST     /compras/oc/{pid}/lineas                           add_linea                      app/routers/inventario.py:444
+  POST     /compras/orden                                     crear_orden_compra             app/routers/inventario.py:387
+  GET      /compras/orden/{oid}                               ver_orden_compra               app/routers/inventario.py:428
+  POST     /compras/orden/{oid}/detalle                       add_detalle                    app/routers/inventario.py:503
+  POST     /compras/orden/{oid}/estado                        cambiar_estado                 app/routers/inventario.py:653
+  POST     /compras/orden/{oid}/recibir                       recibir_orden                  app/routers/inventario.py:610
+  POST     /compras/proveedores                               crear_proveedor                app/routers/inventario.py:355
+  GET      /comprobantes                                      comprobantes                   app/routers/ventas.py:397
+  POST     /comprobantes                                      crear_comprobante              app/routers/ventas.py:424
+  POST     /comprobantes/emitir                               emitir_alias                   app/routers/ventas.py:439
+  GET      /configuracion                                     configuracion                  app/routers/admin.py:123
+  POST     /configuracion                                     guardar_config                 app/routers/admin.py:130
+  GET      /cotizacion/{qid}.pdf                              pdf_cotizacion                 app/routers/reportes.py:50
+  GET      /crm                                               panel                          app/routers/comercial.py:333
+  POST     /crm/cotizaciones                                  crear_cotizacion               app/routers/comercial.py:390
+  GET      /crm/cotizaciones/{qid}                            ver_cotizacion                 app/routers/comercial.py:418
+  GET      /crm/cotizaciones/{qid}                            r_cot                          app/routers/legacy.py:56
+  POST     /crm/cotizaciones/{qid}/convertir                  convertir                      app/routers/comercial.py:449
+  POST     /crm/cotizaciones/{qid}/estado                     estado_cot                     app/routers/comercial.py:441
+  POST     /crm/cotizaciones/{qid}/lineas                     add_linea                      app/routers/comercial.py:427
+  POST     /crm/leads                                         crear_lead                     app/routers/comercial.py:356
+  POST     /crm/leads/{lid}/estado                            estado_lead                    app/routers/comercial.py:369
+  POST     /crm/leads/{lid}/interaccion                       interaccion_lead               app/routers/comercial.py:380
+  GET      /cuentas-por-cobrar                                cxc                            app/routers/finanzas.py:81
+  POST     /cuentas-por-cobrar/abono                          cxc_abono                      app/routers/finanzas.py:111
+  POST     /cuentas-por-cobrar/conciliar                      cxc_conciliar                  app/routers/finanzas.py:135
+  GET      /cuentas-por-pagar                                 cxp                            app/routers/finanzas.py:140
+  POST     /cuentas-por-pagar                                 cxp_crear                      app/routers/finanzas.py:152
+  POST     /cuentas-por-pagar/{cid}/pagar                     cxp_pagar                      app/routers/finanzas.py:169
+  GET      /dashboard                                         dashboard                      app/routers/dashboard.py:24
+  GET      /empresas/{cid}                                    r_empresa                      app/routers/legacy.py:31
+  GET      /facturacion                                       facturacion                    app/routers/ventas.py:385
+  POST     /facturacion/emitir                                emitir                         app/routers/ventas.py:412
+  GET      /facturacion/{iid}.pdf                             pdf                            app/routers/ventas.py:452
+  POST     /facturacion/{iid}/anular                          anular                         app/routers/ventas.py:445
+  GET      /ficha/{gid}                                       ficha                          app/routers/produccion.py:153
+  POST     /ficha/{gid}                                       actualizar_ficha               app/routers/produccion.py:185
+  POST     /fichar                                            fichar                         app/routers/produccion.py:735
+  GET      /fichas                                            fichas                         app/routers/produccion.py:309
+  POST     /fichas                                            crear_ficha                    app/routers/produccion.py:321
+  GET      /fichas/{cid}                                      ficha_detalle                  app/routers/produccion.py:342
+  POST     /fichas/{cid}/citas                                agendar_cita                   app/routers/produccion.py:455
+  POST     /fichas/{cid}/eliminar                             eliminar_cliente               app/routers/produccion.py:484
+  POST     /fichas/{cid}/medidas                              guardar_medidas                app/routers/produccion.py:381
+  POST     /fichas/{cid}/pedidos                              crear_pedido                   app/routers/produccion.py:398
+  POST     /fichas/{cid}/pedidos/{oid}/cancelar               cancelar_pedido                app/routers/produccion.py:470
+  GET      /flujo-caja                                        flujo_caja                     app/routers/finanzas.py:189
+  GET      /health                                            health                         app/main.py:41
+  POST     /interacciones                                     add_interaccion                app/routers/comercial.py:180
+  POST     /invoices                                          create_invoice                 app/api/v1.py:248
+  GET      /invoices/{iid}                                    get_invoice                    app/api/v1.py:255
+  GET      /kanban                                            kanban                         app/routers/produccion.py:93
+  GET      /leads                                             list_leads                     app/api/v1.py:64
+  POST     /leads                                             create_lead                    app/api/v1.py:72
+  GET      /leads/{lid}                                       get_lead                       app/api/v1.py:81
+  PATCH    /leads/{lid}                                       patch_lead                     app/api/v1.py:89
+  GET      /legacy-health                                     legacy_health                  app/routers/legacy.py:61
+  GET      /login                                             login_page                     app/routers/auth.py:16
+  POST     /login                                             login                          app/routers/auth.py:21
+  GET      /logout                                            logout                         app/routers/auth.py:49
+  GET      /manifest.json                                     manifest                       app/main.py:86
+  GET      /medidas/{mid}.pdf                                 pdf_medidas                    app/routers/reportes.py:19
+  POST     /operaciones                                       crear_op                       app/routers/admin.py:113
+  POST     /orden/{gid}/control-calidad                       aprobar                        app/routers/produccion.py:670
+  PATCH    /orden/{gid}/estado                                mover_htmx                     app/routers/produccion.py:98
+  POST     /orden/{gid}/estado                                mover_post                     app/routers/produccion.py:119
+  PUT      /orden/{gid}/estado                                mover_post                     app/routers/produccion.py:119
+  GET      /ordenes                                           ordenes                        app/routers/ventas.py:219
+  POST     /ordenes                                           crear_orden                    app/routers/ventas.py:250
+  POST     /ordenes/{oid}/entregar                            entregar                       app/routers/ventas.py:264
+  GET      /orders                                            list_orders                    app/api/v1.py:227
+  GET      /orders/{oid}                                      get_order                      app/api/v1.py:232
+  GET      /pedido/{oid}.pdf                                  pdf_pedido                     app/routers/reportes.py:40
+  GET      /pos                                               pos                            app/routers/ventas.py:122
+  POST     /pos/vender                                        vender                         app/routers/ventas.py:139
+  POST     /prenda/{gid}/asignar                              asignar                        app/routers/produccion.py:297
+  POST     /prenda/{gid}/diseno                               guardar_diseno                 app/routers/produccion.py:278
+  POST     /prendas/{gid}/estado                              cambiar_estado                 app/routers/produccion.py:725
+  GET      /products                                          list_products                  app/api/v1.py:178
+  POST     /products                                          create_product                 app/api/v1.py:189
+  GET      /products/low-stock                                low_stock                      app/api/v1.py:220
+  POST     /products/{pid}/variants                           add_variant                    app/api/v1.py:198
+  POST     /prueba-entalle                                    registrar_prueba               app/routers/produccion.py:539
+  GET      /pruebas                                           pruebas                        app/routers/produccion.py:525
+  POST     /pruebas/registrar                                 registrar_prueba               app/routers/produccion.py:539
+  POST     /quotations                                        create_quotation               app/api/v1.py:104
+  GET      /quotations/{qid}                                  get_quotation                  app/api/v1.py:118
+  POST     /quotations/{qid}/convert                          convert                        app/api/v1.py:135
+  POST     /quotations/{qid}/lines                            add_line                       app/api/v1.py:126
+  GET      /registro                                          registro_get                   app/modules/rendimiento/router.py:75
+  POST     /registro                                          registro_post                  app/modules/rendimiento/router.py:89
+  GET      /rentabilidad                                      rentabilidad                   app/routers/finanzas.py:226
+  GET      /reporte-pagos                                     reporte                        app/routers/taller_cierre.py:81
+  GET      /reportes-contables                                reportes                       app/routers/finanzas.py:263
+  GET      /reportes-contables/compras.csv                    export_compras                 app/routers/finanzas.py:293
+  GET      /reportes-contables/igv                            igv_resumen                    app/routers/finanzas.py:315
+  GET      /reportes-contables/ventas.csv                     export_ventas                  app/routers/finanzas.py:268
+  GET      /sastre/clientes/{cid}                             r_ficha                        app/routers/legacy.py:36
+  POST     /stock/adjust                                      adjust_stock                   app/api/v1.py:209
+  GET      /taller/fichas/{cid}                               r_ficha2                       app/routers/legacy.py:41
+  GET      /taller/orden/{gid}/ficha                          r_ficha_prod                   app/routers/legacy.py:46
+  GET      /tarifario                                         tarifario_get                  app/modules/rendimiento/router.py:289
+  POST     /tarifario                                         tarifario_post                 app/modules/rendimiento/router.py:296
+  POST     /tarifario/{cid}                                   tarifario_update               app/modules/rendimiento/router.py:309
+  PUT      /tarifario/{cid}                                   tarifario_update               app/modules/rendimiento/router.py:309
+  GET      /tarifario/{cid}/toggle                            tarifario_toggle               app/modules/rendimiento/router.py:327
+  GET      /usuarios                                          usuarios                       app/routers/admin.py:22
+  POST     /usuarios                                          crear_usuario                  app/routers/admin.py:103
+  POST     /usuarios/{uid}/eliminar                           eliminar_usuario               app/routers/admin.py:70
+  POST     /usuarios/{uid}/toggle                             toggle_usuario                 app/routers/admin.py:89
+  GET      /webhooks                                          webhooks                       app/api/v1.py:58
+
+====================================================================================================
+================================= 5. FASTAPI - INSPECCIÓN DINÁMICA =================================
+====================================================================================================
+⚠️ No se pudo importar dinámicamente app.main.
+Error: ModuleNotFoundError: No module named 'fastapi'
+La auditoría estática continúa normalmente.
+
+====================================================================================================
+================================== 6. TEMPLATES / UI / NAVEGACIÓN ==================================
+====================================================================================================
+Templates analizados: 58
+
+URLs/enlaces detectados: 124
+url_for detectados: 0
+
+HERENCIA DE TEMPLATES:
+  app/templates/taller/cierre.html:1 -> extends base.html
+  app/templates/taller/reporte_pagos.html:1 -> extends base.html
+  app/templates/taller/fichas.html:1 -> extends produccion/base_produccion.html
+  app/templates/taller/ficha_detalle.html:1 -> extends produccion/base_produccion.html
+  app/templates/inventario/catalogo.html:1 -> extends inventario/base_inventario.html
+  app/templates/inventario/almacen.html:1 -> extends inventario/base_inventario.html
+  app/templates/inventario/compras.html:1 -> extends inventario/base_inventario.html
+  app/templates/inventario/oc.html:1 -> extends base.html
+  app/templates/inventario/base_inventario.html:1 -> extends base.html
+  app/templates/inventario/almacen_kardex.html:1 -> extends inventario/almacen.html
+  app/templates/inventario/compras_listado.html:1 -> extends inventario/base_inventario.html
+  app/templates/inventario/orden_compra_form.html:1 -> extends inventario/base_inventario.html
+  app/templates/admin/usuarios.html:1 -> extends base.html
+  app/templates/admin/configuracion.html:1 -> extends base.html
+  app/templates/comercial/crm.html:1 -> extends comercial/base_comercial.html
+  app/templates/comercial/cotizacion.html:1 -> extends base.html
+  app/templates/comercial/citas.html:1 -> extends comercial/base_comercial.html
+  app/templates/comercial/cliente_empresa.html:1 -> extends base.html
+  app/templates/comercial/clientes.html:1 -> extends comercial/base_comercial.html
+  app/templates/comercial/base_comercial.html:1 -> extends base.html
+  app/templates/comercial/cliente_detalle.html:1 -> extends comercial/base_comercial.html
+  app/templates/ventas/caja.html:2 -> extends ventas/caja_arqueo.html
+  app/templates/ventas/facturacion.html:1 -> extends base.html
+  app/templates/ventas/pos.html:1 -> extends base.html
+  app/templates/ventas/ordenes.html:2 -> extends ventas/ordenes_listado.html
+  app/templates/ventas/ordenes_listado.html:1 -> extends base.html
+  app/templates/ventas/caja_arqueo.html:1 -> extends base.html
+  app/templates/ventas/comprobantes.html:1 -> extends base.html
+  app/templates/dashboard/panel.html:1 -> extends base.html
+  app/templates/produccion/base_produccion.html:1 -> extends base.html
+  app/templates/produccion/kanban.html:1 -> extends produccion/base_produccion.html
+  app/templates/produccion/ficha_tecnica.html:1 -> extends produccion/base_produccion.html
+  app/templates/produccion/pruebas.html:1 -> extends produccion/base_produccion.html
+  app/templates/produccion/control_calidad.html:1 -> extends produccion/base_produccion.html
+  app/templates/finanzas/base_finanzas.html:1 -> extends base.html
+  app/templates/finanzas/cuentas_por_cobrar.html:1 -> extends finanzas/base_finanzas.html
+  app/templates/finanzas/cuentas_por_pagar.html:1 -> extends finanzas/base_finanzas.html
+  app/templates/finanzas/flujo_caja.html:1 -> extends finanzas/base_finanzas.html
+  app/templates/finanzas/rentabilidad.html:1 -> extends finanzas/base_finanzas.html
+  app/templates/finanzas/reportes_contables.html:1 -> extends finanzas/base_finanzas.html
+  app/templates/rendimiento/base_rendimiento.html:1 -> extends base.html
+  app/templates/rendimiento/registro_diario.html:1 -> extends rendimiento/base_rendimiento.html
+  app/templates/rendimiento/calculadora_destajo.html:1 -> extends rendimiento/base_rendimiento.html
+  app/templates/rendimiento/tarifario.html:1 -> extends rendimiento/base_rendimiento.html
+
+INCLUDES:
+  app/templates/base.html:34 -> include components/sidebar.html
+  app/templates/base.html:39 -> include components/topbar.html
+  app/templates/components/navbar.html:2 -> include components/topbar.html
+  app/templates/produccion/_column.html:4 -> include produccion/_card.html
+  app/templates/produccion/kanban.html:8 -> include produccion/_board.html
+  app/templates/produccion/ficha_tecnica.html:72 -> include produccion/prueba_entalle_modal.html
+  app/templates/produccion/_movecols.html:5 -> include produccion/_column.html
+  app/templates/produccion/_board.html:3 -> include produccion/_column.html
+
+URL_FOR:
+
+FORMULARIOS:
+  app/templates/login.html:10 -> <form method="post" action="/auth/login" class="rounded-2xl p-8 w-full max-w-sm shadow-2xl" style="background-color:#FAF
+  app/templates/taller/cierre.html:19 -> <form method="post" action="/taller/cierre-jornada" x-data="{ total: 0, recalc() { this.total = [...document.querySelect
+  app/templates/taller/reporte_pagos.html:7 -> <form method="get" action="/taller/reporte-pagos" class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-2 text-s
+  app/templates/taller/fichas.html:6 -> <form method="get" class="flex gap-2">
+  app/templates/taller/fichas.html:13 -> <form x-show="open" method="post" action="/produccion/fichas" class="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-
+  app/templates/taller/ficha_detalle.html:16 -> <form method="post" action="/produccion/fichas/{{ c.id }}/eliminar" onsubmit="return confirm('¿Eliminar la ficha de {{ c
+  app/templates/taller/ficha_detalle.html:38 -> <form method="post" action="/produccion/fichas/{{ c.id }}/medidas" class="grid grid-cols-2 gap-2 text-sm">
+  app/templates/taller/ficha_detalle.html:70 -> <form method="post" action="/produccion/fichas/{{ c.id }}/pedidos" class="grid gap-2 text-sm">
+  app/templates/taller/ficha_detalle.html:87 -> <form method="post" action="/produccion/fichas/{{ c.id }}/pedidos/{{ o.id }}/cancelar" onsubmit="return confirm('¿Anular
+  app/templates/taller/ficha_detalle.html:96 -> <form method="post" action="/produccion/fichas/{{ c.id }}/citas" class="grid grid-cols-2 gap-2 text-sm">
+  app/templates/inventario/catalogo.html:17 -> <form method="get" class="flex gap-1 ml-auto">
+  app/templates/inventario/catalogo.html:51 -> <form method="post" action="/inventario/catalogo/insumo" class="grid grid-cols-2 md:grid-cols-4 gap-1 text-xs">
+  app/templates/inventario/catalogo.html:71 -> <form method="post" action="/inventario/catalogo/colecciones" class="flex gap-1 text-xs mb-2">
+  app/templates/inventario/catalogo.html:78 -> <form method="post" action="/inventario/catalogo/productos" class="grid gap-1 text-xs">
+  app/templates/inventario/catalogo.html:97 -> <form method="post" action="/inventario/catalogo/productos/{{ p.id }}/variantes" class="flex gap-1 text-xs mt-1">
+  app/templates/inventario/catalogo.html:107 -> <form method="post" action="/inventario/catalogo/stock" class="flex gap-1 text-xs">
+  app/templates/inventario/almacen.html:35 -> <form method="post" action="/inventario/almacen/tela" class="grid grid-cols-3 gap-1 text-xs mb-3">
+  app/templates/inventario/almacen.html:50 -> <form method="post" action="/inventario/almacen/avio" class="grid grid-cols-3 gap-1 text-xs mb-3">
+  app/templates/inventario/almacen.html:65 -> <form method="post" action="/inventario/almacen/movimiento" class="grid grid-cols-2 md:grid-cols-5 gap-1 text-xs mb-3">
+  app/templates/inventario/almacen.html:81 -> <form method="post" action="/inventario/almacen/kardex" class="grid grid-cols-2 md:grid-cols-5 gap-1 text-xs mb-3">
+  app/templates/inventario/compras.html:9 -> <form method="post" action="/inventario/compras/proveedores" class="flex gap-1 text-xs mb-2">
+  app/templates/inventario/compras.html:16 -> <form method="post" action="/inventario/compras/oc" class="flex gap-1 text-xs">
+  app/templates/inventario/oc.html:12 -> <form method="post" action="/inventario/compras/linea/{{ l.id }}/recibir" class="flex gap-1">
+  app/templates/inventario/oc.html:21 -> <form method="post" action="/inventario/compras/oc/{{ po.id }}/lineas" class="grid grid-cols-2 md:grid-cols-6 gap-1 text
+  app/templates/inventario/compras_listado.html:9 -> <form method="post" action="/inventario/compras/proveedores" class="flex gap-1 text-xs mb-2">
+  app/templates/inventario/compras_listado.html:16 -> <form method="post" action="/inventario/compras/orden" class="flex gap-1 text-xs">
+  app/templates/inventario/orden_compra_form.html:10 -> <form method="post" action="/inventario/compras/orden/{{ oc.id }}/estado" class="flex gap-1 text-xs">
+  app/templates/inventario/orden_compra_form.html:28 -> <form method="post" action="/inventario/compras/orden/{{ oc.id }}/recibir" class="flex gap-1">
+  app/templates/inventario/orden_compra_form.html:38 -> <form method="post" action="/inventario/compras/orden/{{ oc.id }}/detalle" class="grid grid-cols-2 md:grid-cols-4 gap-1 
+  app/templates/admin/usuarios.html:18 -> <form method="post" action="/admin/usuarios" class="grid grid-cols-2 gap-1 text-xs mb-3">
+  app/templates/admin/usuarios.html:27 -> <form method="post" action="/admin/usuarios/{{ u.id }}/toggle"><button class="underline">{{ 'Desactivar' if u.is_active 
+  app/templates/admin/usuarios.html:28 -> <form method="post" action="/admin/usuarios/{{ u.id }}/eliminar" onsubmit="return confirm('¿Eliminar al usuario {{ u.ema
+  app/templates/admin/usuarios.html:33 -> <form method="post" action="/admin/operaciones" class="grid grid-cols-2 gap-1 text-xs mb-3">
+  app/templates/admin/configuracion.html:7 -> <form method="post" action="/admin/configuracion" class="grid gap-3 text-sm">
+  app/templates/comercial/crm.html:9 -> <form method="post" action="/comercial/crm/leads" class="flex gap-1 ml-auto">
+  app/templates/comercial/crm.html:26 -> <form method="post" action="/comercial/crm/leads/{{ l.id }}/estado">
+  app/templates/comercial/crm.html:37 -> <form method="post" action="/comercial/crm/leads/{{ l.id }}/interaccion" class="flex gap-1 mt-1">
+  app/templates/comercial/crm.html:44 -> <form method="post" action="/comercial/crm/leads/{{ l.id }}/estado" class="flex gap-1 mt-1">
+  app/templates/comercial/cotizacion.html:16 -> <form method="post" action="/comercial/crm/cotizaciones/{{ q.id }}/lineas" class="grid grid-cols-2 gap-1 text-xs mt-3">
+  app/templates/comercial/cotizacion.html:28 -> <form method="post" action="/comercial/crm/cotizaciones/{{ q.id }}/estado" class="flex gap-1 text-sm mb-3">
+  app/templates/comercial/cotizacion.html:33 -> <form method="post" action="/comercial/crm/cotizaciones/{{ q.id }}/convertir">
+  app/templates/comercial/citas.html:26 -> <form method="post" action="/comercial/citas" class="grid md:grid-cols-6 gap-2 text-sm">
+  app/templates/comercial/citas.html:53 -> <form method="get" class="flex gap-1 text-xs">
+  app/templates/comercial/citas.html:64 -> <form method="post" action="/comercial/citas/{{ a.id }}/cotizar"><button class="text-xs bg-[#C5A880] text-[#370003] font
+  app/templates/comercial/citas.html:66 -> <form method="post" action="/comercial/citas/{{ a.id }}/estado" class="flex gap-1">
+  app/templates/comercial/cliente_empresa.html:10 -> <form method="post" action="/comercial/clientes/empresa/{{ c.id }}/contactos" class="grid grid-cols-2 gap-1 text-xs mb-3
+  app/templates/comercial/clientes.html:11 -> <form method="get" class="flex gap-2 items-center">
+  app/templates/comercial/clientes.html:21 -> <form method="post" action="/comercial/clientes/empresa" class="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm">
+  app/templates/comercial/clientes.html:42 -> <form x-show="open" method="post" action="/comercial/clientes/persona" class="bg-white rounded-xl shadow p-4 mb-4 grid g
+  app/templates/comercial/cliente_detalle.html:19 -> <form method="post" action="/comercial/interacciones" class="flex gap-1 text-xs mb-2">
+  app/templates/comercial/cliente_detalle.html:57 -> <form method="post" action="/comercial/interacciones" class="flex gap-1 text-xs mb-2">
+  app/templates/ventas/facturacion.html:9 -> <form method="post" action="/ventas/facturacion/emitir" class="flex gap-1 text-xs mb-3">
+  app/templates/ventas/facturacion.html:21 -> <form method="post" action="/ventas/facturacion/{{ f.id }}/anular"><button class="text-red-600 underline">Anular</button
+  app/templates/ventas/pos.html:19 -> <form method="post" action="/ventas/pos/vender" class="grid gap-3 text-sm">
+  app/templates/ventas/ordenes_listado.html:18 -> <form method="post" action="/ventas/ordenes" class="grid md:grid-cols-4 gap-2 text-sm">
+  app/templates/ventas/ordenes_listado.html:33 -> <form method="post" action="/ventas/cobro" class="flex gap-1 text-xs items-center">
+  app/templates/ventas/ordenes_listado.html:45 -> <form method="post" action="/ventas/ordenes/{{ o.id }}/entregar" onsubmit="{% if o.saldo > 0 %}alert('Bloqueado: saldo p
+  app/templates/ventas/caja_arqueo.html:15 -> <form method="post" action="/ventas/caja/cerrar" class="flex gap-1 items-center">
+  app/templates/ventas/caja_arqueo.html:21 -> <form method="post" action="/ventas/caja/abrir" class="flex gap-2 text-sm items-center flex-wrap">
+  app/templates/ventas/caja_arqueo.html:43 -> <form method="post" action="/ventas/caja/cobrar" class="flex gap-1 text-xs mb-3">
+  app/templates/ventas/caja_arqueo.html:50 -> <form method="post" action="/ventas/caja/movimiento" class="flex gap-1 text-xs">
+  app/templates/ventas/comprobantes.html:9 -> <form method="post" action="/ventas/comprobantes" class="flex gap-1 text-xs mb-3">
+  app/templates/ventas/comprobantes.html:16 -> <form method="post" action="/ventas/facturacion/emitir" class="flex gap-1 text-xs mb-3 md:hidden">
+  app/templates/ventas/comprobantes.html:29 -> <form method="post" action="/ventas/facturacion/{{ f.id }}/anular"><button class="text-red-600 underline">Anular</button
+  app/templates/produccion/prueba_entalle_modal.html:6 -> <form method="post" action="/produccion/prueba-entalle" enctype="multipart/form-data" class="grid gap-2 text-sm">
+  app/templates/produccion/ficha_tecnica.html:20 -> <form method="post" action="/produccion/prenda/{{ g.id }}/diseno" class="grid grid-cols-2 gap-2 text-sm">
+  app/templates/produccion/ficha_tecnica.html:33 -> <form method="post" action="/produccion/prenda/{{ g.id }}/asignar" class="flex gap-2 text-sm">
+  app/templates/produccion/ficha_tecnica.html:42 -> <form method="post" action="/produccion/fichar" class="grid grid-cols-2 gap-1 text-xs">
+  app/templates/produccion/pruebas.html:11 -> <form method="post" action="/produccion/prueba-entalle" enctype="multipart/form-data" class="grid gap-1.5 text-xs">
+  app/templates/produccion/control_calidad.html:11 -> <form method="post" action="/produccion/orden/{{ it.g.id }}/control-calidad" class="mt-2 grid gap-1 text-xs">
+  app/templates/finanzas/cuentas_por_cobrar.html:6 -> <form method="get" class="flex gap-2 text-xs mb-3">
+  app/templates/finanzas/cuentas_por_cobrar.html:29 -> <form method="post" action="/finanzas/cuentas-por-cobrar/abono" class="flex gap-1">
+  app/templates/finanzas/cuentas_por_pagar.html:6 -> <form method="get" class="flex gap-2 text-xs mb-3">
+  app/templates/finanzas/cuentas_por_pagar.html:12 -> <form method="post" action="/finanzas/cuentas-por-pagar" class="grid grid-cols-2 md:grid-cols-7 gap-1 text-xs">
+  app/templates/finanzas/cuentas_por_pagar.html:40 -> <form method="post" action="/finanzas/cuentas-por-pagar/{{ c.id }}/pagar" class="flex gap-1">
+  app/templates/finanzas/rentabilidad.html:6 -> <form method="get" class="flex gap-2 text-xs mb-3">
+  app/templates/finanzas/reportes_contables.html:10 -> <form method="get" class="flex gap-1 text-xs mb-3">
+  app/templates/rendimiento/registro_diario.html:12 -> <form method="post" class="text-sm">
+  app/templates/rendimiento/calculadora_destajo.html:6 -> <form method="get" class="flex gap-2 text-xs mb-3 flex-wrap items-end bg-white rounded-xl shadow p-3">
+  app/templates/rendimiento/calculadora_destajo.html:54 -> {% if r.estado=='REGISTRADO' %}<form method="post" action="/rendimiento/calculadora/aprobar"><input type="hidden" name="
+  app/templates/rendimiento/calculadora_destajo.html:55 -> {% if r.estado!='LIQUIDADO' %}<form method="post" action="/rendimiento/calculadora/liquidar"><input type="hidden" name="
+  app/templates/rendimiento/tarifario.html:16 -> <form method="post" action="/rendimiento/tarifario/{{ c.id }}" class="flex gap-1">
+  app/templates/rendimiento/tarifario.html:30 -> <form method="post" action="/rendimiento/tarifario" class="flex gap-1 text-xs">
+
+Enlaces repetidos en múltiples templates: 37
+  /comercial/clientes (5 apariciones)
+  /ventas/caja (5 apariciones)
+  /ventas/ordenes (5 apariciones)
+  /dashboard (4 apariciones)
+  /inventario/compras (4 apariciones)
+  /comercial/citas (4 apariciones)
+  /produccion/fichas (3 apariciones)
+  /comercial/crm (3 apariciones)
+  /ventas/comprobantes (3 apariciones)
+  /produccion/pruebas (3 apariciones)
+  /produccion/kanban (3 apariciones)
+  /finanzas/cuentas-por-cobrar (3 apariciones)
+  https://cdn.tailwindcss.com (2 apariciones)
+  /auth/login (2 apariciones)
+  /auth/logout (2 apariciones)
+  {{ href }} (2 apariciones)
+  /taller/reporte-pagos (2 apariciones)
+  /taller/cierre-jornada (2 apariciones)
+  /inventario/catalogo (2 apariciones)
+  /inventario/compras/proveedores (2 apariciones)
+  /inventario/compras/oc/{{ o.id }} (2 apariciones)
+  /inventario/compras/orden/{{ o.id }} (2 apariciones)
+  /inventario/almacen (2 apariciones)
+  {{ action_href }} (2 apariciones)
+  /comercial/crm/leads/{{ l.id }}/estado (2 apariciones)
+  /comercial/interacciones (2 apariciones)
+  /ventas/facturacion/emitir (2 apariciones)
+  /ventas/facturacion/{{ f.id }}.pdf (2 apariciones)
+  /ventas/facturacion/{{ f.id }}/anular (2 apariciones)
+  /rendimiento/registro (2 apariciones)
+
+====================================================================================================
+================================= 7. CALIDAD Y MÉTRICAS DE CÓDIGO ==================================
+====================================================================================================
+Archivos Python: 91
+Líneas totales: 11561
+Líneas de código aproximadas: 9399
+Líneas vacías: 1690
+Funciones/métodos: 432
+Clases: 87
+Proporción de líneas vacías: 14.6%
+
+ARCHIVOS MÁS GRANDES:
+    2649 líneas app/inspect_project.py
+     747 líneas app/routers/produccion.py
+     700 líneas app/routers/inventario.py
+     463 líneas app/routers/comercial.py
+     460 líneas app/routers/ventas.py
+     332 líneas app/modules/rendimiento/router.py
+     328 líneas app/routers/finanzas.py
+     259 líneas app/api/v1.py
+     232 líneas app/services/taller.py
+     225 líneas app/core/constants.py
+     204 líneas tests/test_taller_prod.py
+     195 líneas app/services/inventory.py
+     173 líneas app/services/ventas.py
+     170 líneas tests/test_taller_cierre.py
+     167 líneas app/services/taller_cierre.py
+     165 líneas tests/test_ficha_eliminar.py
+     164 líneas app/schemas/api.py
+     163 líneas tests/test_ventas_front.py
+     134 líneas app/routers/admin.py
+     126 líneas app/models/order.py
+
+ARCHIVOS CON MAYOR NÚMERO DE FUNCIONES:
+     34 funciones app/inspect_project.py
+     29 funciones app/routers/produccion.py
+     26 funciones app/routers/inventario.py
+     25 funciones app/routers/comercial.py
+     24 funciones app/api/v1.py
+     23 funciones app/routers/ventas.py
+     15 funciones app/routers/finanzas.py
+     14 funciones app/services/taller.py
+     14 funciones app/modules/rendimiento/router.py
+     10 funciones app/services/inventory.py
+     10 funciones app/services/ventas.py
+     10 funciones tests/test_taller_cierre.py
+     10 funciones tests/test_peru.py
+      9 funciones app/routers/legacy.py
+      9 funciones app/services/taller_cierre.py
+      8 funciones app/routers/admin.py
+      7 funciones tests/test_taller_prod.py
+      7 funciones tests/test_ficha_eliminar.py
+      6 funciones tests/test_rbac.py
+      6 funciones tests/test_ventas_front.py
+
+TODO/FIXME/BUG/HACK detectados: 8
+  app/inspect_project.py:162 [TODO] r"\b(TODO|FIXME|XXX|HACK|BUG)\b", re.IGNORECASE
+  app/inspect_project.py:719 [TODO] # TODO/FIXME
+  app/inspect_project.py:1668 [TODO] f"TODO/FIXME/BUG/HACK detectados: {len(todos)}"
+  app/core/rbac.py:3 [TODO] Regla: admin ve todo. El resto solo sus módulos. Los routers la hacen
+  app/services/taller.py:204 [TODO] """Todo lo que la ficha técnica necesita en una sola lectura."""
+  app/modules/rendimiento/router.py:161 [TODO] # operario no admin solo ve lo propio? Por now muestra todo si admin else propio
+  tests/test_api.py:22 [XXX] assert client.get("/api/v1/leads", headers={"Authorization": "Bearer xxx"}).status_code == 401
+  tests/test_taller_cierre.py:162 [TODO] # Admin ve todo + filtro empleado
+
+====================================================================================================
+=========================================== 8. SEGURIDAD ===========================================
+====================================================================================================
+Hallazgos de seguridad/calidad detectados: 126
+
+SEVERIDAD:
+  CRITICAL   1
+  HIGH       12
+  MEDIUM     35
+  LOW        78
+  INFO       0
+
+HALLAZGOS:
+[LOW] CALIDAD [seed.py:14]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [seed.py:21]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [seed.py:23]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [seed.py:28]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [seed.py:32]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [seed.py:71]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [seed.py:72]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/main.py:24]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:259]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:260]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:261]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:267]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/inspect_project.py:394]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/inspect_project.py:432]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/inspect_project.py:633]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/inspect_project.py:680]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[HIGH] SEGURIDAD [app/inspect_project.py:775]
+    Uso de eval() detectado.
+      Recomendación: Eliminar eval() o sustituirlo por parsing seguro.
+[HIGH] SEGURIDAD [app/inspect_project.py:780]
+    Uso de eval() detectado.
+      Recomendación: Eliminar eval() o sustituirlo por parsing seguro.
+[HIGH] SEGURIDAD [app/inspect_project.py:783]
+    Uso de eval() detectado.
+      Recomendación: Eliminar eval() o sustituirlo por parsing seguro.
+[HIGH] SEGURIDAD [app/inspect_project.py:787]
+    Uso de exec() detectado.
+      Recomendación: Eliminar exec() salvo que exista una justificación muy controlada.
+[HIGH] SEGURIDAD [app/inspect_project.py:792]
+    Uso de exec() detectado.
+      Recomendación: Eliminar exec() salvo que exista una justificación muy controlada.
+[HIGH] SEGURIDAD [app/inspect_project.py:795]
+    Uso de exec() detectado.
+      Recomendación: Eliminar exec() salvo que exista una justificación muy controlada.
+[LOW] CALIDAD [app/inspect_project.py:2127]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2138]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2150]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2166]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2189]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2209]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2229]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2250]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2267]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2283]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2324]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2339]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2354]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2369]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2411]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2443]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2451]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2634]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2638]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2642]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/inspect_project.py:2643]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[MEDIUM] SEGURIDAD [app/inspect_project.py:133]
+    DEBUG=True puede exponer información sensible en producción.
+      Recomendación: Revisar la configuración antes de desplegar a producción.
+[HIGH] SEGURIDAD [app/inspect_project.py:138]
+    verify=False deshabilita la verificación TLS.
+      Recomendación: Revisar la configuración antes de desplegar a producción.
+[HIGH] SEGURIDAD [app/inspect_project.py:150]
+    shell=True puede introducir riesgo de command injection.
+      Recomendación: Revisar la configuración antes de desplegar a producción.
+[HIGH] SEGURIDAD [app/inspect_project.py:804]
+    shell=True puede introducir riesgo de command injection.
+      Recomendación: Revisar la configuración antes de desplegar a producción.
+[HIGH] SEGURIDAD [app/inspect_project.py:809]
+    shell=True puede introducir riesgo de command injection.
+      Recomendación: Revisar la configuración antes de desplegar a producción.
+[HIGH] SEGURIDAD [app/inspect_project.py:812]
+    shell=True puede introducir riesgo de command injection.
+      Recomendación: Revisar la configuración antes de desplegar a producción.
+[LOW] CALIDAD [app/models/inventory.py:89]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/models/inventory.py:94]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[MEDIUM] BASE DE DATOS [app/models/inventory.py:83]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [app/models/inventory.py:85]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [app/models/inventory.py:88]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[LOW] CALIDAD [app/models/produccion.py:101]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/models/ventas.py:24]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/models/ventas.py:103]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:159]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:210]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:228]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:286]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:380]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:404]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:497]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:536]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:603]
+    Uso de print() detectado.
+      Recomendación: Usar logging estructurado en código de aplicación.
+[LOW] CALIDAD [app/routers/inventario.py:636]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:647]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:672]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/inventario.py:697]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/ventas.py:59]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/ventas.py:62]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/ventas.py:87]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/ventas.py:90]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/ventas.py:106]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/ventas.py:109]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/ventas.py:200]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:83]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:247]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:447]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:551]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:556]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:578]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:588]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:595]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:617]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:637]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:688]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/routers/produccion.py:710]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/services/inventory.py:57]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/services/taller.py:133]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[LOW] CALIDAD [app/services/ventas.py:97]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[MEDIUM] CALIDAD [app/modules/rendimiento/router.py:96]
+    except: captura todas las excepciones sin especificarlas.
+      Recomendación: Capturar excepciones específicas y registrar el error.
+[MEDIUM] CALIDAD [app/modules/rendimiento/router.py:112]
+    except: captura todas las excepciones sin especificarlas.
+      Recomendación: Capturar excepciones específicas y registrar el error.
+[MEDIUM] CALIDAD [app/modules/rendimiento/router.py:121]
+    except: captura todas las excepciones sin especificarlas.
+      Recomendación: Capturar excepciones específicas y registrar el error.
+[MEDIUM] CALIDAD [app/modules/rendimiento/router.py:152]
+    except: captura todas las excepciones sin especificarlas.
+      Recomendación: Capturar excepciones específicas y registrar el error.
+[MEDIUM] CALIDAD [app/modules/rendimiento/router.py:159]
+    except: captura todas las excepciones sin especificarlas.
+      Recomendación: Capturar excepciones específicas y registrar el error.
+[MEDIUM] CALIDAD [app/modules/rendimiento/router.py:172]
+    except: captura todas las excepciones sin especificarlas.
+      Recomendación: Capturar excepciones específicas y registrar el error.
+[MEDIUM] CALIDAD [app/modules/rendimiento/router.py:234]
+    except: captura todas las excepciones sin especificarlas.
+      Recomendación: Capturar excepciones específicas y registrar el error.
+[LOW] CALIDAD [app/modules/rendimiento/router.py:282]
+    except Exception detectado.
+      Recomendación: Evitar capturas demasiado amplias cuando sea posible.
+[MEDIUM] CALIDAD [app/modules/rendimiento/router.py:299]
+    except: captura todas las excepciones sin especificarlas.
+      Recomendación: Capturar excepciones específicas y registrar el error.
+[MEDIUM] CALIDAD [app/modules/rendimiento/router.py:317]
+    except: captura todas las excepciones sin especificarlas.
+      Recomendación: Capturar excepciones específicas y registrar el error.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:49]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:50]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:51]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:52]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:53]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:54]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:55]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:56]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:57]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:58]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:59]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:60]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:61]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:62]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py:63]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py:33]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py:35]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py:36]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py:38]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py:40]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py:42]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[MEDIUM] BASE DE DATOS [alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py:44]
+    Posible SQL escrito manualmente.
+      Recomendación: Verificar parametrización y evitar concatenación de valores proporcionados por usuarios.
+[CRITICAL] SEGURIDAD [tests/test_rbac.py:53]
+    Posible secreto hardcodeado (PASSWORD).
+      Recomendación: Mover secretos a variables de entorno o gestor de secretos.
+[HIGH] SEGURIDAD [tests/test_rbac.py:53]
+    Posible secreto hardcodeado.
+      Recomendación: Revisar la configuración antes de desplegar a producción.
+
+====================================================================================================
+======================== 9. ARQUITECTURA Y SEPARACIÓN DE RESPONSABILIDADES =========================
+====================================================================================================
+CAPAS DETECTADAS:
+  OK       core
+  OK       models
+  OK       schemas
+  OK       routers
+  OK       services
+  OK       templates
+
+Routers detectados: 13
+Services detectados: 14
+Archivos bajo models/: 18
+
+Nombres de archivo repetidos: 12
+  __init__:
+      - app/__init__.py
+      - app/core/__init__.py
+      - app/models/__init__.py
+      - app/schemas/__init__.py
+      - app/routers/__init__.py
+      - app/services/__init__.py
+      - app/api/__init__.py
+      - app/modules/__init__.py
+      - app/modules/rendimiento/__init__.py
+      - tests/__init__.py
+  billing:
+      - app/models/billing.py
+      - app/services/billing.py
+  config:
+      - app/core/config.py
+      - app/models/config.py
+      - app/services/config.py
+  crm:
+      - app/models/crm.py
+      - app/services/crm.py
+  finanzas:
+      - app/models/finanzas.py
+      - app/routers/finanzas.py
+  inventario:
+      - app/models/inventario.py
+      - app/routers/inventario.py
+  inventory:
+      - app/models/inventory.py
+      - app/services/inventory.py
+  produccion:
+      - app/models/produccion.py
+      - app/routers/produccion.py
+  purchasing:
+      - app/models/purchasing.py
+      - app/services/purchasing.py
+  taller:
+      - app/models/taller.py
+      - app/services/taller.py
+  taller_cierre:
+      - app/routers/taller_cierre.py
+      - app/services/taller_cierre.py
+  ventas:
+      - app/models/ventas.py
+      - app/routers/ventas.py
+      - app/services/ventas.py
+
+====================================================================================================
+=============================== 10. DEPENDENCIAS INTERNAS / IMPORTS ================================
+====================================================================================================
+Módulos internos con imports: 75
+Dependencias internas detectadas: 846
+Ciclos de importación potenciales: 83
+
+CICLOS:
+  app.models -> app.models
+  app.models -> app.models.ventas -> app.models
+  app.models -> app.models.produccion -> app.models
+  app.core.deps -> app.core.deps
+  app.services.ventas -> app.services.ventas
+  alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+  alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+  alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+  alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+  alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+  alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+  alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+  alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+  alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+  alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+  alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+  alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+  alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+  alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+  alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline
+  alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+  alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+  alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+  alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+  alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline
+  alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad
+  alembic.env -> alembic.versions.0aa114401beb_produccion_7_fases_qr_limite -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.env
+  alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+  alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+  alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+  alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+  alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline
+  alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad
+  alembic.env -> alembic.versions.0aa114401beb_produccion_7_fases_qr_limite -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.env
+  alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller
+  alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+  alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+  alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+  alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+  alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline
+  alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad
+  alembic.env -> alembic.versions.0aa114401beb_produccion_7_fases_qr_limite -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.env
+  alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller
+  alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.9c2ab41f0e77_fk_artesano_batch
+  alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+  alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+  alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+  alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+  alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline
+  alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad
+
+====================================================================================================
+================================== 11. DEPENDENCIAS DEL PROYECTO ===================================
+====================================================================================================
+Archivos de configuración/dependencias encontrados:
+  - requirements.txt
+
+Dependencias en requirements.txt: 14
+  - fastapi==0.116.1
+  - uvicorn[standard]==0.30.6
+  - sqlalchemy==2.0.32
+  - alembic==1.13.2
+  - pydantic==2.9.2
+  - pydantic-settings==2.5.0
+  - python-jose[cryptography]==3.3.0
+  - bcrypt==4.1.2
+  - python-multipart==0.0.12
+  - jinja2==3.1.4
+  - httpx==0.27.2
+  - reportlab==4.2.2
+  - psycopg[binary]
+  - pytest==8.3.3
+
+====================================================================================================
+================================== 12. CONFIGURACIÓN / DESPLIEGUE ==================================
+====================================================================================================
+CONFIGURACIÓN DETECTADA:
+  OK  .env.example
+  OK  alembic.ini
+  OK  docker-compose.yml
+  OK  Dockerfile
+
+====================================================================================================
+====================================== 13. RESUMEN EJECUTIVO =======================================
+====================================================================================================
+ESTADO GENERAL: CRÍTICO
+Índice heurístico de riesgo: 682
+
+MÉTRICAS PRINCIPALES:
+  Python:       91 archivos
+  Modelos ORM:  80
+  Endpoints:    167
+  Templates:    58
+
+HALLAZGOS:
+  CRITICAL: 1
+  HIGH:     63
+  MEDIUM:   38
+  LOW:      79
+
+Prioridad inmediata: resolver los hallazgos CRITICAL.
+
+====================================================================================================
+================================= 14. TOP HALLAZGOS POR PRIORIDAD ==================================
+====================================================================================================
+  1. [CRITICAL] SEGURIDAD - Posible secreto hardcodeado (PASSWORD).
+     tests/test_rbac.py:53
+  2. [HIGH] ARQUITECTURA - Posible dependencia circular: app.models -> app.models
+  3. [HIGH] ARQUITECTURA - Posible dependencia circular: app.models -> app.models.ventas -> app.models
+  4. [HIGH] ARQUITECTURA - Posible dependencia circular: app.models -> app.models.produccion -> app.models
+  5. [HIGH] ARQUITECTURA - Posible dependencia circular: app.core.deps -> app.core.deps
+  6. [HIGH] ARQUITECTURA - Posible dependencia circular: app.services.ventas -> app.services.ventas
+  7. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+  8. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+  9. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+ 10. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+ 11. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+ 12. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+ 13. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+ 14. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+ 15. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+ 16. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+ 17. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+ 18. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+ 19. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+ 20. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+ 21. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline
+ 22. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+ 23. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+ 24. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+ 25. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+ 26. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline
+ 27. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad
+ 28. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.env -> alembic.versions.0aa114401beb_produccion_7_fases_qr_limite -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.env
+ 29. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+ 30. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+ 31. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+ 32. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+ 33. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline
+ 34. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad
+ 35. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.env -> alembic.versions.0aa114401beb_produccion_7_fases_qr_limite -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.env
+ 36. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller
+ 37. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+ 38. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+ 39. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+ 40. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+ 41. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline
+ 42. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad
+ 43. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.env -> alembic.versions.0aa114401beb_produccion_7_fases_qr_limite -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.env
+ 44. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller
+ 45. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.9c2ab41f0e77_fk_artesano_batch
+ 46. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos
+ 47. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja
+ 48. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad
+ 49. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado
+ 50. [HIGH] ARQUITECTURA - Posible dependencia circular: alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline
+
+====================================================================================================
+======================================== ARCHIVOS GENERADOS ========================================
+====================================================================================================
+Reporte TXT : /home/herbias/Projects/Suit-Elans-ERP/auditoria_proyecto.txt
+Reporte JSON: /home/herbias/Projects/Suit-Elans-ERP/auditoria_proyecto.json
+
+Auditoría finalizada.

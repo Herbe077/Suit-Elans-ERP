@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% from "components/badge.html" import badge, empty_state %}
+{% from "components/page_header.html" import page_header %}
+{% block title %}Punto de venta{% endblock %}
+{% block content %}
+{{ page_header("🛒 Punto de venta", "Venta task-oriented en 3 pasos: cliente → prenda/tela → pago. Turno requerido para cobrar.", [{"label":"Ventas","href":"/ventas/ordenes"},{"label":"POS"}], "/ventas/caja", "Abrir turno") }}
+
+{% if ok %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-4 text-sm flex items-center gap-2">{{ badge("✓ Venta registrada","success") }} <span>Pedido creado; si hubo anticipo ≥ {{ min_anticipo }}% ya está <b>VENTA_CONFIRMADA</b> y en taller.</span></div>{% endif %}
+{% if error == 'turno' %}<div class="bg-amber-50 border border-amber-300 text-amber-900 rounded-xl p-3 mb-4 text-sm flex items-center gap-2">{{ badge("Turno requerido","warning") }} Para cobrar necesitas un <b>turno de caja ABIERTA</b>. <a class="underline ml-1" href="/ventas/caja">Abrir turno →</a></div>{% endif %}
+{% if not turno %}<div class="bg-[#1F1112] text-white rounded-xl p-3 mb-4 text-sm flex justify-between items-center"><span>Sin turno abierto: puedes registrar la venta, pero el cobro exige turno.</span><a href="/ventas/caja" class="bg-[#C5A880] text-[#370003] rounded-full px-3 py-1 text-xs font-bold">Abrir turno →</a></div>{% endif %}
+
+<div class="grid md:grid-cols-5 gap-4" x-data="{ paso: 1, modo: 'servicio' }">
+  <div class="md:col-span-3 bg-white rounded-xl shadow p-4 border" style="border-color:#C5A880/20">
+    <div class="flex gap-1 text-xs mb-3">
+      <span class="px-2 py-1 rounded-full font-bold" :class="paso>=1 ? 'bg-[#370003] text-white' : 'bg-[#FAF8F5] border'" style="border-color:#C5A880">1 Cliente</span>
+      <span class="px-2 py-1 rounded-full font-bold" :class="paso>=2 ? 'bg-[#370003] text-white' : 'bg-[#FAF8F5] border'" style="border-color:#C5A880">2 Prenda/Tela</span>
+      <span class="px-2 py-1 rounded-full font-bold" :class="paso>=3 ? 'bg-[#370003] text-white' : 'bg-[#FAF8F5] border'" style="border-color:#C5A880">3 Pago</span>
+    </div>
+    <form method="post" action="/ventas/pos/vender" class="grid gap-3 text-sm">
+      <div x-show="paso === 1" x-transition>
+        <p class="font-bold text-xs mb-2" style="color:#1F1112">PASO 1 · Cliente</p>
+        <div class="relative">
+          <input id="buscador-cliente-pos" type="text" oninput="filtrarClientesPOS(this.value)" onfocus="filtrarClientesPOS(this.value)" autocomplete="off" placeholder="🔍 Buscar cliente por nombre, DNI, teléfono o empresa... (escribe para filtrar)" class="w-full border rounded-lg px-3 py-2 mb-1 focus:border-[#C5A880] focus:ring-1 focus:ring-[#C5A880]">
+          <div id="pos-clientes-resultados" class="hidden absolute z-10 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto mt-1" style="border-color:#C5A880"></div>
+        </div>
+        <div id="pos-cliente-seleccionado" class="hidden mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs flex justify-between items-center">
+          <span id="pos-cliente-seleccionado-texto" class="font-medium"></span>
+          <button type="button" onclick="limpiarSeleccionPOS()" class="text-red-600 underline">Quitar</button>
+        </div>
+        {% if not clientes and not empresas %}
+          <div class="mb-2">{{ empty_state("🤝", "Sin clientes registrados", "El alta maestro se hace en Comercial y CRM", "/comercial/clientes", "Ir a Comercial y CRM") }}</div>
+        {% endif %}
+        <select name="client_id" id="select-cliente-pos" class="hidden"><option value="">— Persona —</option>{% for c in clientes %}<option value="{{ c.id }}">{{ c.nombre }} {{ c.apellidos }} · {{ c.doc_label }} · {{ c.telefono or '' }}</option>{% endfor %}</select>
+        <select name="company_id" id="select-empresa-pos" class="hidden"><option value="">— Empresa —</option>{% for e in empresas %}<option value="{{ e.id }}">{{ e.nombre_comercial }} · {{ e.ruc or '' }}</option>{% endfor %}</select>
+        <div id="pos-cliente-vacio" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">Sin resultados para la búsqueda. <a href="/comercial/clientes" class="underline font-bold">Crear en Comercial y CRM →</a></div>
+        <div class="mt-1 text-xs text-slate-500">¿Cliente no existe? <a href="/comercial/clientes" class="underline text-[#370003] font-bold">Alta en Comercial y CRM</a> (único punto maestro).</div>
+        <button type="button" @click="paso = 2" class="mt-3 w-full bg-[#370003] text-white rounded-full py-2.5 font-bold hover:bg-[#1F1112]">Siguiente →</button>
+      </div>
+      <div x-show="paso === 2" x-transition>
+        <p class="font-bold text-xs mb-2" style="color:#1F1112">PASO 2 · Prenda / tela</p>
+        <div class="flex gap-2 mb-3 text-xs">
+          <button type="button" @click="modo = 'servicio'; document.getElementById('pv-var').value = ''" :class="modo==='servicio' ? 'bg-[#370003] text-white' : 'bg-[#FAF8F5] border'" class="rounded-full px-3 py-1 font-bold" style="border-color:#C5A880">Servicio / medida</button>
+          <button type="button" @click="modo = 'variante'; document.getElementById('pv-concepto').value = ''; document.getElementById('pv-precio').value = ''; document.getElementById('pv-tela').value = ''" :class="modo==='variante' ? 'bg-[#370003] text-white' : 'bg-[#FAF8F5] border'" class="rounded-full px-3 py-1 font-bold" style="border-color:#C5A880">Línea comercial</button>
+        </div>
+        <div x-show="modo === 'servicio'" class="grid gap-2">
+          <input id="pv-concepto" name="concepto" placeholder="Concepto (ej. Terno 2 piezas)" class="border rounded-lg px-3 py-2 focus:border-[#C5A880]">
+          <div class="grid grid-cols-2 gap-2">
+            <select name="garment_tipo" class="border rounded-lg px-3 py-2"><option value="">— Tipo —</option>{% for t in tipos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select>
+            <input id="pv-precio" name="precio" type="number" step="0.01" placeholder="Precio S/" class="border rounded-lg px-3 py-2">
+          </div>
+          <select id="pv-tela" name="tela_id" class="border rounded-lg px-3 py-2"><option value="">— Tela (reserva inmediata) —</option>{% for t in telas %}<option value="{{ t.id }}">{{ t.codigo }} · {{ t.nombre }} ({{ t.stock_metros }} m) {% if t.stock_metros <= t.stock_minimo %}⚠️{% endif %}</option>{% endfor %}</select>
+        </div>
+        <div x-show="modo === 'variante'" class="grid grid-cols-2 gap-2">
+          <select id="pv-var" name="variant_id" class="border rounded-lg px-3 py-2"><option value="">— Variante —</option>{% for v in variantes %}<option value="{{ v.id }}">{{ v.sku }} · {{ v.stock }} · S/ {{ "%.2f"|format(v.precio) }} {% if v.stock <= v.stock_minimo %}{{ badge("stock bajo","danger") }}{% endif %}</option>{% endfor %}</select>
+          <input name="cantidad" type="number" step="1" value="1" class="border rounded-lg px-3 py-2">
+        </div>
+        <div class="flex gap-2 mt-3">
+          <button type="button" @click="paso = 1" class="flex-1 bg-[#FAF8F5] border rounded-full py-2 font-bold" style="border-color:#C5A880">← Atrás</button>
+          <button type="button" @click="paso = 3" class="flex-1 bg-[#370003] text-white rounded-full py-2 font-bold">Siguiente →</button>
+        </div>
+      </div>
+      <div x-show="paso === 3" x-transition>
+        <p class="font-bold text-xs mb-2" style="color:#1F1112">PASO 3 · Pago (anticipo mín. {{ min_anticipo }}% confirma y manda a taller)</p>
+        <div class="grid grid-cols-2 gap-2">
+          <input name="monto_cobro" type="number" step="0.01" placeholder="Monto S/ (0 = sin cobro)" class="border rounded-lg px-3 py-2">
+          <select name="metodo" class="border rounded-lg px-3 py-2"><option>efectivo</option><option>transferencia</option><option>tarjeta</option><option>yape</option><option>plin</option></select>
+        </div>
+        <div class="flex gap-2 mt-3">
+          <button type="button" @click="paso = 2" class="flex-1 bg-[#FAF8F5] border rounded-full py-2 font-bold" style="border-color:#C5A880">← Atrás</button>
+          <button class="flex-1 bg-[#C5A880] text-[#1F1112] font-bold rounded-full py-2.5">Registrar venta</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="md:col-span-2">
+    <div class="bg-white rounded-xl shadow p-4 border" style="border-color:#C5A880/20">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="font-bold text-sm" style="color:#370003">Últimas ventas</h2>
+        <a href="/ventas/ordenes" class="text-xs bg-[#FAF8F5] border rounded-full px-2 py-0.5" style="border-color:#C5A880">Ver órdenes →</a>
+      </div>
+      {% for o in recientes %}
+        <div class="text-xs border-b py-2 flex justify-between items-center">
+          <span class="font-mono">{{ o.folio }}</span>
+          {{ badge(o.estado, "info") if o.estado=="cotizado" else badge("VENTA_CONFIRMADA","warning") if o.estado=="confirmado" else badge(o.estado,"default") }}
+          <b style="color:#370003">S/ {{ "%.2f"|format(o.total) }}</b>
+        </div>
+      {% else %}
+        {{ empty_state("🛒", "Sin ventas", "Registra tu primera venta en 3 pasos", "/ventas/pos", "Registrar Venta") }}
+      {% endfor %}
+      <div class="mt-3 flex gap-2 text-xs">
+        <a href="/ventas/ordenes" class="flex-1 text-center bg-[#FAF8F5] border rounded-full py-1" style="border-color:#C5A880">Órdenes →</a>
+        <a href="/ventas/caja" class="flex-1 text-center bg-[#FAF8F5] border rounded-full py-1" style="border-color:#C5A880">Caja →</a>
+        <a href="/ventas/comprobantes" class="flex-1 text-center bg-[#FAF8F5] border rounded-full py-1" style="border-color:#C5A880">Facturar →</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const POS_CLIENTES = [
+  {% for c in clientes %} {id: "{{ c.id }}", texto: "{{ c.nombre }} {{ c.apellidos }} {{ c.doc_label }} {{ c.telefono or '' }}".toLowerCase(), display: "{{ c.nombre }} {{ c.apellidos }} · {{ c.doc_label }}", tipo: "persona"}, {% endfor %}
+];
+const POS_EMPRESAS = [
+  {% for e in empresas %} {id: "{{ e.id }}", texto: "{{ e.nombre_comercial }} {{ e.ruc or '' }}".toLowerCase(), display: "{{ e.nombre_comercial }} · {{ e.ruc or '' }}", tipo: "empresa"}, {% endfor %}
+];
+function filtrarClientesPOS(qRaw) {
+  const q = (qRaw || '').toLowerCase().trim();
+  const cont = document.getElementById('pos-clientes-resultados');
+  const selC = document.getElementById('select-cliente-pos');
+  const selE = document.getElementById('select-empresa-pos');
+  const vacio = document.getElementById('pos-cliente-vacio');
+  if (!q) {
+    cont.classList.add('hidden');
+    cont.innerHTML = '';
+    if (vacio) vacio.classList.add('hidden');
+    // mostrar todas las opciones
+    if (selC) for (let o of selC.options) o.hidden = false;
+    if (selE) for (let o of selE.options) o.hidden = false;
+    return;
+  }
+  const matches = [];
+  POS_CLIENTES.forEach(c => { if (c.texto.includes(q)) matches.push({kind:'persona', ...c}); });
+  POS_EMPRESAS.forEach(c => { if (c.texto.includes(q)) matches.push({kind:'empresa', ...c}); });
+  // Filtrar selects (compatibilidad)
+  if (selC) for (let o of selC.options) {
+    if (!o.value) { o.hidden = false; continue; }
+    const txt = o.text.toLowerCase();
+    o.hidden = !txt.includes(q);
+  }
+  if (selE) for (let o of selE.options) {
+    if (!o.value) { o.hidden = false; continue; }
+    const txt = o.text.toLowerCase();
+    o.hidden = !txt.includes(q);
+  }
+  // Mostrar lista práctica clickeable
+  cont.innerHTML = '';
+  if (matches.length === 0) {
+    cont.classList.add('hidden');
+    if (vacio) vacio.classList.remove('hidden');
+    return;
+  }
+  if (vacio) vacio.classList.add('hidden');
+  matches.slice(0, 20).forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'px-3 py-2 hover:bg-[#FAF8F5] cursor-pointer flex justify-between items-center text-xs border-b';
+    div.style.borderColor = '#C5A88030';
+    div.innerHTML = '<span>' + m.display + ' <span class=\"text-slate-400\">(' + m.tipo + ')</span></span><span class=\"bg-[#370003] text-white rounded-full px-2 py-0.5\">Seleccionar</span>';
+    div.onclick = () => seleccionarClientePOS(m);
+    cont.appendChild(div);
+  });
+  cont.classList.remove('hidden');
+  // Auto-seleccionar si solo hay 1 coincidencia
+  if (matches.length === 1) {
+    // opcional: resaltar pero no auto-seleccionar hasta click para evitar error
+  }
+}
+function seleccionarClientePOS(m) {
+  const selC = document.getElementById('select-cliente-pos');
+  const selE = document.getElementById('select-empresa-pos');
+  const input = document.getElementById('buscador-cliente-pos');
+  const badge = document.getElementById('pos-cliente-seleccionado');
+  const badgeText = document.getElementById('pos-cliente-seleccionado-texto');
+  const cont = document.getElementById('pos-clientes-resultados');
+  if (m.kind === 'persona') {
+    selC.value = m.id;
+    selE.value = '';
+  } else {
+    selE.value = m.id;
+    selC.value = '';
+  }
+  if (input) input.value = m.display;
+  if (badge && badgeText) {
+    badgeText.textContent = '✓ ' + m.display + ' (' + m.tipo + ')';
+    badge.classList.remove('hidden');
+  }
+  if (cont) { cont.classList.add('hidden'); cont.innerHTML = ''; }
+  // ocultar mensaje vacío
+  const vacio = document.getElementById('pos-cliente-vacio');
+  if (vacio) vacio.classList.add('hidden');
+}
+function limpiarSeleccionPOS() {
+  const selC = document.getElementById('select-cliente-pos');
+  const selE = document.getElementById('select-empresa-pos');
+  const input = document.getElementById('buscador-cliente-pos');
+  const badge = document.getElementById('pos-cliente-seleccionado');
+  if (selC) selC.value = '';
+  if (selE) selE.value = '';
+  if (input) input.value = '';
+  if (badge) badge.classList.add('hidden');
+  filtrarClientesPOS('');
+}
+// Cerrar resultados al hacer click fuera
+document.addEventListener('click', (e) => {
+  const cont = document.getElementById('pos-clientes-resultados');
+  const input = document.getElementById('buscador-cliente-pos');
+  if (cont && input && !cont.contains(e.target) && e.target !== input) {
+    cont.classList.add('hidden');
+  }
+});
+</script>
+{% endblock %}

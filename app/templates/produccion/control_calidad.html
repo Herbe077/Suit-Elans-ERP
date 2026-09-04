@@ -1,0 +1,34 @@
+{% extends "produccion/base_produccion.html" %}
+{% from "components/badge.html" import badge %}
+{% block title %}Control de calidad pre-entrega{% endblock %}
+{% block produccion %}
+<h1 class="text-2xl font-bold mb-1 font-serif">✔ Control de calidad</h1>
+<p class="text-sm text-slate-500 mb-4">Los 6 puntos son obligatorios para marcar <b>Listo para Entrega</b>.</p>
+{% if error %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ Marca los 6 puntos para aprobar.</div>{% endif %}
+<div class="grid md:grid-cols-2 gap-3">
+{% for it in items %}
+<div class="bg-white rounded-xl shadow p-4">
+  <p class="font-bold text-sm">{{ it.g.tipo|capitalize }} #{{ it.g.id }} <span class="font-mono font-normal text-slate-500">{{ it.folio }}</span></p>
+  <p class="text-xs text-slate-500 mb-1">👤 {{ it.dueno or '—' }} · {{ badge(it.g.estado_taller, "warning") }}</p>
+  <form method="post" action="/produccion/orden/{{ it.g.id }}/control-calidad" class="mt-2 grid gap-1 text-xs qc-form">
+    <label class="flex gap-2 items-center py-1 font-bold cursor-pointer" style="color:#370003"><input type="checkbox" class="qc-todos mt-0.5 accent-[#370003]">Marcar los 6 puntos</label>
+    {% for q in qc %}
+    <label class="flex gap-2 items-start border-b py-1 cursor-pointer"><input type="checkbox" name="check_{{ loop.index0 }}" class="mt-0.5 accent-[#370003]"><span>{{ loop.index }}. {{ q }}</span></label>
+    {% endfor %}
+    <textarea name="observaciones" placeholder="Observaciones (opc.)" class="border rounded px-2 py-1"></textarea>
+    <button class="bg-emerald-700 text-white font-bold rounded-lg py-1.5">Aprobar y marcar lista</button>
+  </form>
+</div>
+{% else %}<p class="text-slate-500 text-sm">Sin prendas en acabados.</p>{% endfor %}
+</div>
+<script>
+document.querySelectorAll('.qc-form').forEach(function(f){
+  var todos = f.querySelector('.qc-todos');
+  var items = f.querySelectorAll('input[type=checkbox][name^=check_]');
+  todos.addEventListener('change', function(){ items.forEach(function(c){ c.checked = todos.checked; }); });
+  items.forEach(function(c){ c.addEventListener('change', function(){
+    todos.checked = Array.from(items).every(function(x){ return x.checked; });
+  }); });
+});
+</script>
+{% endblock %}

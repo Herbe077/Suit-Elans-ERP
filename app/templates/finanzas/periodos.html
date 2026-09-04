@@ -1,0 +1,28 @@
+{% extends "finanzas/base_finanzas.html" %}
+{% block title %}Periodos Contables{% endblock %}
+{% block finanzas %}
+<h1 class="text-2xl font-bold mb-1 font-serif">🗓️ Periodos Contables</h1>
+<p class="text-sm text-slate-500 mb-3">ABIERTO / CERRADO / BLOQUEADO — no se contabiliza en cerrados</p>
+<div class="bg-white rounded-xl shadow p-4 mb-4">
+  <form method="post" action="/finanzas/periodos" class="flex gap-2 text-xs">
+    <input name="anio" type="number" value="{{ 2026 }}" class="border rounded px-2 py-1 w-24" placeholder="Año">
+    <input name="mes" type="number" min="1" max="12" value="{{ 9 }}" class="border rounded px-2 py-1 w-20" placeholder="Mes">
+    <button class="bg-[#370003] text-white rounded px-3">Abrir/Crear ABIERTO</button>
+  </form>
+</div>
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+  <table class="w-full text-xs">
+    <thead class="bg-slate-50"><tr><th class="p-2">Periodo</th><th>Estado</th><th>Apertura</th><th>Cierre</th><th>Acción</th></tr></thead>
+    <tbody>
+      {% for p in periodos %}
+      <tr class="border-b">
+        <td class="p-2 font-mono">{{ p.anio }}-{{ "%02d"|format(p.mes) }}</td><td><span class="px-1.5 py-0.5 rounded text-xs {{ 'bg-emerald-100' if p.estado=='ABIERTO' else 'bg-red-100' if p.estado=='CERRADO' else 'bg-slate-200' }}">{{ p.estado }}</span></td><td>{{ p.fecha_apertura or '—' }}</td><td>{{ p.fecha_cierre or '—' }}</td>
+        <td class="flex gap-1">
+          {% if p.estado=="ABIERTO" %}<form method="post" action="/finanzas/periodos/{{ p.id }}/cerrar"><button class="bg-amber-600 text-white rounded px-2 py-0.5">Cerrar</button></form>{% elif p.estado=="CERRADO" %}<form method="post" action="/finanzas/periodos/{{ p.id }}/reabrir"><button class="bg-emerald-700 text-white rounded px-2 py-0.5">Reabrir</button></form>{% endif %}
+        </td>
+      </tr>
+      {% else %}<tr><td colspan="5" class="text-center p-3 text-slate-400">Sin periodos</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% from "components/money.html" import soles %}
+{% extends "finanzas/base_finanzas.html" %}
+{% block title %}Mayor Contable{% endblock %}
+{% block finanzas %}
+<h1 class="text-2xl font-bold mb-1 font-serif" style="color:#370003">📘 Mayor Contable</h1>
+<p class="text-sm text-slate-500 mb-3">Movimientos por cuenta PCGE y período.</p>
+<form method="get" class="flex gap-2 text-xs mb-3 items-end">
+  <label class="block">Cuenta PCGE
+    <select name="cuenta" class="border rounded px-2 py-1.5 block mt-0.5 bg-white"><option value="">Todas</option>{% for c in cuentas %}<option value="{{ c.codigo }}" {% if cuenta==c.codigo %}selected{% endif %}>{{ c.codigo }} — {{ c.nombre }}</option>{% endfor %}</select>
+  </label>
+  <label class="block">Período
+    <input name="periodo" value="{{ periodo or '' }}" placeholder="YYYY-MM" pattern="\d{4}-\d{2}" class="border rounded px-2 py-1.5 w-28 block mt-0.5">
+  </label>
+  <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold self-end">Filtrar</button>
+</form>
+{% set nombres_cuenta = {} %}
+{% for c in cuentas %}{% set _ = nombres_cuenta.update({c.id: c.codigo ~ ' — ' ~ c.nombre}) %}{% endfor %}
+<div class="bg-white rounded-xl shadow overflow-x-auto border-t-2 border-[#C5A880]">
+  <table class="w-full text-xs">
+    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="p-2 text-left">Fecha</th><th class="p-2 text-left">Asiento</th><th class="p-2 text-left">Cuenta</th><th class="p-2 text-right">Debe</th><th class="p-2 text-right">Haber</th><th class="p-2 text-left">Centro</th><th class="p-2 text-left">Descripción</th></tr></thead>
+    <tbody>
+      {% for l in lineas %}
+      <tr class="border-b hover:bg-marfil">
+        <td class="p-2">{{ l.asiento_id }}</td><td class="font-mono">#{{ l.asiento_id }}</td><td>{{ nombres_cuenta.get(l.cuenta_id, 'Cuenta #' ~ l.cuenta_id) }}</td><td class="text-right">{{ soles(l.debe) }}</td><td class="text-right">{{ soles(l.haber) }}</td><td>{{ l.centro_costo_id or '—' }}</td><td>{{ l.descripcion or '' }}</td>
+      </tr>
+      {% else %}<tr><td colspan="7" class="text-center p-3 text-slate-400">Sin movimientos para este filtro.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "comercial/base_comercial.html" %}
+{% block title %}Ficha 360° — Comercial{% endblock %}
+{% block comercial %}
+<a href="/comercial/clientes" class="text-sm text-slate-500">← Clientes</a>
+{% if tipo == 'empresa' and compania %}
+<h1 class="text-2xl font-bold mt-1">🏢 {{ compania.nombre_comercial }}</h1>
+<p class="text-sm text-slate-500 mb-4">{{ compania.doc_label }} · {{ compania.telefono or '' }} · {{ compania.email or '' }} · {{ compania.distrito or '' }} · <b>{{ compania.clasificacion }}</b></p>
+<div class="grid md:grid-cols-2 gap-4">
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">👥 Contactos</h2>
+    {% for t in contactos %}<div class="text-xs border-b py-1"><b>{{ t.nombre }}</b> {{ t.cargo or '' }} {% if t.es_principal %}<span class="text-laton-dark">★</span>{% endif %}<br><span class="text-slate-500">{{ t.telefono or '' }} {{ t.email or '' }}</span></div>{% else %}<p class="text-xs text-slate-500">Sin contactos. <a class="underline" href="/comercial/clientes/empresa/{{ compania.id }}">Agregar →</a></p>{% endfor %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">🧾 Historial de pedidos</h2>
+    {% for o in pedidos %}<div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ o.folio }} · {{ o.estado }}</span><b>S/ {{ "%.2f"|format(o.total) }}</b></div>{% else %}<p class="text-xs text-slate-500">Sin pedidos.</p>{% endfor %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4 md:col-span-2">
+    <h2 class="font-bold mb-2 text-sm">💬 Interacciones</h2>
+    <form method="post" action="/comercial/interacciones" class="flex gap-1 text-xs mb-2">
+      <input type="hidden" name="tipo_ent" value="empresa"><input type="hidden" name="ent_id" value="{{ compania.id }}">
+      <input type="hidden" name="back" value="/comercial/clientes/detalle?tipo=empresa&id={{ compania.id }}">
+      <select name="tipo" class="border rounded px-2 py-1"><option value="llamada">Llamada</option><option value="whatsapp">WhatsApp</option><option value="nota">Nota</option><option value="visita">Visita</option></select>
+      <input name="texto" required placeholder="Registrar interacción…" class="border rounded px-2 py-1 flex-1">
+      <button class="bg-borgo text-white rounded px-3">OK</button>
+    </form>
+    {% for i in inter %}<div class="text-xs border-b py-1"><b>{{ i.tipo }}</b> · {{ i.created_at }}<br>{{ i.texto }}</div>{% else %}<p class="text-xs text-slate-500">Sin interacciones.</p>{% endfor %}
+  </div>
+</div>
+{% elif tipo == 'persona' and cliente %}
+<h1 class="text-2xl font-bold mt-1">{{ cliente.nombre }} {{ cliente.apellidos }}</h1>
+<p class="text-sm text-slate-500 mb-4">{{ cliente.doc_label }} · {{ cliente.telefono or '' }} · {{ cliente.email or '' }} · {{ cliente.distrito or '' }} · <b>{{ cliente.clasificacion }}</b></p>
+<div class="grid md:grid-cols-2 gap-4">
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">📏 Medidas actuales {% if ultima %}(v{{ ultima.version }} · {{ ultima.created_at }}){% endif %}</h2>
+    {% if ultima %}
+    <div class="grid grid-cols-3 gap-1 text-xs">
+      {% for k in ['pecho','cintura_saco','cadera','largo_manga','largo_saco','largo_pantalon','cuello','hombro'] %}
+      {% set v = ultima[k] %}<div class="border-b py-0.5 flex justify-between"><span class="text-slate-500">{{ k }}</span><b>{{ v if v is not none else '—' }}</b></div>
+      {% endfor %}
+    </div>
+    {% else %}<p class="text-xs text-slate-500">Sin medidas.</p>{% endif %}
+    <a href="/produccion/fichas/{{ cliente.id }}" class="text-xs underline text-laton-dark">Abrir ficha completa en Taller →</a>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">🧾 Historial de compras</h2>
+    {% for o in pedidos %}<div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ o.folio }} · {{ o.estado }} · {{ o.canal }}</span><b>S/ {{ "%.2f"|format(o.total) }}</b></div>{% else %}<p class="text-xs text-slate-500">Sin pedidos.</p>{% endfor %}
+    <h2 class="font-bold mb-1 mt-3 text-sm">🧾 Cotizaciones</h2>
+    {% for q in cots %}<div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ q.folio }} · {{ q.estado }}</span><b>S/ {{ "%.2f"|format(q.total) }}</b></div>{% else %}<p class="text-xs text-slate-500">Sin cotizaciones.</p>{% endfor %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">📅 Citas</h2>
+    {% for a in citas %}<div class="text-xs border-b py-1">{{ a.inicio }} → {{ a.fin }} · {{ a.tipo }} · {{ a.estado }}</div>{% else %}<p class="text-xs text-slate-500">Sin citas.</p>{% endfor %}
+    <a href="/comercial/citas" class="text-xs underline text-laton-dark">Agendar →</a>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">💬 Interacciones</h2>
+    <form method="post" action="/comercial/interacciones" class="flex gap-1 text-xs mb-2">
+      <input type="hidden" name="tipo_ent" value="persona"><input type="hidden" name="ent_id" value="{{ cliente.id }}">
+      <input type="hidden" name="back" value="/comercial/clientes/detalle?tipo=persona&id={{ cliente.id }}">
+      <select name="tipo" class="border rounded px-2 py-1"><option value="llamada">Llamada</option><option value="whatsapp">WhatsApp</option><option value="nota">Nota</option><option value="visita">Visita</option></select>
+      <input name="texto" required placeholder="Registrar interacción…" class="border rounded px-2 py-1 flex-1">
+      <button class="bg-borgo text-white rounded px-3">OK</button>
+    </form>
+    {% for i in inter %}<div class="text-xs border-b py-1"><b>{{ i.tipo }}</b> · {{ i.created_at }}<br>{{ i.texto }}</div>{% else %}<p class="text-xs text-slate-500">Sin interacciones.</p>{% endfor %}
+  </div>
+</div>
+{% else %}
+<p class="text-slate-500">No encontrado. <a class="underline" href="/comercial/clientes">Volver</a></p>
+{% endif %}
+{% endblock %}

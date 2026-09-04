@@ -1,0 +1,10 @@
+{% extends "produccion/base_produccion.html" %}
+{% block title %}Taller — Tablero de producción{% endblock %}
+{% block produccion %}
+<h1 class="text-2xl font-bold font-serif mb-1">🧵 Producción</h1>
+<p class="text-xs text-slate-500 mb-3">Mueve tarjetas con ← → (se reubican solas) o abre la ficha técnica.</p>
+<style>#board.htmx-request .kanban-btn { pointer-events: none; opacity: .5; }</style>
+<div class="flex gap-3 overflow-x-auto pb-4 items-start" id="board">
+  {% include "produccion/_board.html" %}
+</div>
+{% endblock %}

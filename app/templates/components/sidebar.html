@@ -1,0 +1,76 @@
+{# Sidebar centralizada — única fuente de navegación. RBAC = app/core/rbac.py MODULES. Soporta aliases COMERCIAL/MAESTRO_SASTRE/OPERARIO_TALLER/CAJERO y nuevos roles ADMIN/VENTA/SASTRE-MAESTRO/SASTRE-ASISTENTE/ALMACEN/FINANZAS #}
+{% set _aliases = {"comercial":"ventas","maestro_sastre":"sastre","sastre-maestro":"sastre","maestro-sastre":"sastre","sastre_asistente":"sastre","sastre-asistente":"sastre","operario_taller":"taller","operario-taller":"taller","cajero":"ventas","vendedor":"ventas","recepcion":"ventas","almacenero":"almacen","venta":"ventas","ventas":"venta","finanzas":"finanzas","gerente":"finanzas","contador":"finanzas","administrador":"admin"} %}
+{% macro _has(roles) -%}{% set r = (user.role|lower if user and user.role else "") %}{% set rn = _aliases.get(r, r) %}{% if r=="admin" or r in roles|map('lower')|list or rn in roles|map('lower')|list or user.role in roles or user.role|lower in roles|map('lower')|list %}1{% endif %}{%- endmacro %}
+{% macro sec(icon, label, roles, open) -%}
+{% if user and (_has(roles) or user.role|lower == 'admin' or user.role|lower in roles|map('lower')|list) %}
+<div class="mb-1" x-data="{ open: {{ 'true' if open else 'false' }} }">
+  <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-bold hover:bg-white/10">
+    <span>{{ icon }} {{ label }}</span><span x-text="open ? '▾' : '▸'" class="text-laton"></span>
+  </button>
+  <div x-show="open" class="ml-2 pl-2 border-l border-white/10 space-y-0.5 mt-0.5">
+    {{ caller() }}
+  </div>
+</div>
+{% endif %}
+{%- endmacro %}
+{% macro sub(href, label, roles) -%}
+{% set r = (user.role|lower if user and user.role else "") %}{% set rn = _aliases.get(r, r) %}{% if user and (r=="admin" or r in roles|map('lower')|list or rn in roles|map('lower')|list or user.role in roles or user.role|lower in roles|map('lower')|list) %}<a href="{{ href }}" class="block px-3 py-1.5 rounded-lg text-sm text-slate-300 hover:text-laton hover:bg-white/5">{{ label }}</a>{% endif %}
+{%- endmacro %}
+
+<nav class="p-3">
+  {% if user and (user.role|lower in ['admin','ventas','venta','comercial','sastre','sastre-maestro','sastre-asistente','taller','operario_taller','operario-taller','almacen','almacenero','finanzas','gerente','contador'] or user.role|lower == 'admin') %}
+  <a href="/dashboard" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold hover:bg-white/10 mb-1">📊 Panel general</a>
+  {% endif %}
+
+  {% call sec('🤝', 'Comercial y CRM', ['VENTA','ventas','comercial','COMERCIAL','cajero','CAJERO','vendedor','sastre','SASTRE-MAESTRO','sastre-maestro','SASTRE-ASISTENTE','maestro_sastre','sastre_asistente'], true) %}
+    {{ sub('/comercial/clientes', 'Clientes', ['VENTA','ventas','comercial','COMERCIAL','SASTRE-MAESTRO','sastre-maestro']) }}
+    {{ sub('/comercial/citas', 'Agenda de citas', ['VENTA','ventas','comercial','sastre','SASTRE-MAESTRO','sastre-maestro','SASTRE-ASISTENTE','maestro_sastre','sastre_asistente']) }}
+    {{ sub('/comercial/crm', 'Oportunidades / CRM', ['VENTA','ventas','comercial','COMERCIAL','SASTRE-MAESTRO','sastre-maestro']) }}
+  {% endcall %}
+
+  {% call sec('🏭', 'Producción y Confección', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre','ventas','VENTA','operario_taller','operario-taller','maestro_sastre','sastre-maestro'], true) %}
+    {{ sub('/produccion/kanban', 'Tablero kanban', ['taller','operario_taller','operario-taller','sastre','SASTRE-MAESTRO','SASTRE-ASISTENTE','sastre-maestro','sastre-asistente']) }}
+    {{ sub('/produccion/fichas', 'Fichas técnicas y medidas', ['sastre','SASTRE-MAESTRO','SASTRE-ASISTENTE','maestro_sastre','sastre_asistente','ventas','VENTA','comercial']) }}
+    {{ sub('/produccion/pruebas', 'Pruebas de entalle', ['taller','operario_taller','operario-taller','sastre','SASTRE-MAESTRO','SASTRE-ASISTENTE']) }}
+    {{ sub('/produccion/calidad', 'Control de calidad', ['taller','operario_taller','sastre','SASTRE-MAESTRO','sastre-maestro']) }}
+  {% endcall %}
+
+  {% call sec('🛒', 'Venta y Atención', ['VENTA','ventas','cajero','CAJERO','comercial','COMERCIAL','SASTRE-MAESTRO','sastre-maestro'], false) %}
+    {{ sub('/ventas/pos', 'Punto de venta', ['VENTA','ventas','cajero','CAJERO','SASTRE-MAESTRO','sastre-maestro']) }}
+    {{ sub('/ventas/ordenes', 'Órdenes de venta', ['VENTA','ventas','cajero','CAJERO','SASTRE-MAESTRO','sastre-maestro']) }}
+    {{ sub('/ventas/caja', 'Control de caja', ['VENTA','ventas','cajero','CAJERO','SASTRE-MAESTRO','sastre-maestro']) }}
+    {{ sub('/ventas/facturacion', 'Facturación', ['VENTA','ventas','cajero','CAJERO','SASTRE-MAESTRO','sastre-maestro']) }}
+  {% endcall %}
+
+  {% call sec('📦', 'Inventario y Cadena', ['VENTA','ventas','ALMACEN','almacen','comercial','COMERCIAL','almacenero'], false) %}
+    {{ sub('/inventario/catalogo', 'Telas y muestrarios', ['VENTA','ventas','comercial','COMERCIAL','ALMACEN','almacen','almacenero']) }}
+    {{ sub('/inventario/almacen', 'Stock de almacén', ['ALMACEN','almacen','almacenero']) }}
+    {{ sub('/inventario/compras', 'Compras a proveedores', ['ALMACEN','almacen','almacenero']) }}
+  {% endcall %}
+
+  {% call sec('💰', 'Finanzas y Contabilidad', ['FINANZAS','gerente','contador','ADMIN'], false) %}
+    {{ sub('/finanzas/cuentas-por-cobrar', 'Cuentas por cobrar', ['FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/finanzas/cuentas-por-pagar', 'Cuentas por pagar', ['FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/finanzas/gastos', 'Gastos y compras', ['FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/finanzas/flujo-caja', 'Flujo de caja', ['FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/finanzas/plan-contable', 'Plan contable PCGE', ['FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/finanzas/diario', 'Libro diario', ['FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/finanzas/mayor', 'Libro mayor', ['FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/finanzas/estados-financieros', 'Estados financieros', ['FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/finanzas/apertura', 'Asiento de apertura', ['FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/finanzas/periodos', 'Periodos contables', ['FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/finanzas/rentabilidad', 'Rentabilidad', ['FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/finanzas/reportes-contables', 'Reportes contables', ['FINANZAS','gerente','contador','ADMIN']) }}
+  {% endcall %}
+
+  {% call sec('⚡', 'Rendimiento y Destajo', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre','sastre-maestro','sastre-asistente','operario_taller','operario-taller'], false) %}
+    {{ sub('/rendimiento/registro', 'Registro diario', ['taller','sastre','SASTRE-MAESTRO','SASTRE-ASISTENTE','sastre-maestro','sastre-asistente','operario_taller','operario-taller']) }}
+    {{ sub('/rendimiento/calculadora', 'Calculadora destajo', ['taller','sastre','SASTRE-MAESTRO','SASTRE-ASISTENTE','FINANZAS','gerente','contador','ADMIN']) }}
+    {{ sub('/rendimiento/tarifario', 'Tarifario 44 ops', ['FINANZAS','gerente','contador','ADMIN','SASTRE-MAESTRO','sastre-maestro']) }}
+  {% endcall %}
+
+  {% call sec('⚙️', 'Administración', ['ADMIN','admin'], false) %}
+    {{ sub('/admin/usuarios', 'Usuarios y roles', ['ADMIN','admin']) }}
+    {{ sub('/admin/configuracion', 'Configuración de sede', ['ADMIN','admin']) }}
+  {% endcall %}
+</nav>

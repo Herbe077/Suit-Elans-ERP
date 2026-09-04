@@ -1,0 +1,47 @@
+{% extends "inventario/base_inventario.html" %}
+{% block title %}Editar producto {{ prod.codigo }}{% endblock %}
+{% block inventario %}
+<a href="/inventario/catalogo" class="text-sm text-slate-500">← Catálogo</a>
+{% if error %}<div class="bg-red-50 border border-red-300 text-red-700 text-xs rounded px-3 py-2 mt-2">{{ error }}</div>{% endif %}
+<h1 class="text-2xl font-bold mt-1 font-serif" style="color:#370003">Editar prenda terminada</h1>
+<p class="text-xs text-slate-500">Código <span class="font-mono font-bold">{{ prod.codigo }}</span> (no editable) · El stock de cada variante se ajusta en Catálogo → Ajuste de stock.</p>
+
+<div class="grid md:grid-cols-2 gap-3 mt-3">
+  <form method="post" action="/inventario/catalogo/producto/{{ prod.id }}/guardar" class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880] grid grid-cols-2 gap-2 text-xs items-end">
+    <label class="block col-span-2">Nombre *
+      <input name="nombre" required value="{{ prod.nombre }}" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Línea
+      <select name="linea" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="comercial" {% if prod.linea=='comercial' %}selected{% endif %}>Comercial</option><option value="medida" {% if prod.linea=='medida' %}selected{% endif %}>Medida</option></select>
+    </label>
+    <label class="block">Precio base S/
+      <input name="precio_base" type="number" step="0.01" min="0" value="{{ prod.precio_base or 0 }}" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block col-span-2">Colección
+      <select name="collection_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="">— Sin colección —</option>{% for c in colecciones %}<option value="{{ c.id }}" {% if prod.collection_id==c.id %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}</select>
+    </label>
+    <div class="col-span-2 flex gap-2">
+      <button class="bg-borgo text-white rounded px-4 py-1.5 font-semibold">Guardar cambios</button>
+      <a href="/inventario/catalogo" class="border rounded px-4 py-1.5">Cancelar</a>
+    </div>
+  </form>
+  <div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
+    <h2 class="font-bold text-sm mb-2">Variantes (talla / precio)</h2>
+    {% for v in variantes %}
+    <form method="post" action="/inventario/catalogo/variante/{{ v.id }}/guardar" class="flex gap-1 text-xs items-end border-b py-1.5">
+      <span class="font-mono font-bold self-center">{{ v.sku }} <span class="font-sans font-normal text-slate-400">({{ v.stock }} u.)</span></span>
+      <label class="block">Talla
+        <input name="talla" value="{{ v.talla }}" class="border rounded px-2 py-1 w-16 block mt-0.5">
+      </label>
+      <label class="block flex-1">Precio S/
+        <input name="precio" type="number" step="0.01" min="0" value="{{ v.precio or 0 }}" class="border rounded px-2 py-1 w-full block mt-0.5">
+      </label>
+      <label class="block flex-1">Costo S/
+        <input name="costo_unitario" type="number" step="0.01" min="0" value="{{ v.costo_unitario or 0 }}" title="Costo unitario del activo (PCGE Cta 23)" class="border rounded px-2 py-1 w-full block mt-0.5">
+      </label>
+      <button class="bg-slate-800 text-white rounded px-3 py-1 font-semibold self-end">OK</button>
+    </form>
+    {% else %}<p class="text-xs text-slate-400">Sin variantes.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

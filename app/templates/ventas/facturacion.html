@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "components/badge.html" import badge %}
+{% block title %}Facturación{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-1 font-serif" style="color:#370003">🧾 Facturación interna</h1>
+<p class="text-xs text-slate-500 mb-3">Comprobantes B001/F001 de uso interno (no electrónicos). Al emitir se genera el asiento y la cuenta por cobrar.</p>
+<div class="grid md:grid-cols-2 gap-4">
+<div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
+  <h2 class="font-bold mb-2 text-sm">Emitir desde pedido</h2>
+  <form method="post" action="/ventas/facturacion/emitir" class="grid grid-cols-3 gap-2 text-xs items-end mb-3">
+    <label class="block">Serie
+      <select name="serie" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option>B001</option><option>F001</option></select>
+    </label>
+    <label class="block col-span-2">Pedido pendiente
+      <select name="order_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for o in pendientes %}<option value="{{ o.id }}">{{ o.folio }} · S/ {{ "%.2f"|format(o.total) }}</option>{% endfor %}</select>
+    </label>
+    <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold col-span-3">Emitir (IGV {{ igv }}%)</button>
+  </form>
+  <h2 class="font-bold mb-2 text-sm">Emitidos</h2>
+  {% for f in facturas %}
+  <div class="text-xs border-b py-1.5 flex justify-between items-center gap-2">
+    <span><span class="font-mono font-bold">{{ f.serie }}-{{ f.numero }}</span> · {{ nombres[f.id] }} · <b>S/ {{ "%.2f"|format(f.total) }}</b> · {{ badge(f.estado, "success" if f.estado=='emitida' else "danger") }}</span>
+    <span class="flex gap-1">
+      <a href="/ventas/facturacion/{{ f.id }}.pdf" target="_blank" class="underline">PDF</a>
+      {% if f.estado == 'emitida' %}
+      <form method="post" action="/ventas/facturacion/{{ f.id }}/anular"><button class="text-red-600 underline">Anular</button></form>
+      {% endif %}
+    </span>
+  </div>
+  {% else %}<p class="text-xs text-slate-500">Sin comprobantes.</p>{% endfor %}
+</div>
+<div class="bg-white rounded-xl shadow p-4 text-sm">
+  <h2 class="font-bold mb-2">Cómo funciona</h2>
+  <ul class="list-disc ml-5 text-xs text-slate-600 space-y-1">
+    <li>El correlativo es automático por serie (000001, 000002…).</li>
+    <li>Las líneas se toman del pedido (prendas) o del total.</li>
+    <li>Anular no borra: deja trazabilidad para caja.</li>
+    <li>Para SUNAT/Odoo a futuro se usa <span class="font-mono">/api/v1/invoices</span>.</li>
+  </ul>
+</div>
+</div>
+{% endblock %}

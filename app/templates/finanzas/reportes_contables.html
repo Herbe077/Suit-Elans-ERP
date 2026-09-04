@@ -1,0 +1,42 @@
+{% extends "finanzas/base_finanzas.html" %}
+{% block title %}Reportes Contables{% endblock %}
+{% block finanzas %}
+<h1 class="text-2xl font-bold mb-1 font-serif">📑 Reportes Contables</h1>
+<p class="text-sm text-slate-500 mb-3">Exportación Excel/CSV ventas y compras — IGV cobrado vs pagado</p>
+
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold text-sm mb-2">Filtros por periodo</h2>
+    <form method="get" class="flex gap-1 text-xs mb-3">
+      <input name="desde" type="date" value="{{ desde or '' }}" class="border rounded px-2 py-1">
+      <input name="hasta" type="date" value="{{ hasta or '' }}" class="border rounded px-2 py-1">
+      <button class="bg-slate-800 text-white rounded px-3">Filtrar</button>
+    </form>
+    <div class="flex gap-2 text-xs">
+      <a href="/finanzas/reportes-contables/ventas.csv?desde={{ desde or '' }}&hasta={{ hasta or '' }}" class="bg-emerald-700 text-white rounded px-3 py-1">⬇ Ventas CSV</a>
+      <a href="/finanzas/reportes-contables/compras.csv?desde={{ desde or '' }}&hasta={{ hasta or '' }}" class="bg-borgo text-white rounded px-3 py-1">⬇ Compras CSV</a>
+      <a href="/finanzas/reportes-contables/ventas.csv" class="bg-slate-200 rounded px-3 py-1">Excel compatible</a>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold text-sm mb-2">IGV / Impuestos</h2>
+    {% if igv_cobrado is defined %}
+      <p class="text-xs">IGV cobrado (ventas): <b>S/ {{ "%.2f"|format(igv_cobrado) }}</b></p>
+      <p class="text-xs">IGV pagado (compras ~18%): <b>S/ {{ "%.2f"|format(igv_pagado) }}</b></p>
+      <p class="text-sm font-bold mt-1">Balance IGV: S/ {{ "%.2f"|format(igv_cobrado - igv_pagado) }}</p>
+    {% else %}
+      <a href="/finanzas/reportes-contables/igv?desde={{ desde or '' }}&hasta={{ hasta or '' }}" class="text-xs bg-amber-600 text-white rounded px-3 py-1">Ver resumen IGV</a>
+      <p class="text-xs text-slate-400 mt-2">Resumen IGV cobrado vs pagado en compras.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="bg-white rounded-xl shadow p-4">
+  <h2 class="font-bold text-sm mb-2">Centro de descargas</h2>
+  <ul class="text-xs list-disc ml-5 space-y-1">
+    <li><a href="/finanzas/reportes-contables/ventas.csv" class="underline text-laton-dark">Ventas CSV</a> — serie, número, subtotal, IGV, total, estado, fecha</li>
+    <li><a href="/finanzas/reportes-contables/compras.csv" class="underline text-laton-dark">Compras CSV</a> — folio, proveedor, total, estado, fecha</li>
+    <li>Formatos compatibles Excel / contabilidad periodificada</li>
+  </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+suitelans.db*
+*.db-journal
+alembic.ini.bak
+dist/
+build/

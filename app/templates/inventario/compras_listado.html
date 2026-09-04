@@ -1,0 +1,52 @@
+{% extends "inventario/base_inventario.html" %}
+{% block title %}Órdenes de Compra{% endblock %}
+{% block inventario %}
+<h1 class="text-2xl font-bold mb-1 font-serif">🧾 Órdenes de Compra a Proveedores</h1>
+<p class="text-sm text-slate-500 mb-3">Órdenes de compra: del borrador a la facturación, con recepción en almacén.</p>
+{% if error %}<div class="bg-red-50 border border-red-300 text-red-700 text-xs rounded px-3 py-2 mb-3">{{ error }}</div>{% endif %}
+<div class="grid md:grid-cols-3 gap-4">
+  <div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
+    <h2 class="font-bold mb-2 text-sm">Proveedores</h2>
+    <form method="post" action="/inventario/compras/proveedores" class="flex gap-1 text-xs mb-2">
+      <input name="nombre" required placeholder="Nombre *" class="border rounded px-2 py-1.5 flex-1" aria-label="Nombre del proveedor">
+      <input name="ruc" placeholder="RUC" class="border rounded px-2 py-1.5 w-24" aria-label="RUC">
+      <button class="bg-borgo text-white rounded px-2 font-semibold" aria-label="Agregar proveedor">+</button>
+    </form>
+    {% for s in proveedores %}<div class="text-xs border-b py-1">{{ s.nombre }} <span class="text-slate-400">{{ s.ruc or '' }}</span></div>{% endfor %}
+    <h2 class="font-bold mb-2 mt-4 text-sm">Nueva orden de compra</h2>
+    <p class="text-xs text-slate-500 mb-1">Nace en DRAFT: no mueve stock ni contabilidad.</p>
+    <form method="post" action="/inventario/compras/orden" class="flex flex-col gap-1 text-xs">
+      <select name="proveedor_id" class="border rounded px-2 py-1.5 flex-1 bg-white" aria-label="Proveedor">{% for s in proveedores %}<option value="{{ s.id }}">{{ s.nombre }}</option>{% endfor %}</select>
+      <div class="flex gap-1">
+        <input name="fecha_entrega_esperada" type="date" class="border rounded px-2 py-1.5 flex-1" aria-label="Fecha de entrega esperada">
+        <button class="bg-borgo text-white rounded px-3 font-semibold">Crear OC DRAFT</button>
+      </div>
+    </form>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4 md:col-span-2 border-t-2 border-[#C5A880]">
+    <h2 class="font-bold mb-2 text-sm">Órdenes de compra</h2>
+    <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead><tr class="text-left text-slate-500 border-b">
+        <th class="py-1 pr-2 font-semibold">Código OC</th><th class="py-1 pr-2 font-semibold">Proveedor</th>
+        <th class="py-1 pr-2 font-semibold">Fecha Emisión</th><th class="py-1 pr-2 font-semibold text-right">Monto Total</th>
+        <th class="py-1 pr-2 font-semibold">Estado</th><th class="py-1 font-semibold text-right">Acción</th>
+      </tr></thead>
+      <tbody>
+      {% for o in ocs_unificadas %}
+      <tr class="border-b hover:bg-marfil">
+        <td class="py-1.5 pr-2 font-mono font-bold">{{ o.codigo }}{% if o.factura %}<br><span class="font-sans font-normal text-slate-400">🧾 {{ o.factura }}</span>{% endif %}</td>
+        <td class="py-1.5 pr-2">{{ o.proveedor }}</td>
+        <td class="py-1.5 pr-2 text-slate-500">{{ o.fecha or '—' }}</td>
+        <td class="py-1.5 pr-2 text-right font-semibold">S/ {{ "%.2f"|format(o.monto) }}</td>
+        <td class="py-1.5 pr-2"><span class="px-1.5 py-0.5 rounded font-semibold {% if o.estado=='DRAFT' %}bg-slate-200 text-slate-700{% elif o.estado=='APPROVED' %}bg-sky-100 text-sky-800{% elif o.estado=='PARTIALLY_RECEIVED' %}bg-amber-100 text-amber-800{% elif o.estado=='RECEIVED' %}bg-emerald-100 text-emerald-800{% elif o.estado=='BILLED' %}bg-borgo text-white{% elif o.estado=='CANCELLED' %}bg-red-100 text-red-800{% else %}bg-slate-200{% endif %}">{{ o.estado }}</span></td>
+        <td class="py-1.5 text-right"><a href="{{ o.url }}" class="underline font-semibold" style="color:#370003">Ver ficha →</a></td>
+      </tr>
+      {% else %}<tr><td colspan="6" class="py-2 text-slate-500">Sin órdenes de compra.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <p class="text-xs text-slate-400 mt-2" title="La recepción genera el Kardex valorizado y el asiento 241/611; la facturación genera la provisión 601+4011/421 y la cuenta por pagar.">ⓘ Flujo: DRAFT → APPROVED → PARTIALLY_RECEIVED → RECEIVED → BILLED.</p>
+  </div>
+</div>
+{% endblock %}

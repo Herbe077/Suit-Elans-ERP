@@ -1,0 +1,96 @@
+{% from "components/money.html" import soles %}
+{% extends "finanzas/base_finanzas.html" %}
+{% block title %}Gastos y Compras Operativas{% endblock %}
+{% block finanzas %}
+<h1 class="text-2xl font-bold mb-1 font-serif">🧾 Gastos y Compras Operativas</h1>
+<p class="text-sm text-slate-500 mb-3">Alquileres (6311) · Honorarios (6322) · Planilla (6211) · Activos Fijos (3341) — asiento automático Debe gasto/activo + Debe 40111 / Haber 4212</p>
+
+<div class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880] overflow-visible">
+  <h2 class="font-bold text-sm mb-2">Registrar nuevo gasto</h2>
+  <form method="post" action="/finanzas/gastos" class="grid grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-2 text-xs items-end">
+    <label class="block min-w-0">Fecha
+      <input name="fecha" type="date" value="{{ '' }}" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0">Proveedor
+      <select name="proveedor_id" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate">
+        <option value="">— Sin proveedor —</option>
+        {% for s in proveedores %}<option value="{{ s.id }}">{{ s.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="block min-w-0">RUC
+      <input name="ruc" placeholder="RUC/DNI" maxlength="11" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0">Tipo comprobante
+      <select name="tipo_comprobante" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option>FACTURA</option><option>RECIBO_HONORARIOS</option><option>BOLETA</option><option>PLANILLA</option><option>OTRO</option>
+      </select>
+    </label>
+    <label class="block min-w-0">N° Comprobante
+      <input name="numero_comprobante" placeholder="F001-123" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0">Categoría
+      <select name="categoria" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate" title="{% for cat in categorias %}{{ cat }} → {{ map[cat][0] }}&#10;{% endfor %}">
+        {% for cat in categorias %}<option value="{{ cat }}">{{ cat }} → {{ map[cat][0] }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="block min-w-0">Cuenta PCGE
+      <input name="cuenta_codigo" placeholder="vacío = auto" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0">Centro de costo
+      <select name="centro_costo_id" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate">
+        <option value="">—</option>
+        {% for cc in centros %}<option value="{{ cc.id }}">{{ cc.codigo }} - {{ cc.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="block min-w-0">Monto Base S/
+      <input id="g-base" name="monto_base" type="number" step="0.01" min="0.01" required placeholder="2000.00" oninput="gastoCalc()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0">IGV S/ <span class="font-normal text-slate-400">(18% editable)</span>
+      <input id="g-igv" name="igv" type="number" step="0.01" min="0" value="0" oninput="gastoCalc(false)" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <div class="block min-w-0">Monto Total S/
+      <div id="g-total" class="border rounded px-2 py-1.5 mt-0.5 bg-[#FAF8F5] font-bold">S/ 0.00</div>
+    </div>
+    <div class="self-end"><button class="bg-[#370003] text-white rounded px-4 py-1.5 font-bold w-full">Registrar gasto</button></div>
+  </form>
+</div>
+<script>
+function gastoCalc(autoIgv) {
+  if (autoIgv === undefined) autoIgv = true;
+  var b = parseFloat(document.getElementById('g-base').value) || 0;
+  var igvEl = document.getElementById('g-igv');
+  if (autoIgv) igvEl.value = (Math.round(b * 0.18 * 100) / 100).toFixed(2);
+  var igv = parseFloat(igvEl.value) || 0;
+  document.getElementById('g-total').textContent = 'S/ ' + (b + igv).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+</script>
+
+<form method="get" class="flex gap-2 text-xs mb-3">
+  <select name="estado" class="border rounded px-2 py-1"><option value="">Todos</option><option value="PENDIENTE" {% if estado=='PENDIENTE' %}selected{% endif %}>PENDIENTE</option><option value="PAGADO" {% if estado=='PAGADO' %}selected{% endif %}>PAGADO</option></select>
+  <select name="categoria" class="border rounded px-2 py-1"><option value="">Todas categorías</option>{% for cat in categorias %}<option value="{{ cat }}" {% if categoria==cat %}selected{% endif %}>{{ cat }}</option>{% endfor %}</select>
+  <button class="bg-slate-800 text-white rounded px-3">Filtrar</button>
+</form>
+
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+  <table class="w-full text-xs">
+    <thead class="bg-slate-50 text-slate-500"><tr><th class="text-left p-2">ID</th><th>Fecha</th><th>Proveedor/RUC</th><th>Comprobante</th><th>Categoría</th><th>Cuenta</th><th class="text-right">Base</th><th class="text-right">IGV</th><th class="text-right">Total</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+    {% for g in gastos %}
+      <tr class="border-b hover:bg-amber-50">
+        <td class="p-2 font-mono">{{ g.id }}</td>
+        <td>{{ g.fecha_emision }}</td>
+        <td>{{ prov_map.get(g.proveedor_id, '') }}{% if g.ruc_proveedor %} ({{ g.ruc_proveedor }}){% elif not g.proveedor_id %}—{% endif %}</td>
+        <td class="font-mono">{{ g.tipo_comprobante or '' }} {{ g.numero_comprobante or '' }}</td>
+        <td><span class="px-1.5 py-0.5 rounded bg-slate-100">{{ g.categoria or '—' }}</span><div class="text-slate-400">{{ g.clasificacion }}</div></td>
+        <td class="font-mono">{{ cuentas_map.get(g.cuenta_id, g.cuenta_id or '—') }}</td>
+        <td class="text-right">{{ soles(g.monto_base or 0) }}</td>
+        <td class="text-right">{{ soles(g.monto_igv or 0) }}</td>
+        <td class="text-right font-bold">{{ soles(g.monto_total or 0) }}</td>
+        <td>{% if g.estado=='PAGADO' %}<span class="text-emerald-700 font-bold">PAGADO</span>{% else %}<span class="text-amber-700 font-bold">PENDIENTE</span>{% endif %}</td>
+        <td>{% if g.estado!='PAGADO' %}<form method="post" action="/finanzas/gastos/{{ g.id }}/pagar" class="flex gap-1"><select name="cuenta_origen" class="border rounded px-1"><option value="104">Banco</option><option value="101">Caja</option></select><button class="underline">Pagar</button></form>{% endif %}</td>
+      </tr>
+    {% else %}<tr><td colspan="11" class="text-center p-3 text-slate-400">Sin gastos registrados.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

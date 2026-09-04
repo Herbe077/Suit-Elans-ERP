@@ -1,0 +1,29 @@
+{% extends "finanzas/base_finanzas.html" %}
+{% block title %}PCGE — Plan Contable{% endblock %}
+{% block finanzas %}
+<h1 class="text-2xl font-bold mb-1 font-serif">📘 Plan Contable General Empresarial</h1>
+<p class="text-sm text-slate-500 mb-3">Estructura jerárquica PCGE — cuentas agrupadoras e imputables</p>
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+  <table class="w-full text-xs">
+    <thead class="bg-slate-50"><tr><th class="text-left p-2">Código</th><th class="text-left">Nombre</th><th>Tipo</th><th>Elem.</th><th>Nivel</th><th>Padre</th><th>Analítica</th><th>Imputable</th><th>Activa</th></tr></thead>
+    <tbody>
+      {% for c in cuentas %}
+      <tr class="border-b hover:bg-amber-50 {% if not c.activo %}bg-red-50{% endif %}">
+        <td class="p-2 font-mono font-bold">{{ c.codigo }}</td><td>{{ c.nombre }}</td><td class="text-center"><span class="px-1.5 py-0.5 rounded text-xs bg-slate-100">{{ c.tipo }}</span></td><td class="text-center">{{ c.elemento or '—' }}</td><td class="text-center">{{ c.nivel }}</td><td class="text-center">{{ c.cuenta_padre_id or '—' }}</td><td class="text-center">{% if c.es_analitica %}✓{% else %}—{% endif %}</td><td class="text-center">{% if c.acepta_movimientos %}✓{% else %}—{% endif %}</td><td class="text-center">{% if c.activo %}✓{% else %}✗{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="bg-white rounded-xl shadow p-4 mt-4">
+  <h2 class="font-bold text-sm mb-2">Nueva cuenta PCGE</h2>
+  <form method="post" action="/finanzas/plan-contable" class="grid grid-cols-2 md:grid-cols-6 gap-1 text-xs">
+    <input name="codigo" required placeholder="Código ej. 1041" class="border rounded px-2 py-1">
+    <input name="nombre" required placeholder="Nombre" class="border rounded px-2 py-1">
+    <select name="tipo" class="border rounded px-2 py-1"><option>ACTIVO</option><option>PASIVO</option><option>PATRIMONIO</option><option>INGRESO</option><option>GASTO</option></select>
+    <input name="nivel" type="number" value="2" class="border rounded px-2 py-1">
+    <input name="padre" placeholder="Código padre" class="border rounded px-2 py-1">
+    <button class="bg-[#370003] text-white rounded px-3">Crear</button>
+  </form>
+</div>
+{% endblock %}

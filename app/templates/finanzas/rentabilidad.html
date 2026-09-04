@@ -1,0 +1,30 @@
+{% extends "finanzas/base_finanzas.html" %}
+{% block title %}Rentabilidad{% endblock %}
+{% block finanzas %}
+<h1 class="text-2xl font-bold mb-1 font-serif" style="color:#370003">📈 Rentabilidad — Margen por Pedido <span class="text-xs font-sans font-normal text-slate-400">(gestión)</span></h1>
+<p class="text-sm text-slate-500 mb-3">Margen bruto = Precio − (Materiales + Mano de obra) — Alerta si &lt; {{ umbral }}%. Indicador de gestión; la contabilidad oficial (P&amp;L y balances PCGE) está en Estados financieros.</p>
+<form method="get" class="flex gap-2 text-xs mb-3">
+  <label>Umbral <input name="umbral" type="number" step="1" value="{{ umbral }}" class="border rounded px-2 py-1 w-20"> %</label>
+  <button class="bg-borgo text-white rounded px-3">Aplicar</button>
+</form>
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+  <table class="w-full text-xs">
+    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left p-2">Pedido</th><th>Prenda(s)</th><th class="text-right">Precio</th><th class="text-right">Costo Materiales</th><th class="text-right">Costo M.O.</th><th class="text-right">Costo Total</th><th class="text-right">Margen Bruto</th><th class="text-right">% Margen</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr class="border-b hover:bg-marfil {% if r.alerta %}bg-red-50{% endif %}">
+        <td class="p-2 font-mono">{{ r.order.folio }} <span class="text-slate-400">{{ r.order.estado }}</span></td>
+        <td>{% for g in r.garments %}<span class="inline-block bg-slate-100 rounded px-1 mr-1">{{ g.tipo }}</span>{% endfor %}</td>
+        <td class="text-right">S/ {{ "%.2f"|format(r.precio) }}</td>
+        <td class="text-right">S/ {{ "%.2f"|format(r.costo_telas) }}</td>
+        <td class="text-right">S/ {{ "%.2f"|format(r.costo_destajo) }}</td>
+        <td class="text-right">S/ {{ "%.2f"|format(r.costo_total) }}</td>
+        <td class="text-right font-bold {% if r.margen<0 %}text-red-600{% else %}text-emerald-700{% endif %}">S/ {{ "%.2f"|format(r.margen) }}</td>
+        <td class="text-right font-bold {% if r.alerta %}text-red-600{% endif %}">{{ r.margen_pct }}% {% if r.alerta %}⚠️ margen bajo{% endif %}</td>
+      </tr>
+    {% else %}<tr><td colspan="8" class="text-center p-3 text-slate-400">Sin pedidos para analizar.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="text-xs text-slate-400 mt-2" title="El detalle operativo del destajo vive en el módulo Rendimiento y Destajo; aquí solo se usa el costo agregado para el margen.">ⓘ Pedidos con margen bajo &lt; {{ umbral }}% — alerta visual. Fuente contable oficial: Estados financieros.</p>
+{% endblock %}

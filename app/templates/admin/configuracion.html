@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Configuración de sede{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-1 font-serif">⚙️ Configuración de la sede</h1>
+<p class="text-sm text-slate-500 mb-4">Datos que aparecen en comprobantes y reportes. El IGV se aplica al facturar.</p>
+<div class="bg-white rounded-xl shadow p-4 max-w-xl">
+  <form method="post" action="/admin/configuracion" class="grid gap-3 text-sm">
+    <label>Nombre de sede<input name="sede_nombre" value="{{ vals.sede_nombre }}" class="w-full border rounded px-3 py-1.5"></label>
+    <label>Dirección<input name="direccion" value="{{ vals.direccion }}" class="w-full border rounded px-3 py-1.5"></label>
+    <div class="grid grid-cols-2 gap-3">
+      <label>Teléfono<input name="telefono" value="{{ vals.telefono }}" class="w-full border rounded px-3 py-1.5"></label>
+      <label>WhatsApp<input name="whatsapp" value="{{ vals.whatsapp }}" placeholder="519…" class="w-full border rounded px-3 py-1.5"></label>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <label>IGV por defecto (%)<input name="igv_default" type="number" step="0.01" value="{{ vals.igv_default }}" class="w-full border rounded px-3 py-1.5"></label>
+      <label>Anticipo mínimo para confirmar (%)<input name="anticipo_min_pct" type="number" step="1" value="{{ vals.anticipo_min_pct }}" class="w-full border rounded px-3 py-1.5"></label>
+    </div>
+    <button class="bg-borgo text-white font-bold rounded-lg py-2">Guardar configuración</button>
+  </form>
+</div>
+{% endblock %}

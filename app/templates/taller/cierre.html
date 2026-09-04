@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Cierre de jornada — Taller{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-1 font-serif">🧵 Cierre de jornada</h1>
+<div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+<p class="text-sm text-slate-500">1️⃣ Marca tus prendas · 2️⃣ Marca solo tus actividades (las de otros aparecen 🔒).</p>
+<a href="/taller/reporte-pagos" class="text-sm underline text-laton-dark">Ver mis liquidaciones →</a>
+</div>
+{% if ok and ok != '0' %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-4 text-sm">✓ {{ ok }} cierre(s) guardado(s).</div>{% endif %}
+{% if mias %}
+<div class="bg-white rounded-xl shadow p-4 mb-4">
+  <h2 class="font-bold mb-1 text-sm">Tus cierres de hoy</h2>
+  {% for c in mias %}<div class="text-xs border-b py-1 flex justify-between"><span>{{ c.producto_referencia }}</span><b>S/ {{ "%.2f"|format(c.total_pago) }}</b></div>{% endfor %}
+</div>
+{% endif %}
+{% if not productos %}
+<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">No hay prendas abiertas en taller (kanban vacío o todo terminado).</div>
+{% else %}
+<form method="post" action="/taller/cierre-jornada" x-data="{ total: 0, recalc() { this.total = [...document.querySelectorAll('input[data-tarifa]:checked:not(:disabled)')].reduce((s, el) => s + parseFloat(el.dataset.tarifa), 0) } }">
+  {% for p in productos %}
+  {% set rec = reclamos.get(p.ref, {}) %}
+  <div class="bg-white rounded-xl shadow p-4 mb-4" x-data="{ open: {{ 'true' if loop.first else 'false' }} }">
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" name="prod_{{ p.gid }}" class="w-5 h-5 accent-[#370003]" @change="open = $el.checked; if (!$el.checked) { $el.closest('div.bg-white').querySelectorAll('input[data-tarifa]:checked').forEach(i => i.checked = false); recalc() }">
+      <span class="font-bold text-sm">{{ p.ref }}</span>
+      <span class="text-xs px-2 py-0.5 rounded-full bg-slate-200">{{ p.estado }}</span>
+    </label>
+    <div x-show="open" class="mt-2 divide-y border-t">
+      {% for t in tareas %}
+      {% set quien = rec.get(t.id) %}
+      <label class="flex items-center justify-between py-1.5 px-1 rounded {% if quien %}opacity-60{% else %}cursor-pointer hover:bg-marfil{% endif %}">
+        <span class="text-sm">
+          <input type="checkbox" name="tasks_{{ p.gid }}" value="{{ t.id }}" data-tarifa="{{ t.tarifa }}" {% if quien %}disabled{% endif %} @change="recalc()" class="mr-2 accent-[#370003]">
+          {{ t.descripcion }}
+          {% if quien %}<span class="text-xs text-red-700 font-bold">🔒 {{ quien }}</span>{% endif %}
+        </span>
+        <span class="text-sm font-bold whitespace-nowrap ml-2">S/ {{ "%.2f"|format(t.tarifa) }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  <div class="sticky bottom-20 md:bottom-4 bg-borgo text-white rounded-xl shadow p-4 flex items-center justify-between">
+    <div><p class="text-xs text-laton">Total a cobrar (mis actividades)</p><p class="text-2xl font-bold">S/ <span x-text="total.toFixed(2)">0.00</span></p></div>
+    <button class="bg-[#C5A880] text-[#370003] font-bold rounded-lg px-6 py-2.5">Guardar jornada</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

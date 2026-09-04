@@ -1,0 +1,21 @@
+{# Modal de anotaciones del sastre durante la prueba (1ra/2da/3ra). #}
+<div x-show="modalPrueba" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
+  <div class="absolute inset-0 bg-black/50" @click="modalPrueba = false"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <h3 class="font-bold mb-2">📏 Registrar prueba de entalle</h3>
+    <form method="post" action="/produccion/prueba-entalle" enctype="multipart/form-data" class="grid gap-2 text-sm">
+      <input type="hidden" name="garment_id" value="{{ g.id }}">
+      <select name="numero_prueba" class="border rounded px-2 py-1"><option value="1">1ra prueba</option><option value="2">2da prueba</option><option value="3">3ra prueba</option></select>
+      {% for k, label in zonas_prueba %}
+      <label>{{ label }}<input name="zona_{{ k }}" placeholder="Corrección (vacío = ok)" class="w-full border rounded px-2 py-1"></label>
+      {% endfor %}
+      <textarea name="observaciones_ajuste" placeholder="Observaciones de ajuste" class="border rounded px-2 py-1"></textarea>
+      <textarea name="notas_sastre" placeholder="Notas del sastre" class="border rounded px-2 py-1"></textarea>
+      <label class="text-xs">Fotos (máx 3)<input name="fotos" type="file" accept=".jpg,.jpeg,.png,.webp" multiple class="w-full"></label>
+      <div class="flex gap-2">
+        <button type="button" @click="modalPrueba = false" class="flex-1 bg-slate-200 rounded-lg py-2">Cancelar</button>
+        <button class="flex-1 bg-borgo text-white rounded-lg py-2">Guardar prueba</button>
+      </div>
+    </form>
+  </div>
+</div>

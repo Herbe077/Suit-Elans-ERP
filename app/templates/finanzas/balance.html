@@ -1,0 +1,40 @@
+{% extends "finanzas/base_finanzas.html" %}
+{% block title %}Balance{% endblock %}
+{% block finanzas %}
+<h1 class="text-2xl font-bold mb-1 font-serif">⚖️ Balance de Comprobación / EEFF</h1>
+<form method="get" class="flex gap-2 text-xs mb-3">
+  <input name="periodo" value="{{ periodo or '' }}" placeholder="YYYY-MM" class="border rounded px-2 py-1">
+  <button class="bg-slate-800 text-white rounded px-3">Ver</button>
+</form>
+<div class="grid md:grid-cols-2 gap-4">
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold text-sm mb-2">Balance de Comprobación</h2>
+    <table class="w-full text-xs">
+      <thead class="bg-slate-50"><tr><th class="text-left">Cuenta</th><th class="text-right">Debe</th><th class="text-right">Haber</th><th class="text-right">Saldo Deudor</th><th class="text-right">Saldo Acreedor</th></tr></thead>
+      <tbody>
+        {% for r in bal %}
+        <tr class="border-b"><td>{{ r.codigo }} - {{ r.nombre }}</td><td class="text-right">S/ {{ "%.2f"|format(r.debe) }}</td><td class="text-right">S/ {{ "%.2f"|format(r.haber) }}</td><td class="text-right">S/ {{ "%.2f"|format(r.saldo_deudor) }}</td><td class="text-right">S/ {{ "%.2f"|format(r.saldo_acreedor) }}</td></tr>
+        {% else %}<tr><td colspan="5" class="text-center p-2 text-slate-400">Sin movimientos</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="space-y-4">
+    <div class="bg-white rounded-xl shadow p-4">
+      <h2 class="font-bold text-sm mb-2">Estado de Resultados</h2>
+      <p class="text-xs">Ventas: <b>S/ {{ "%.2f"|format(er.ventas) }}</b></p>
+      <p class="text-xs">Costo ventas: <b>S/ {{ "%.2f"|format(er.costo_ventas) }}</b></p>
+      <p class="text-xs">Utilidad bruta: <b>S/ {{ "%.2f"|format(er.utilidad_bruta) }}</b></p>
+      <p class="text-xs">Gastos admin: S/ {{ "%.2f"|format(er.gastos_admin) }}</p>
+      <p class="text-xs">Gastos ventas: S/ {{ "%.2f"|format(er.gastos_ventas) }}</p>
+      <p class="text-xs">Resultado: <b class="{% if er.resultado>=0 %}text-emerald-700{% else %}text-red-700{% endif %}">S/ {{ "%.2f"|format(er.resultado) }}</b></p>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4">
+      <h2 class="font-bold text-sm mb-2">Balance General</h2>
+      <p class="text-xs">Activo: <b>S/ {{ "%.2f"|format(bg.activo) }}</b></p>
+      <p class="text-xs">Pasivo: <b>S/ {{ "%.2f"|format(bg.pasivo) }}</b></p>
+      <p class="text-xs">Patrimonio: <b>S/ {{ "%.2f"|format(bg.patrimonio) }}</b> (total {{ "%.2f"|format(bg.patrimonio_total) }})</p>
+      <p class="text-xs {% if bg.valida %}text-emerald-700{% else %}text-red-700{% endif %}">Valida: {{ bg.valida }} (Activo = Pasivo + Patrimonio)</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

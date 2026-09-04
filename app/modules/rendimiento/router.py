@@ -1,0 +1,427 @@
+"""Router Rendimiento & Destajo Operario (/rendimiento).
+
+Independiente: usa tablas rendimiento_* (no taller_*), pero reutiliza TALLER_TAREAS para seed.
+Decimal para cálculos, filtros semana/mes/rango, export a Finanzas.
+"""
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
+from fastapi import APIRouter, Depends, Form, Request, Query
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+
+from app.core.config import BASE_DIR
+from app.core.constants import TALLER_TAREAS
+from app.core.database import get_db
+from app.core.deps import require_roles
+from app.models.order import Garment, Order
+from app.modules.rendimiento.models import CatalogoOperacion, DetalleJornada, RegistroJornada
+
+router = APIRouter(prefix="/rendimiento", tags=["rendimiento"])
+templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
+Auth = Depends(require_roles("SASTRE-MAESTRO", "SASTRE-ASISTENTE"))  # ADMIN pasa siempre
+FinanzasSM = Depends(require_roles("ADMIN", "FINANZAS", "SASTRE-MAESTRO"))
+
+def _ensure_catalogo(db: Session):
+    """Seed idempotente 44 operaciones con código CAT-01.."""
+    existing = db.query(CatalogoOperacion).count()
+    if existing >= len(TALLER_TAREAS):
+        return
+    for idx, (desc, tarifa) in enumerate(TALLER_TAREAS, start=1):
+        codigo = f"OP-{idx:02d}"
+        if not db.query(CatalogoOperacion).filter(CatalogoOperacion.codigo == codigo).first():
+            # evita duplicado por nombre si ya existe con otro código
+            if not db.query(CatalogoOperacion).filter(CatalogoOperacion.nombre_operacion == desc).first():
+                db.add(CatalogoOperacion(codigo=codigo, nombre_operacion=desc, tarifa_base=Decimal(str(tarifa)), activa=True))
+    db.commit()
+
+def _rango(preset: str, desde: str = "", hasta: str = "") -> tuple[date, date]:
+    hoy = date.today()
+    if preset == "hoy" or preset == "diario":
+        return hoy, hoy
+    if preset == "semana" or preset == "semana_actual" or preset == "semanal":
+        inicio = hoy - timedelta(days=hoy.weekday())  # lunes
+        fin = inicio + timedelta(days=6)
+    elif preset == "mes" or preset == "mes_actual" or preset == "mensual":
+        inicio = hoy.replace(day=1)
+        # último día del mes
+        if hoy.month == 12:
+            fin = date(hoy.year+1, 1, 1) - timedelta(days=1)
+        else:
+            fin = date(hoy.year, hoy.month+1, 1) - timedelta(days=1)
+    elif preset == "personalizado" and desde and hasta:
+        inicio = date.fromisoformat(desde)
+        fin = date.fromisoformat(hasta)
+        if inicio > fin:
+            inicio, fin = fin, inicio
+    else:
+        # por defecto semana
+        inicio = hoy - timedelta(days=hoy.weekday())
+        fin = inicio + timedelta(days=6)
+    return inicio, fin
+
+def _sede_filter_query(db: Session, user):
+    """Prendas que ya superaron la etapa En Prueba (destajo posterior al fitting).
+
+    Solo EN_CONFECCION / ACABADOS / CALIDAD_OK (+ equivalentes legacy).
+    Entregadas/terminadas se excluyen (ya archivadas del kanban).
+    Filtra por sede si aplica (proxy sastre_id).
+    """
+    from app.core.constants import ETAPAS_POST_PRUEBA_TODAS
+    q = db.query(Garment).filter(Garment.estado_taller.in_(ETAPAS_POST_PRUEBA_TODAS))
+    sede_id = getattr(user, "sede_id", None)
+    if sede_id:
+        # si Order tuviera sede_id, filtraría. Por ahora intenta filtrar por sastre_id como proxy
+        q = q.filter(Garment.artesano_id == user.id)
+    return q
+
+@router.get("/registro/marcadas", response_class=JSONResponse)
+def marcadas_por_prenda(garment_id: int = Query(...), db: Session = Depends(get_db), user=Auth):
+    """Memoria de tareo: actividades ya marcadas para una prenda (quién/cuándo)."""
+    from app.models.user import User
+    marcadas = []
+    for d in db.query(DetalleJornada).filter(DetalleJornada.orden_produccion_id == garment_id).all():
+        reg = db.get(RegistroJornada, d.registro_jornada_id)
+        op = db.get(CatalogoOperacion, d.operacion_id) if d.operacion_id else None
+        emp = db.get(User, reg.operario_id) if reg else None
+        marcadas.append({
+            "operacion_id": d.operacion_id,
+            "codigo": op.codigo if op else "",
+            "nombre": op.nombre_operacion if op else "",
+            "operario": emp.full_name if emp else "",
+            "fecha": reg.fecha.isoformat() if reg and reg.fecha else "",
+            "registro_id": d.registro_jornada_id,
+        })
+    return {"garment_id": garment_id, "marcadas": marcadas}
+
+@router.get("", response_class=HTMLResponse)
+def root(request: Request, db: Session = Depends(get_db), user=Auth):
+    return RedirectResponse("/rendimiento/registro", status_code=302)
+
+@router.get("/registro", response_class=HTMLResponse)
+def registro_get(request: Request, todas: str = Query(""), db: Session = Depends(get_db), user=Auth):
+    _ensure_catalogo(db)
+    catalogo = db.query(CatalogoOperacion).filter(CatalogoOperacion.activa.is_(True)).order_by(CatalogoOperacion.id).all()
+    # prendas que superaron En Prueba (salvo ?todas=1 que muestra en proceso)
+    if todas:
+        prendas = db.query(Garment).filter(Garment.estado_taller.notin_(["terminado", "entregado"])).order_by(Garment.id.desc()).limit(80).all()
+    else:
+        prendas = _sede_filter_query(db, user).order_by(Garment.id.desc()).limit(80).all()
+    # para mostrar folio
+    orders = {o.id: o for o in db.query(Order).filter(Order.id.in_([g.order_id for g in prendas])).all()} if prendas else {}
+    # dueño del pedido: nombre del cliente o empresa
+    from app.models.client import Client
+    from app.models.company import Company
+    propietarios: dict[int, str] = {}
+    if orders:
+        cls = {c.id: c for c in db.query(Client).filter(Client.id.in_([o.client_id for o in orders.values() if o.client_id])).all()}
+        comps = {c.id: c for c in db.query(Company).filter(Company.id.in_([o.company_id for o in orders.values() if o.company_id])).all()}
+        for o in orders.values():
+            if o.client_id and o.client_id in cls:
+                propietarios[o.id] = f"{cls[o.client_id].nombre} {cls[o.client_id].apellidos or ''}".strip()
+            elif o.company_id and o.company_id in comps:
+                propietarios[o.id] = comps[o.company_id].nombre_comercial
+            else:
+                propietarios[o.id] = "—"
+    from app.core.constants import TALLER_KANBAN
+    etapas = dict(TALLER_KANBAN)
+    # histórico del operario hoy
+    hoy = date.today()
+    mias = db.query(RegistroJornada).filter(RegistroJornada.operario_id==user.id, RegistroJornada.fecha==hoy).order_by(RegistroJornada.id.desc()).limit(10).all()
+    return templates.TemplateResponse(request, "rendimiento/registro_diario.html", {
+        "user": user, "tab": "registro", "catalogo": catalogo, "prendas": prendas, "orders": orders, "propietarios": propietarios, "etapas": etapas, "mias": mias, "hoy": hoy, "todas": todas})
+
+@router.post("/registro", response_class=HTMLResponse)
+async def registro_post(request: Request, db: Session = Depends(get_db), user=Auth):
+    _ensure_catalogo(db)
+    form = await request.form()
+    orden_id = form.get("orden_produccion_id") or form.get("orden_id") or form.get("garment_id")
+    observaciones = form.get("observaciones") or ""
+    try:
+        gid = int(orden_id) if orden_id else None
+    except:
+        gid = None
+    # valida prenda existe si se especificó
+    garment = db.get(Garment, gid) if gid else None
+    # la prenda es obligatoria: sin prenda no hay tareo
+    if not garment:
+        return RedirectResponse("/rendimiento/registro?error=sin_prenda", status_code=303)
+    # el tareo con prenda exige etapa posterior a En Prueba
+    if garment:
+        from app.core.constants import ETAPAS_POST_PRUEBA, KANBAN_MAP
+        etapa = KANBAN_MAP.get(garment.estado_taller or "", garment.estado_taller or "")
+        if etapa not in ETAPAS_POST_PRUEBA:
+            return RedirectResponse("/rendimiento/registro?error=etapa_prueba", status_code=303)
+    # recolecta operaciones seleccionadas
+    ops = []
+    for key in form.keys():
+        if key.startswith("op_"):
+            try:
+                op_id = int(key[3:])
+                cantidad = int(form.get(f"cantidad_{op_id}") or "1")
+                if cantidad < 1:
+                    cantidad = 1
+                # checkbox value
+                if form.get(key) in ("on", "1", "true", str(op_id)):
+                    ops.append((op_id, cantidad))
+            except:
+                continue
+    # alternativa: lista `operaciones` multiple
+    if not ops:
+        try:
+            for v in form.getlist("operaciones"):
+                op_id = int(v)
+                cantidad = int(form.get(f"cantidad_{op_id}") or "1")
+                ops.append((op_id, cantidad))
+        except:
+            pass
+    if not ops:
+        return RedirectResponse("/rendimiento/registro?error=no_ops", status_code=303)
+    # valida operaciones activas
+    catalogo_map = {c.id: c for c in db.query(CatalogoOperacion).filter(CatalogoOperacion.id.in_([o[0] for o in ops])).all()}
+    if len(catalogo_map) != len(ops):
+        return RedirectResponse("/rendimiento/registro?error=invalid_op", status_code=303)
+    # memoria: descarta actividades ya marcadas en esta prenda (por cualquiera)
+    if gid:
+        ya = {d.operacion_id for d in db.query(DetalleJornada).filter(DetalleJornada.orden_produccion_id == gid).all()}
+        ops = [(op_id, cant) for op_id, cant in ops if op_id not in ya]
+        if not ops:
+            return RedirectResponse("/rendimiento/registro?error=ya_marcada", status_code=303)
+    # crea registro jornada
+    reg = RegistroJornada(operario_id=user.id, fecha=date.today(), observaciones=observaciones, estado="REGISTRADO",
+                          sede_id=getattr(user, "sede_id", None))
+    db.add(reg)
+    db.flush()
+    total = Decimal("0")
+    # referencia canónica a orden_produccion.id (además del legado garments.id)
+    orden_prod_ref = None
+    try:
+        if garment:
+            from app.models.produccion import OrdenProduccion as _OP
+            _op = db.query(_OP).filter(_OP.orden_venta_id == garment.order_id).order_by(_OP.id.desc()).first()
+            orden_prod_ref = _op.id if _op else None
+    except Exception:
+        orden_prod_ref = None
+    for op_id, cant in ops:
+        cat = catalogo_map[op_id]
+        tarifa = cat.tarifa_base
+        subtotal = (tarifa * Decimal(cant)).quantize(Decimal("0.01"))
+        total += subtotal
+        db.add(DetalleJornada(registro_jornada_id=reg.id, orden_produccion_id=gid, orden_id= garment.order_id if garment else None,
+                              orden_produccion_ref_id=orden_prod_ref,
+                              operacion_id=op_id, cantidad=cant, tarifa_aplicada=tarifa, subtotal=subtotal))
+    try:
+        db.commit()
+    except Exception as e:
+        # carrera entre dos empleados: el candado único decide quién marcó primero
+        from sqlalchemy.exc import IntegrityError
+        db.rollback()
+        if isinstance(e, IntegrityError) or "uq_detalle_prenda_operacion" in str(e).lower() or "unique" in str(e).lower():
+            return RedirectResponse("/rendimiento/registro?error=ya_marcada", status_code=303)
+        raise
+    # integración financiera opcional: exportar a Finanzas como MovimientoFinanciero pendiente
+    # No auto-liquidado; queda REGISTRADO hasta aprobación
+    return RedirectResponse(f"/rendimiento/registro?ok={reg.id}", status_code=303)
+
+@router.get("/calculadora", response_class=HTMLResponse)
+def calculadora(request: Request, preset: str = Query("semana"), desde: str = Query(""), hasta: str = Query(""), operario: str = Query(""), orden: str = Query(""), db: Session = Depends(get_db), user=Depends(require_roles("ADMIN", "FINANZAS", "SASTRE-MAESTRO", "SASTRE-ASISTENTE"))):
+    _ensure_catalogo(db)
+    # si el usuario ingresó ambas fechas, mandan sobre el preset
+    if desde and hasta and preset != "personalizado":
+        try:
+            date.fromisoformat(desde); date.fromisoformat(hasta)
+            preset = "personalizado"
+        except ValueError:
+            pass
+    try:
+        inicio, fin = _rango(preset, desde, hasta)
+    except:
+        inicio, fin = _rango("semana")
+        preset = "semana"
+    q = db.query(RegistroJornada).filter(RegistroJornada.fecha >= inicio, RegistroJornada.fecha <= fin)
+    if operario:
+        try:
+            q = q.filter(RegistroJornada.operario_id == int(operario))
+        except:
+            pass
+    # operario no admin solo ve lo propio? Por now muestra todo si admin else propio
+    if user.role not in ("admin", "gerente", "contador") and user.role not in ("taller",):
+        # limit to own?
+        pass
+    # filtro por orden en detalles
+    if orden:
+        try:
+            oid = int(orden)
+            # busca registros que tengan al menos un detalle con ese orden
+            sub = db.query(DetalleJornada.registro_jornada_id).filter(DetalleJornada.orden_produccion_id==oid).distinct()
+            q = q.filter(RegistroJornada.id.in_(sub))
+        except:
+            pass
+    registros = q.order_by(RegistroJornada.fecha.desc()).all()
+    detalles = []
+    if registros:
+        detalles = db.query(DetalleJornada).filter(DetalleJornada.registro_jornada_id.in_([r.id for r in registros])).all()
+    # métricas Decimal
+    total_acumulado = sum((d.subtotal for d in detalles), Decimal("0"))
+    # prendas intervenidas distintas
+    prendas_set = set(d.orden_produccion_id for d in detalles if d.orden_produccion_id)
+    n_prendas = len(prendas_set)
+    # horas/puntos: si tarifa es S/, puntos = total. Horas aprox = subtotal / tarifa_promedio? Simplifica: total como puntos
+    catalogo = {c.id: c for c in db.query(CatalogoOperacion).all()}
+    # desglose por operario
+    from app.models.user import User
+    users = {u.id: u for u in db.query(User).filter(User.id.in_([r.operario_id for r in registros])).all()} if registros else {}
+    por_operario: dict[int, dict] = {}
+    for r in registros:
+        dets = [d for d in detalles if d.registro_jornada_id==r.id]
+        sub = sum((d.subtotal for d in dets), Decimal("0"))
+        agg = por_operario.setdefault(r.operario_id, {"user": users.get(r.operario_id), "total": Decimal("0"), "prendas": set(), "detalles": 0})
+        agg["total"] += sub
+        agg["prendas"].update(d.orden_produccion_id for d in dets if d.orden_produccion_id)
+        agg["detalles"] += len(dets)
+    por_operario_list = []
+    for oid, agg in por_operario.items():
+        por_operario_list.append({"operario": agg["user"].full_name if agg["user"] else f"usuario#{oid}", "operario_id": oid, "total": agg["total"], "prendas": len(agg["prendas"]), "registros": len([r for r in registros if r.operario_id==oid])})
+    por_operario_list.sort(key=lambda x: x["total"], reverse=True)
+    # por orden
+    por_orden: dict[int, dict] = {}
+    for d in detalles:
+        if not d.orden_produccion_id:
+            continue
+        agg = por_orden.setdefault(d.orden_produccion_id, {"total": Decimal("0"), "ops": set()})
+        agg["total"] += d.subtotal
+        agg["ops"].add(d.operacion_id)
+    # por actividad
+    por_actividad: dict[int, dict] = {}
+    for d in detalles:
+        agg = por_actividad.setdefault(d.operacion_id, {"cat": catalogo.get(d.operacion_id), "total": Decimal("0"), "cantidad": 0})
+        agg["total"] += d.subtotal
+        agg["cantidad"] += d.cantidad
+    # lista usuarios para filtro
+    usuarios = db.query(User).filter(User.is_active.is_(True)).order_by(User.full_name).all()
+    # lista órdenes para filtro
+    prendas_opt = db.query(Garment).order_by(Garment.id.desc()).limit(50).all()
+    orders_map = {o.id: o for o in db.query(Order).all()}
+    return templates.TemplateResponse(request, "rendimiento/calculadora_destajo.html", {
+        "user": user, "tab": "calculadora", "preset": preset, "desde": desde, "hasta": hasta,
+        "inicio": inicio, "fin": fin, "registros": registros, "detalles": detalles,
+        "total_acumulado": total_acumulado, "n_prendas": n_prendas, "n_registros": len(registros),
+        "por_operario": por_operario_list, "por_orden": por_orden, "por_actividad": por_actividad,
+        "operario": operario, "orden": orden, "usuarios": usuarios, "prendas_opt": prendas_opt, "orders_map": orders_map, "catalogo": catalogo})
+
+@router.get("/calculadora/export")
+def export_liquidacion(preset: str = Query("semana"), desde: str = Query(""), hasta: str = Query(""), operario: str = Query(""), db: Session = Depends(get_db), user=Auth):
+    """Exporta liquidación aprobada para Finanzas/Caja (CSV)."""
+    if desde and hasta and preset != "personalizado":
+        try:
+            date.fromisoformat(desde); date.fromisoformat(hasta)
+            preset = "personalizado"
+        except ValueError:
+            pass
+    try:
+        inicio, fin = _rango(preset, desde, hasta)
+    except:
+        inicio, fin = _rango("semana")
+    q = db.query(RegistroJornada).filter(RegistroJornada.fecha >= inicio, RegistroJornada.fecha <= fin, RegistroJornada.estado.in_(["REGISTRADO","APROBADO"]))
+    if operario:
+        try:
+            q = q.filter(RegistroJornada.operario_id == int(operario))
+        except:
+            pass
+    registros = q.all()
+    # crea MovimientoFinanciero para cada registro no liquidado? Solo exporta, no marca
+    import csv, io
+    from fastapi.responses import StreamingResponse
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["registro_id","fecha","operario_id","orden_produccion_id","operacion","cantidad","tarifa","subtotal","estado"])
+    catalogo = {c.id: c for c in db.query(CatalogoOperacion).all()}
+    for r in registros:
+        for d in db.query(DetalleJornada).filter(DetalleJornada.registro_jornada_id==r.id).all():
+            cat = catalogo.get(d.operacion_id)
+            w.writerow([r.id, r.fecha, r.operario_id, d.orden_produccion_id, cat.nombre_operacion if cat else d.operacion_id, d.cantidad, d.tarifa_aplicada, d.subtotal, r.estado])
+    buf.seek(0)
+    return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=liquidacion_{inicio}_{fin}.csv"})
+
+@router.post("/calculadora/aprobar")
+def aprobar_registro(registro_id: int = Form(...), db: Session = Depends(get_db), user=FinanzasSM):
+    reg = db.get(RegistroJornada, registro_id)
+    if not reg:
+        return RedirectResponse("/rendimiento/calculadora", status_code=303)
+    reg.estado = "APROBADO"
+    db.commit()
+    return RedirectResponse("/rendimiento/calculadora", status_code=303)
+
+@router.post("/calculadora/liquidar")
+def liquidar_registro(registro_id: int = Form(...), db: Session = Depends(get_db), user=FinanzasSM):
+    reg = db.get(RegistroJornada, registro_id)
+    if not reg:
+        return RedirectResponse("/rendimiento/calculadora", status_code=303)
+    # integra con Finanzas: crea MovimientoFinanciero EGRESO y CuentaPorPagar
+    total = sum((d.subtotal for d in db.query(DetalleJornada).filter(DetalleJornada.registro_jornada_id==reg.id).all()), Decimal("0"))
+    try:
+        from app.models.finanzas import MovimientoFinanciero, CuentaPorPagar
+        from app.models.purchasing import Supplier
+        # busca proveedor genérico personal o crea
+        sup = db.query(Supplier).filter(Supplier.nombre=="Personal Destajo").first()
+        if not sup:
+            sup = Supplier(nombre="Personal Destajo", ruc="00000000000")
+            db.add(sup); db.flush()
+        # CuentaPorPagar
+        from datetime import date
+        cpp = db.query(CuentaPorPagar).filter(CuentaPorPagar.numero_factura == f"LIQ-{reg.id}").first()
+        if not cpp:
+            cpp = __import__("app.models.finanzas", fromlist=["CuentaPorPagar"]).CuentaPorPagar(proveedor_id=sup.id, numero_factura=f"LIQ-{reg.id}", monto_total=float(total), monto_pagado=0, saldo_pendiente=float(total), estado="POR_PAGAR", fecha_emision=date.today())
+            db.add(cpp)
+        db.add(MovimientoFinanciero(tipo="EGRESO", categoria="Pago Servicios", monto=float(total), cuenta_origen="Caja", comprobante_ref=f"LIQ-{reg.id}", usuario_id=user.id, descripcion=f"Liquidación destajo registro {reg.id} operario {reg.operario_id}"))
+    except Exception:
+        pass
+    reg.estado = "LIQUIDADO"
+    db.commit()
+    return RedirectResponse("/rendimiento/calculadora", status_code=303)
+
+@router.get("/tarifario", response_class=HTMLResponse)
+def tarifario_get(request: Request, db: Session = Depends(get_db), user=FinanzasSM):
+    _ensure_catalogo(db)
+    catalogo = db.query(CatalogoOperacion).order_by(CatalogoOperacion.id).all()
+    return templates.TemplateResponse(request, "rendimiento/tarifario.html", {
+        "user": user, "tab": "tarifario", "catalogo": catalogo})
+
+@router.post("/tarifario", response_class=HTMLResponse)
+def tarifario_post(codigo: str = Form(...), nombre_operacion: str = Form(...), tarifa_base: str = Form(...), db: Session = Depends(get_db), user=FinanzasSM):
+    try:
+        tarifa = Decimal(tarifa_base)
+    except:
+        return RedirectResponse("/rendimiento/tarifario", status_code=303)
+    if db.query(CatalogoOperacion).filter(CatalogoOperacion.codigo==codigo).first():
+        return RedirectResponse("/rendimiento/tarifario", status_code=303)
+    db.add(CatalogoOperacion(codigo=codigo, nombre_operacion=nombre_operacion.strip(), tarifa_base=tarifa, activa=True))
+    db.commit()
+    return RedirectResponse("/rendimiento/tarifario", status_code=303)
+
+@router.post("/tarifario/{cid}", response_class=HTMLResponse)
+@router.put("/tarifario/{cid}", response_class=HTMLResponse)
+async def tarifario_update(cid: int, request: Request, db: Session = Depends(get_db), user=FinanzasSM):
+    cat = db.get(CatalogoOperacion, cid)
+    if not cat:
+        return HTMLResponse("Operación no encontrada", status_code=404)
+    form = await request.form()
+    if form.get("tarifa_base"):
+        try:
+            cat.tarifa_base = Decimal(str(form.get("tarifa_base")))
+        except:
+            pass
+    if form.get("nombre_operacion"):
+        cat.nombre_operacion = str(form.get("nombre_operacion")).strip()
+    if "activa" in form:
+        cat.activa = form.get("activa") in ("on","true","1",True)
+    db.commit()
+    return RedirectResponse("/rendimiento/tarifario", status_code=303)
+
+@router.get("/tarifario/{cid}/toggle", response_class=HTMLResponse)
+def tarifario_toggle(cid: int, db: Session = Depends(get_db), user=FinanzasSM):
+    cat = db.get(CatalogoOperacion, cid)
+    if cat:
+        cat.activa = not cat.activa
+        db.commit()
+    return RedirectResponse("/rendimiento/tarifario", status_code=303)
