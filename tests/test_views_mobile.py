@@ -31,3 +31,19 @@ def test_pos_banner_compacto(client, auth_cookies):
     t = client.get("/ventas/pos", cookies=auth_cookies).text
     assert "Sin turno abierto" in t
     assert "rounded-xl px-3 py-1.5 mb-3 text-xs" in t
+
+
+def test_bottom_nav_cinco_accesos_con_rendimiento(client, auth_cookies):
+    t = client.get("/ventas/pos", cookies=auth_cookies).text
+    for item in ("Panel", "POS", "Taller", "Rendimiento", "Menú"):
+        assert item in t
+
+
+def test_bottom_nav_rendimiento_activo(client, auth_cookies):
+    t = client.get("/rendimiento/registro", cookies=auth_cookies).text
+    assert "⚡<br>Rendimiento" in t
+    assert '<a href="/rendimiento/registro" class="p-2 whitespace-nowrap text-center min-w-[56px] text-laton font-bold">' in t
+    assert 'text-laton font-bold" aria-label="Abrir menú"' not in t
+    # Caja sigue accesible desde los tabs de Ventas
+    t = client.get("/ventas/caja", cookies=auth_cookies).text
+    assert "Control de caja" in t

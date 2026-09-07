@@ -53,7 +53,7 @@ h1 { font-family: Georgia, 'Times New Roman', serif; }
 {# Mobile bottom nav — 5 accesos máximos; el resto vive en el drawer (sidebar) #}
 <div x-data="{ drawer: false }">
 {% set _path = (request.url.path if request is defined and request else "") %}
-{% set _main_on = _path == '/' or _path.startswith('/dashboard') or _path.startswith('/ventas/pos') or _path.startswith('/produccion') or _path.startswith('/ventas/caja') %}
+{% set _main_on = _path == '/' or _path.startswith('/dashboard') or _path.startswith('/ventas/pos') or _path.startswith('/produccion') or _path.startswith('/rendimiento') %}
 <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-ink text-white flex justify-around py-2 text-[11px] z-40" style="padding-bottom: env(safe-area-inset-bottom)">
   {% macro mlink(href, icon, label, roles, prefixes) -%}
   {% set _p2 = (request.url.path if request is defined and request else "") %}
@@ -63,7 +63,7 @@ h1 { font-family: Georgia, 'Times New Roman', serif; }
   {{ mlink('/dashboard', '📊', 'Panel', ['VENTA','SASTRE-MAESTRO','SASTRE-ASISTENTE','ALMACEN','FINANZAS','ventas','sastre','taller','almacen','gerente','contador'], ['/dashboard', '/']) }}
   {{ mlink('/ventas/pos', '🛒', 'POS', ['VENTA','SASTRE-MAESTRO','ventas'], ['/ventas/pos', '/ventas/ordenes', '/ventas/facturacion', '/ventas/comprobantes']) }}
   {{ mlink('/produccion/kanban', '🧵', 'Taller', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre'], ['/produccion']) }}
-  {{ mlink('/ventas/caja', '💰', 'Caja', ['VENTA','SASTRE-MAESTRO','ventas'], ['/ventas/caja']) }}
+  {{ mlink('/rendimiento/registro', '⚡', 'Rendimiento', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre'], ['/rendimiento']) }}
   <button @click="drawer = true" class="p-2 whitespace-nowrap text-center min-w-[56px] {% if not _main_on %}text-laton font-bold{% endif %}" aria-label="Abrir menú">☰<br>Menú</button>
 </nav>
 <div x-show="drawer" x-cloak class="lg:hidden fixed inset-0 z-50">
