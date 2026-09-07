@@ -513,23 +513,55 @@ def rentabilidad(request: Request, umbral: float = Query(40.0), db: Session = De
     for o in orders:
         garments=db.query(Garment).filter(Garment.order_id==o.id).all()
         if not garments: continue
-        costo_telas=0.0
-        for g in garments:
-            consumo=CONSUMO_TELA_M.get(g.tipo,1.5)
-            tela=db.get(Fabric,g.tela_id) if g.tela_id else None
-            if tela: costo_telas+=consumo*(tela.precio_metro or 0)
+        # Valor de venta NETO (sin IGV): el total comercial incluye IGV.
+        bruto=o.total or sum(g.precio for g in garments) or 0
+        precio=round(bruto/1.18,2)
+        # Costo de materiales: primero Kardex real (SALIDA_TALLER por pedido).
+        from app.models.inventario import MovimientoKardex
+        salidas=db.query(MovimientoKardex).filter(
+            MovimientoKardex.orden_venta_id==o.id,
+            MovimientoKardex.tipo_movimiento=="SALIDA_TALLER").all()
+        if salidas:
+            costo_telas=round(sum(k.costo_total or 0 for k in salidas),2)
+            fuente_costo="kardex"
+            pendiente_costeo=False
+        else:
+            # Estimación BOM estándar (consumo × costo de tela asignada).
+            costo_telas=0.0
+            con_insumo=False
+            for g in garments:
+                consumo=CONSUMO_TELA_M.get(g.tipo,1.5)
+                tela=db.get(Fabric,g.tela_id) if g.tela_id else None
+                if tela:
+                    con_insumo=True
+                    costo_telas+=consumo*(tela.precio_metro or 0)
+                else:
+                    prod=db.query(ProductoInsumo).filter(ProductoInsumo.sku==str(g.tela_id)).first() if g.tela_id else None
+                    if prod:
+                        con_insumo=True
+                        costo_telas+=consumo*(prod.costo_unitario or 0)
+            if con_insumo:
+                costo_telas=round(costo_telas,2)
+                fuente_costo="bom"
+                pendiente_costeo=False
             else:
-                prod=db.query(ProductoInsumo).filter(ProductoInsumo.sku==str(g.tela_id)).first() if g.tela_id else None
-                if prod: costo_telas+=consumo*(prod.costo_unitario or 0)
+                # Sin consumo ni insumo: no inventar S/ 0.00 (margen falso 100%).
+                fuente_costo="pendiente"
+                pendiente_costeo=True
         from app.models.order import WorkLog
         minutos=db.query(func.coalesce(func.sum(WorkLog.minutos_reales),0)).filter(WorkLog.garment_id.in_([gg.id for gg in garments])).scalar() or 0
         costo_destajo=round(minutos*tarifa_media,2)
-        precio=o.total or sum(g.precio for g in garments) or 0
-        costo_total=round(costo_telas+costo_destajo,2)
-        margen=round(precio-costo_total,2) if precio else 0
-        margen_pct=round((margen/precio*100) if precio else 0,1)
-        alerta=margen_pct<umbral
-        rows.append({"order":o,"precio":precio,"costo_telas":round(costo_telas,2),"costo_destajo":costo_destajo,"costo_total":costo_total,"margen":margen,"margen_pct":margen_pct,"alerta":alerta,"garments":garments})
+        if pendiente_costeo:
+            costo_total=round(costo_destajo,2)
+            margen=None
+            margen_pct=None
+            alerta=True
+        else:
+            costo_total=round(costo_telas+costo_destajo,2)
+            margen=round(precio-costo_total,2) if precio else 0
+            margen_pct=round((margen/precio*100) if precio else 0,1)
+            alerta=margen_pct<umbral
+        rows.append({"order":o,"precio":precio,"costo_telas":round(costo_telas,2),"costo_destajo":costo_destajo,"costo_total":costo_total,"margen":margen,"margen_pct":margen_pct,"alerta":alerta,"garments":garments,"fuente_costo":fuente_costo,"pendiente_costeo":pendiente_costeo})
     return templates.TemplateResponse(request, "finanzas/rentabilidad.html", {"user":user,"tab":"rentabilidad","rows":rows,"umbral":umbral,"tarifa_media":tarifa_media})
 
 @router.get("/reportes-contables", response_class=HTMLResponse)
