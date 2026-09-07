@@ -411,11 +411,15 @@ def _nombre(db: Session, inv: Invoice) -> str:
 @router.get("/facturacion", response_class=HTMLResponse)
 def facturacion(request: Request, db: Session = Depends(get_db), user=Auth):
     facturas = db.query(Invoice).order_by(Invoice.id.desc()).limit(80).all()
+    pendientes = db.query(Order).filter(Order.estado.notin_(["cancelado"])).order_by(
+        Order.id.desc()).limit(60).all()
     return templates.TemplateResponse(request, "ventas/facturacion.html", {
         "user": user, "facturas": facturas,
         "nombres": {f.id: _nombre(db, f) for f in facturas},
-        "pendientes": db.query(Order).filter(Order.estado.notin_(["cancelado"])).order_by(
-            Order.id.desc()).limit(60).all(),
+        "pendientes": pendientes,
+        # Pedidos de empresa (RUC) fuerzan Factura F001.
+        "serie_forzada": {o.id: ("F001" if o.company_id else "B001")
+                          for o in pendientes},
         "igv": _igv(db),
         "sede": config_svc.get(db, "sede_nombre", "Suit Elans")})
 
@@ -425,11 +429,14 @@ def comprobantes(request: Request, db: Session = Depends(get_db), user=Auth):
     # Spec pide comprobantes.html; facturacion.html es legacy
     if (BASE_DIR / "app" / "templates" / "ventas" / "comprobantes.html").exists():
         facturas = db.query(Invoice).order_by(Invoice.id.desc()).limit(80).all()
+        pendientes = db.query(Order).filter(Order.estado.notin_(["cancelado"])).order_by(
+            Order.id.desc()).limit(60).all()
         return templates.TemplateResponse(request, "ventas/comprobantes.html", {
             "user": user, "facturas": facturas,
             "nombres": {f.id: _nombre(db, f) for f in facturas},
-            "pendientes": db.query(Order).filter(Order.estado.notin_(["cancelado"])).order_by(
-                Order.id.desc()).limit(60).all(),
+            "pendientes": pendientes,
+            "serie_forzada": {o.id: ("F001" if o.company_id else "B001")
+                              for o in pendientes},
             "igv": _igv(db),
             "sede": config_svc.get(db, "sede_nombre", "Suit Elans")})
     return facturacion(request, db, user)
@@ -441,6 +448,8 @@ def emitir(serie: str = Form("B001"), order_id: str = Form(""),
     # Emisión atómica: comprobante + asiento 1212/40111+7011 + CxC (bloquea período cerrado)
     from app.services import contabilidad as contab
     order = db.get(Order, int(order_id)) if order_id else None
+    if order and order.company_id:
+        serie = "F001"  # Empresa con RUC: comprobante forzado a Factura
     try:
         if order:
             res = contab.emitir_factura_venta(db, order.id, serie, _igv(db), user.id)
@@ -458,9 +467,11 @@ def crear_comprobante(serie: str = Form("B001"), order_id: str = Form(""), tipo:
                      db: Session = Depends(get_db), user=Auth):
     # Spec: POST /ventas/comprobantes crea BOLETA/FACTURA (emisión atómica si hay pedido)
     from app.services import contabilidad as contab
-    if tipo and tipo.upper() in ("BOLETA", "FACTURA"):
-        serie = "B001" if tipo.upper() == "BOLETA" else "F001"
     order = db.get(Order, int(order_id)) if order_id and order_id.isdigit() else None
+    if order and order.company_id:
+        tipo, serie = "FACTURA", "F001"  # Empresa con RUC: Factura forzada
+    elif tipo and tipo.upper() in ("BOLETA", "FACTURA"):
+        serie = "B001" if tipo.upper() == "BOLETA" else "F001"
     try:
         if order:
             res = contab.emitir_factura_venta(db, order.id, serie, _igv(db), user.id)

@@ -9,16 +9,30 @@
     <h2 class="font-bold mb-2 text-sm">Emitir comprobante</h2>
     <form method="post" action="/ventas/comprobantes" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs items-end">
       <label class="block">Tipo
-        <select name="tipo" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="BOLETA">BOLETA</option><option value="FACTURA">FACTURA</option></select>
+        <select name="tipo" id="tipo-comp" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="BOLETA">BOLETA</option><option value="FACTURA">FACTURA</option></select>
       </label>
       <label class="block">Serie
-        <select name="serie" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option>B001</option><option>F001</option></select>
+        <select name="serie" id="serie-comp" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option>B001</option><option>F001</option></select>
       </label>
       <label class="block md:col-span-2">Orden de venta
-        <select name="order_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for o in pendientes %}<option value="{{ o.id }}">{{ o.folio }} · S/ {{ "%.2f"|format(o.total) }}</option>{% endfor %}</select>
+        <select name="order_id" id="pedido-comp" onchange="forzarSerieComp(this.value)" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for o in pendientes %}<option value="{{ o.id }}">{{ o.folio }} · S/ {{ "%.2f"|format(o.total) }}{% if o.company_id %} · 🏢{% endif %}</option>{% endfor %}</select>
       </label>
+      <p id="aviso-serie-comp" class="col-span-2 md:col-span-4 text-amber-700 hidden">🏢 Pedido de empresa (RUC): el comprobante se fuerza a <b>Factura F001</b>.</p>
       <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold col-span-2 md:col-span-4">Emitir (IGV {{ igv }}%)</button>
     </form>
+<script>
+const SERIE_FORZADA_COMP = { {% for o in pendientes %}"{{ o.id }}": "{{ serie_forzada[o.id] }}",{% endfor %} };
+function forzarSerieComp(oid) {
+  var t = document.getElementById('tipo-comp');
+  var s = document.getElementById('serie-comp');
+  var aviso = document.getElementById('aviso-serie-comp');
+  var forzada = SERIE_FORZADA_COMP[oid] || 'B001';
+  if (t) t.value = forzada === 'F001' ? 'FACTURA' : 'BOLETA';
+  if (s) s.value = forzada;
+  if (aviso) aviso.classList.toggle('hidden', forzada !== 'F001');
+}
+forzarSerieComp(document.getElementById('pedido-comp') ? document.getElementById('pedido-comp').value : '');
+</script>
     <h2 class="font-bold mb-2 text-sm">Emitidos ({{ facturas|length }})</h2>
     {% for f in facturas %}
     <div class="text-xs border-b py-1.5 flex justify-between items-center gap-2">

@@ -27,13 +27,14 @@
           <span id="pos-cliente-seleccionado-texto" class="font-medium"></span>
           <button type="button" onclick="limpiarSeleccionPOS()" class="text-red-600 underline">Quitar</button>
         </div>
+        <div id="pos-comprobante" class="hidden mt-2 p-2 rounded-lg text-xs font-bold"></div>
         {% if not clientes and not empresas %}
           <div class="mb-2">{{ empty_state("🤝", "Sin clientes registrados", "El alta maestro se hace en Comercial y CRM", "/comercial/clientes", "Ir a Comercial y CRM") }}</div>
         {% endif %}
         <select name="client_id" id="select-cliente-pos" class="hidden"><option value="">— Persona —</option>{% for c in clientes %}<option value="{{ c.id }}">{{ c.nombre }} {{ c.apellidos }} · {{ c.doc_label }} · {{ c.telefono or '' }}</option>{% endfor %}</select>
         <select name="company_id" id="select-empresa-pos" class="hidden"><option value="">— Empresa —</option>{% for e in empresas %}<option value="{{ e.id }}">{{ e.nombre_comercial }} · {{ e.ruc or '' }}</option>{% endfor %}</select>
         <div id="pos-colaborador" class="hidden mt-2 p-2 bg-[#FAF8F5] border rounded-lg text-xs" style="border-color:#C5A880">
-          <p class="font-bold mb-1" style="color:#370003">🧑‍💼 Colaborador / Beneficiario <span class="font-normal text-slate-500">(prenda y ficha a su nombre · factura a la empresa)</span></p>
+          <p class="font-bold mb-1" style="color:#370003">🧑‍💼 Asignar a / Beneficiario <span class="font-normal text-slate-500">(Colaborador / Beneficiario: prenda y ficha a su nombre · factura a la empresa)</span></p>
           <select name="colaborador_id" id="select-colaborador-pos" onchange="toggleNuevoColab(this.value)" class="w-full border rounded-lg px-2 py-1.5 bg-white"></select>
           <div id="pos-nuevo-colab" class="hidden grid grid-cols-3 gap-1 mt-1">
             <input name="colab_nombre" placeholder="Nombres *" class="border rounded px-2 py-1">
@@ -176,10 +177,12 @@ function seleccionarClientePOS(m) {
     selC.value = m.id;
     selE.value = '';
     ocultarColaboradorPOS();
+    mostrarComprobantePOS('persona');
   } else {
     selE.value = m.id;
     selC.value = '';
     mostrarColaboradorPOS(m.id);
+    mostrarComprobantePOS('empresa');
   }
   if (input) input.value = m.display;
   if (badge && badgeText) {
@@ -201,6 +204,7 @@ function limpiarSeleccionPOS() {
   if (input) input.value = '';
   if (badge) badge.classList.add('hidden');
   ocultarColaboradorPOS();
+  mostrarComprobantePOS('');
   filtrarClientesPOS('');
 }
 function mostrarColaboradorPOS(empId) {
@@ -232,6 +236,20 @@ function ocultarColaboradorPOS() {
 function toggleNuevoColab(v) {
   const div = document.getElementById('pos-nuevo-colab');
   if (div) div.classList.toggle('hidden', v !== '__nuevo__');
+}
+function mostrarComprobantePOS(kind) {
+  const div = document.getElementById('pos-comprobante');
+  if (!div) return;
+  if (kind === 'empresa') {
+    div.className = 'mt-2 p-2 rounded-lg text-xs font-bold bg-amber-50 border border-amber-300 text-amber-900';
+    div.textContent = '🧾 Comprobante: FACTURA (forzado por RUC de empresa)';
+  } else if (kind === 'persona') {
+    div.className = 'mt-2 p-2 rounded-lg text-xs font-bold bg-slate-50 border border-slate-200 text-slate-600';
+    div.textContent = '🧾 Comprobante: BOLETA';
+  } else {
+    div.className = 'hidden mt-2 p-2 rounded-lg text-xs font-bold';
+    div.textContent = '';
+  }
 }
 // Cerrar resultados al hacer click fuera
 document.addEventListener('click', (e) => {

@@ -9,13 +9,25 @@
   <h2 class="font-bold mb-2 text-sm">Emitir desde pedido</h2>
   <form method="post" action="/ventas/facturacion/emitir" class="grid grid-cols-3 gap-2 text-xs items-end mb-3">
     <label class="block">Serie
-      <select name="serie" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option>B001</option><option>F001</option></select>
+      <select name="serie" id="serie-fact" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option>B001</option><option>F001</option></select>
     </label>
     <label class="block col-span-2">Pedido pendiente
-      <select name="order_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for o in pendientes %}<option value="{{ o.id }}">{{ o.folio }} · S/ {{ "%.2f"|format(o.total) }}</option>{% endfor %}</select>
+      <select name="order_id" id="pedido-fact" onchange="forzarSerie(this.value)" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for o in pendientes %}<option value="{{ o.id }}">{{ o.folio }} · S/ {{ "%.2f"|format(o.total) }}{% if o.company_id %} · 🏢{% endif %}</option>{% endfor %}</select>
     </label>
+    <p id="aviso-serie" class="col-span-3 text-amber-700 hidden">🏢 Pedido de empresa (RUC): el comprobante se fuerza a <b>Factura F001</b>.</p>
     <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold col-span-3">Emitir (IGV {{ igv }}%)</button>
   </form>
+<script>
+const SERIE_FORZADA = { {% for o in pendientes %}"{{ o.id }}": "{{ serie_forzada[o.id] }}",{% endfor %} };
+function forzarSerie(oid) {
+  var s = document.getElementById('serie-fact');
+  var aviso = document.getElementById('aviso-serie');
+  var forzada = SERIE_FORZADA[oid] || 'B001';
+  if (s) s.value = forzada;
+  if (aviso) aviso.classList.toggle('hidden', forzada !== 'F001');
+}
+forzarSerie(document.getElementById('pedido-fact') ? document.getElementById('pedido-fact').value : '');
+</script>
   <h2 class="font-bold mb-2 text-sm">Emitidos</h2>
   {% for f in facturas %}
   <div class="text-xs border-b py-1.5 flex justify-between items-center gap-2">
