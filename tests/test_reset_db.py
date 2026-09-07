@@ -67,3 +67,32 @@ def test_reset_bloquea_prod_sin_flag(tmp_path):
     con = sqlite3.connect(db)
     assert con.execute("SELECT COUNT(*) FROM clients").fetchone()[0] == 3
     con.close()
+
+
+def test_force_alias_y_orden_fk(tmp_path):
+    db = str(tmp_path / "reset_force.db")
+    _seed(db)
+    env = dict(os.environ, DATABASE_URL=f"sqlite:///{db}")
+    r = subprocess.run(SCRIPT + ["--force"], cwd=REPO, env=env,
+                       capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0 and "users intactos" in r.stdout
+    # Sin --force ni --yes pide confirmación (stdin cerrado → EOF → aborta)
+    db2 = str(tmp_path / "reset_noconfirm.db")
+    _seed(db2)
+    env2 = dict(os.environ, DATABASE_URL=f"sqlite:///{db2}")
+    r = subprocess.run(SCRIPT, cwd=REPO, env=env2, input="NO\n",
+                       capture_output=True, text=True, timeout=120)
+    assert r.returncode == 4 and "Cancelado" in r.stdout
+
+
+def test_orden_fk_hijas_primero():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "reset_db", f"{REPO}/scripts/reset_db.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    from sqlalchemy import create_engine
+    eng = create_engine("sqlite://")
+    orden = mod.purge_order(eng, ["orders", "payments", "clients", "garments"])
+    assert orden.index("payments") < orden.index("orders")
+    assert orden.index("garments") < orden.index("orders")

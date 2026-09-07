@@ -1,22 +1,27 @@
 #!/usr/bin/env python3
-"""Reset de base de datos (mantenimiento).
+"""Reset de base de datos (mantenimiento) — purga operativa + reinicio.
 
-Limpia todas las tablas operativas (pedidos, ventas, inventario, kardex,
-contabilidad, clientes, etc.) y PRESERVA `users`, `configuracion` (sede) y
-`alembic_version`. El RBAC vive en código (rol en `users`), sin tablas propias.
+Limpia en orden correcto de integridad referencial (hijas primero) todas las
+tablas operativas:
+  Ventas/POS (órdenes, cotizaciones, comprobantes, caja), Finanzas/Caja
+  (CxC, CxP, gastos, flujo), Inventario/Almacén (kardex, telas, insumos,
+  catálogo), Producción/Taller (fichas, medidas, tareo/destajo),
+  Clientes/CRM (personas, empresas, contactos), Rendimiento.
+PRESERVA `users` (RBAC por rol en código), `configuracion` (sede/empresa) y
+`alembic_version`. Reinicia correlativos (RESTART IDENTITY / AUTOINCREMENT).
 
-- PostgreSQL: un solo `TRUNCATE ... RESTART IDENTITY CASCADE`.
-- SQLite: `DELETE` + reinicio de `sqlite_sequence` + `VACUUM`.
+- PostgreSQL: `TRUNCATE ... RESTART IDENTITY CASCADE` en orden FK.
+- SQLite: `DELETE` en orden FK + reinicio de `sqlite_sequence` + `VACUUM`.
 
 SEGURIDAD:
 - URLs PostgreSQL o `ENV=prod/production` exigen `--allow-prod`.
-- Sin `--yes` pide confirmación interactiva (escribir BORRAR).
-- `--dry-run` solo lista lo que se borraría.
+- Requiere confirmación `--force` (o interactiva BORRAR) — nunca corre solo.
+- `--dry-run` solo lista lo que se borraría (en orden de purga).
 
 Uso:
     python scripts/reset_db.py --dry-run
-    python scripts/reset_db.py --yes
-    DATABASE_URL=sqlite:////tmp/demo.db python scripts/reset_db.py --yes
+    python scripts/reset_db.py --force
+    DATABASE_URL=sqlite:////tmp/demo.db python scripts/reset_db.py --force
 """
 from __future__ import annotations
 
@@ -58,6 +63,23 @@ def target_tables(engine) -> list[str]:
     return sorted(out)
 
 
+def purge_order(engine, tables: list[str]) -> list[str]:
+    """Orden de purga FK-correcto: tablas hijas primero.
+
+    Usa el orden topológico de los metadatos de la app (invertido); las
+    tablas no registradas en metadatos van primero (asume dependencias).
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+        from app.models import Base  # noqa: F401 — registra todos los modelos
+        topo = [t.name for t in Base.metadata.sorted_tables]  # padres primero
+        rank = {name: i for i, name in enumerate(topo)}
+        return sorted(tables, key=lambda t: rank.get(t, float("inf")),
+                      reverse=True)
+    except Exception:
+        return sorted(tables)
+
+
 def wipe(engine, tables: list[str], is_pg: bool) -> None:
     from sqlalchemy import text
 
@@ -87,7 +109,8 @@ def wipe(engine, tables: list[str], is_pg: bool) -> None:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Reset de BD (preserva users).")
     ap.add_argument("--database-url", default=None, help="URL SQLAlchemy (default: $DATABASE_URL o suitelans.db)")
-    ap.add_argument("--yes", action="store_true", help="Omitir confirmación interactiva")
+    ap.add_argument("--force", action="store_true", help="Confirmación requerida (anti-producción accidental)")
+    ap.add_argument("--yes", action="store_true", help="Alias de --force")
     ap.add_argument("--dry-run", action="store_true", help="Solo mostrar lo que se borraría")
     ap.add_argument("--allow-prod", action="store_true", help="Permitir URLs PostgreSQL / ENV prod")
     args = ap.parse_args(argv)
@@ -108,6 +131,7 @@ def main(argv: list[str] | None = None) -> int:
 
     engine = create_engine(url)
     tables = target_tables(engine)
+    orden = purge_order(engine, tables)
     with engine.connect() as c:
         counts = {t: c.execute(text(f'SELECT COUNT(*) FROM "{t}"')).scalar()
                   for t in tables}
@@ -115,18 +139,18 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Destino: {label}  (tablas operativas: {len(tables)}, filas: {total})")
     print("Preservadas: users (RBAC por rol), configuracion (sede), alembic_version")
     if args.dry_run:
-        for t in tables:
+        for t in orden:
             print(f"  - {t} ({counts[t]} filas)")
         print("[dry-run] sin cambios.")
         return 0
-    if not args.yes:
+    if not (args.force or args.yes):
         print("ADVERTENCIA: esto BORRA todos los datos operativos (irreversible).")
         resp = input("Escribe BORRAR para confirmar: ").strip()
         if resp != "BORRAR":
             print("Cancelado.")
             return 4
-    wipe(engine, tables, url.startswith("postgresql"))
-    print(f"OK: {len(tables)} tablas limpiadas, {total} filas borradas. users intactos.")
+    wipe(engine, orden, url.startswith("postgresql"))
+    print(f"OK: {len(orden)} tablas limpiadas en orden FK, {total} filas borradas. users intactos.")
     return 0
 
 
