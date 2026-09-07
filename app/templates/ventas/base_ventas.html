@@ -1,11 +1,11 @@
 {% extends "base.html" %}
+{% from "components/sub_nav.html" import sub_nav with context %}
 {% block content %}
-{% set _vp = (request.url.path if request is defined and request else "") %}
-<div class="flex overflow-x-auto whitespace-nowrap scrollbar-none py-2 border-b border-neutral-200 bg-white/50 px-4 gap-2 mb-4 text-sm" role="tablist" aria-label="Ventas y Atención">
-  <a href="/ventas/pos" role="tab" class="px-3 py-1.5 rounded-lg font-bold {{ 'bg-borgo text-white' if _vp.startswith('/ventas/pos') else 'hover:bg-white text-[#C5A880]' }}">🛒 Punto de venta</a>
-  <a href="/ventas/ordenes" role="tab" class="px-3 py-1.5 rounded-lg font-bold {{ 'bg-borgo text-white' if _vp.startswith('/ventas/ordenes') else 'hover:bg-white text-[#C5A880]' }}">📋 Órdenes de venta</a>
-  <a href="/ventas/caja" role="tab" class="px-3 py-1.5 rounded-lg font-bold {{ 'bg-borgo text-white' if _vp.startswith('/ventas/caja') else 'hover:bg-white text-[#C5A880]' }}">💵 Control de caja</a>
-  <a href="/ventas/facturacion" role="tab" class="px-3 py-1.5 rounded-lg font-bold {{ 'bg-borgo text-white' if _vp.startswith('/ventas/facturacion') or _vp.startswith('/ventas/comprobantes') else 'hover:bg-white text-[#C5A880]' }}">🧾 Facturación</a>
-</div>
+{{ sub_nav([
+  {"icon": "🛒", "label": "Punto de venta", "url": "/ventas/pos"},
+  {"icon": "📋", "label": "Órdenes de venta", "url": "/ventas/ordenes"},
+  {"icon": "💵", "label": "Control de caja", "url": "/ventas/caja"},
+  {"icon": "🧾", "label": "Facturación", "url": "/ventas/facturacion"},
+]) }}
 {% block ventas %}{% endblock %}
 {% endblock %}

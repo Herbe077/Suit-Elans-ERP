@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from "components/sub_nav.html" import sub_nav with context %}
 {% block content %}
-<div class="flex gap-2 mb-4 text-sm border-b-2 pb-2 overflow-x-auto" style="border-color:#C5A880">
-  <a href="/rendimiento/registro" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'text-white' if tab=='registro' else 'hover:bg-white' }} font-bold" style="{% if tab=='registro' %}background:#370003{% endif %}">📋 Registro Diario</a>
-  <a href="/rendimiento/calculadora" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'text-white' if tab=='calculadora' else 'hover:bg-white' }} font-bold" style="{% if tab=='calculadora' %}background:#370003{% endif %}">🧮 Calculadora Destajo</a>
-  <a href="/rendimiento/tarifario" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'text-white' if tab=='tarifario' else 'hover:bg-white' }} font-bold" style="{% if tab=='tarifario' %}background:#370003{% endif %}">💲 Tarifario (44)</a>
-</div>
+{{ sub_nav([
+  {"icon": "📋", "label": "Registro Diario", "url": "/rendimiento/registro"},
+  {"icon": "🧮", "label": "Calculadora Destajo", "url": "/rendimiento/calculadora"},
+  {"icon": "💲", "label": "Tarifario (44)", "url": "/rendimiento/tarifario"},
+]) }}
 {% block rendimiento %}{% endblock %}
 {% endblock %}

@@ -9,13 +9,12 @@ def test_cxc_cxp_tablas_scroll(client, auth_cookies):
         assert "tabular-nums" in t, url
 
 
-def test_almacen_tablas_y_selects(client, auth_cookies):
+def test_almacen_tablas_y_subnav(client, auth_cookies):
     t = client.get("/inventario/almacen", cookies=auth_cookies).text
     assert t.count("w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0") >= 4
     assert "min-w-[140px]" in t
-    # Un selector en móvil, tabs clásicos solo en escritorio
-    assert 'class="block sm:hidden w-full' in t
-    assert 'class="hidden sm:flex gap-2 mb-4 text-xs"' in t
+    # Submenú unificado con scroll en móvil
+    assert "bg-neutral-100/70 p-1.5 border-b border-neutral-200 gap-1.5" in t
 
 
 def test_bottom_nav_activo_por_ruta(client, auth_cookies):

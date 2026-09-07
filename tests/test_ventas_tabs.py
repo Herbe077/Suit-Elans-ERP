@@ -10,8 +10,8 @@ def test_tabs_en_las_4_vistas(client, auth_cookies):
         for tab in ("Punto de venta", "Órdenes de venta", "Control de caja",
                     "Facturación"):
             assert tab in t, (url, tab)
-        assert f"bg-borgo text-white\">{activo}" in t, url
-        assert "overflow-x-auto whitespace-nowrap scrollbar-none py-2" in t, url
+        assert f"bg-[#3B0A11] text-white shadow-sm\">{activo}" in t, url
+        assert "overflow-x-auto whitespace-nowrap scrollbar-none" in t, url
 
 
 def test_sin_botones_redundantes(client, auth_cookies):

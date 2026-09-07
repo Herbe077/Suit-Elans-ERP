@@ -15,16 +15,11 @@
 
 <div x-data="{ sub: '{{ sub }}' }">
 {# ——— Sub-pestañas por cuenta contable ——— #}
-<div class="hidden sm:flex gap-2 mb-4 text-xs" role="tablist" aria-label="Existencias por cuenta">
+<div class="flex gap-1.5 mb-4 text-xs" role="tablist" aria-label="Existencias por cuenta">
   <button role="tab" data-scope="mp" :aria-selected="sub === 'mp'" @click="sub = 'mp'" :class="sub === 'mp' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">Materia Prima / Avíos (Cta 24)</button>
   <button role="tab" data-scope="wip" :aria-selected="sub === 'wip'" @click="sub = 'wip'" :class="sub === 'wip' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">Productos en Proceso / Taller (Cta 23)</button>
   <button role="tab" data-scope="pt" :aria-selected="sub === 'pt'" @click="sub = 'pt'" :class="sub === 'pt' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">Productos Terminados / RTW (Cta 21)</button>
 </div>
-<select onchange="if(this.value) location.href='/inventario/almacen?sub='+this.value" class="block sm:hidden w-full text-xs border rounded-lg px-3 py-2 mb-3 bg-white" aria-label="Existencias por cuenta">
-  <option value="mp" {% if sub=='mp' %}selected{% endif %}>Materia Prima / Avíos (Cta 24)</option>
-  <option value="wip" {% if sub=='wip' %}selected{% endif %}>Productos en Proceso / Taller (Cta 23)</option>
-  <option value="pt" {% if sub=='pt' %}selected{% endif %}>Productos Terminados / RTW (Cta 21)</option>
-</select>
 
 {# ——— A. Materia Prima / Avíos (Cta 24) ——— #}
 <div x-show="sub === 'mp'" class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880]">

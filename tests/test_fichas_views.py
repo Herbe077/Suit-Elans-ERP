@@ -26,7 +26,8 @@ def test_ficha_grilla_movil_y_etiquetas(client, auth_cookies):
 
 def test_subbar_scroll_y_bottom_nav(client, auth_cookies):
     t = _ficha(client, auth_cookies)
-    assert "flex overflow-x-auto whitespace-nowrap scrollbar-none py-2" in t
+    assert "overflow-x-auto whitespace-nowrap scrollbar-none" in t
+    assert "bg-neutral-100/70" in t  # submenú unificado
     assert ".scrollbar-none" in t
     for item in ("Panel", "POS", "Taller", "Caja", "Menú"):
         assert item in t
