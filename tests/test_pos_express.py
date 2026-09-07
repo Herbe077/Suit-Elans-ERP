@@ -58,3 +58,41 @@ def test_express_no_crea_medidas(client, auth_cookies):
     assert c is not None
     assert db.query(Measurement).filter(Measurement.client_id == c.id).count() == 0
     db.close()
+
+
+def test_paso1_gate_y_card_compacta(client, auth_cookies):
+    t = client.get("/ventas/pos", cookies=auth_cookies).text
+    assert 'id="btn-paso2"' in t and "disabled" in t  # bloqueado sin cliente
+    assert "Público General" in t
+    assert 'id="pos-confirm"' in t and "Cambiar" in t  # card compacta
+    assert "pos-cliente-vacio" not in t and "pos-comprobante" not in t
+    assert 'x-show="express"' in t  # alta rápida oculta por defecto
+
+
+def test_publico_general_vende_sin_cliente(client, auth_cookies):
+    from app.core.database import SessionLocal
+    from app.models.order import Order
+    db = SessionLocal()
+    antes = db.query(Order).count()
+    db.close()
+    r = client.post("/ventas/pos/vender",
+                    data={"publico_general": "1", "concepto": "Venta menor PG",
+                          "precio": "150", "garment_tipo": "camisa",
+                          "monto_cobro": "0"}, cookies=auth_cookies)
+    assert r.status_code in (200, 303)
+    db = SessionLocal()
+    o = db.query(Order).filter(Order.concepto == "Venta menor PG").first()
+    assert o is not None and o.client_id is None and o.company_id is None
+    assert o.total == 150.0  # sin recargos
+    # Sin cliente ni flag: no se crea nada
+    n = db.query(Order).count()
+    db.close()
+    r = client.post("/ventas/pos/vender",
+                    data={"concepto": "Sin cliente", "precio": "100",
+                          "garment_tipo": "camisa", "monto_cobro": "0"},
+                    cookies=auth_cookies, follow_redirects=False)
+    assert r.status_code == 303
+    db = SessionLocal()
+    assert db.query(Order).filter(Order.concepto == "Sin cliente").first() is None
+    assert db.query(Order).count() == n
+    db.close()

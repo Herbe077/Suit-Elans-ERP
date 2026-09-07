@@ -185,6 +185,7 @@ async def cliente_rapido(request: Request, db: Session = Depends(get_db),
 def vender(client_id: str = Form(""), company_id: str = Form(""),
            colaborador_id: str = Form(""), colab_nombre: str = Form(""),
            colab_apellidos: str = Form(""), colab_telefono: str = Form(""),
+           publico_general: str = Form(""),
            variant_id: str = Form(""), cantidad: float = Form(1),
            concepto: str = Form(""), precio: float = Form(0),
            garment_tipo: str = Form(""), tela_id: str = Form(""),
@@ -192,6 +193,7 @@ def vender(client_id: str = Form(""), company_id: str = Form(""),
            db: Session = Depends(get_db), user=Auth):
     from app.models.inventory import StockMovement
     from app.services.orders import next_folio
+    es_pg = (publico_general or "").strip().lower() in ("1", "true", "si", "on")
     emp_id = int(company_id) if company_id and company_id.isdigit() else None
     # Colaborador / beneficiario: la prenda y ficha van a su nombre,
     # la facturación queda a nombre de la empresa (company_id).
@@ -213,7 +215,7 @@ def vender(client_id: str = Form(""), company_id: str = Form(""),
             db.flush()
             beneficiario_id = col.id
     cli_id = int(client_id) if client_id and client_id.isdigit() else beneficiario_id
-    if not cli_id and not emp_id:
+    if not cli_id and not emp_id and not es_pg:
         return RedirectResponse("/ventas/pos", status_code=303)
     if not variant_id and not (concepto and precio > 0):
         return RedirectResponse("/ventas/pos", status_code=303)
