@@ -219,6 +219,7 @@ def registrar_gasto_operativo(
     centro_costo_id: int | None = None,
     variabilidad: str = "FIJO",
     clasificacion: str | None = None,
+    glosa: str | None = None,
 ) -> tuple[GastoRegistrado, AsientoContable]:
     """Registra gasto/compra operativa y genera sus asientos devengados.
 
@@ -264,6 +265,7 @@ def registrar_gasto_operativo(
         tipo_comprobante=(tipo_comprobante or None),
         numero_comprobante=(numero_comprobante or None),
         categoria=cat,
+        glosa=(glosa or "").strip() or None,
         monto_base=float(base),
         monto_igv=float(igv),
         monto_total=float(total),
@@ -280,7 +282,7 @@ def registrar_gasto_operativo(
         lineas.append({"cuenta_id": c_igv.id, "debe": igv, "haber": Decimal("0")})
     lineas.append({"cuenta_id": c_prov.id, "debe": Decimal("0"), "haber": total})
     asiento = crear_asiento_flush(
-        db, fecha, f"{cat.title()} {numero_comprobante or ''}".strip(), regla["origen"], gasto.id, lineas,
+        db, fecha, (glosa or f"{cat.title()} {numero_comprobante or ''}").strip() or cat.title(), regla["origen"], gasto.id, lineas,
     )
     # Destino analítico: por centro de costo (Taller→921, Adm→941, Com→951);
     # fallback a clasificación; sin destino para cuentas de Balance (33x).

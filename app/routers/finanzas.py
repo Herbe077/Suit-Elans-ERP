@@ -407,7 +407,7 @@ def gastos_crear(
     tipo_comprobante: str = Form("FACTURA"), numero_comprobante: str = Form(""),
     categoria: str = Form("OTRO"), cuenta_codigo: str = Form(""),
     monto_total: float = Form(0), monto_base: float = Form(0),
-    igv: float = Form(0),
+    igv: float = Form(0), glosa: str = Form(""),
     centro_costo_id: str = Form(""), db: Session = Depends(get_db), user=FinanzasAuth,
 ):
     try:
@@ -440,7 +440,7 @@ def gastos_crear(
             db, fecha=fe, categoria=cat, monto_base=monto_base, monto_igv=igv,
             cuenta_codigo=cta, proveedor_id=pid, ruc_proveedor=ruc or None,
             tipo_comprobante=tipo_comprobante or None, numero_comprobante=numero_comprobante or None,
-            centro_costo_id=ccid,
+            centro_costo_id=ccid, glosa=glosa,
         )
     except Exception as e:
         return HTMLResponse(str(e), status_code=400)

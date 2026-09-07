@@ -150,6 +150,7 @@ class GastoRegistrado(Base):
     tipo_comprobante: Mapped[str | None] = mapped_column(String(20), nullable=True)  # FACTURA/RECIBO_HONORARIOS/BOLETA/PLANILLA/OTRO
     numero_comprobante: Mapped[str | None] = mapped_column(String(40), nullable=True)
     categoria: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)  # ALQUILER/HONORARIOS/PLANILLA/ACTIVO_FIJO/OTRO
+    glosa: Mapped[str | None] = mapped_column(String(255), nullable=True)  # descripción libre
     monto_base: Mapped[float] = mapped_column(Float, default=0.0)
     monto_igv: Mapped[float] = mapped_column(Float, default=0.0)
     monto_total: Mapped[float] = mapped_column(Float, default=0.0)

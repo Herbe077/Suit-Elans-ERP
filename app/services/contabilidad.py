@@ -477,7 +477,8 @@ def registrar_gasto_atomico(db: Session, fecha: date, categoria: str,
                             numero_comprobante: str | None = None,
                             centro_costo_id: int | None = None,
                             variabilidad: str = "FIJO",
-                            clasificacion: str | None = None) -> tuple[GastoRegistrado, object]:
+                            clasificacion: str | None = None,
+                            glosa: str | None = None) -> tuple[GastoRegistrado, object]:
     """Provisión de gasto con bloqueo de período, en UNA transacción."""
     from app.services import finanzas as fin
 
@@ -489,7 +490,7 @@ def registrar_gasto_atomico(db: Session, fecha: date, categoria: str,
             monto_igv=monto_igv, cuenta_codigo=cuenta_codigo, proveedor_id=proveedor_id,
             ruc_proveedor=ruc_proveedor, tipo_comprobante=tipo_comprobante,
             numero_comprobante=numero_comprobante, centro_costo_id=centro_costo_id,
-            variabilidad=variabilidad, clasificacion=clasificacion)
+            variabilidad=variabilidad, clasificacion=clasificacion, glosa=glosa)
         return gasto, asiento
     except Exception:
         # registrar_gasto_operativo commitea internamente; si el asiento falló

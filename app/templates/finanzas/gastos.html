@@ -3,7 +3,7 @@
 {% block title %}Gastos y Compras Operativas{% endblock %}
 {% block finanzas %}
 <h1 class="text-2xl font-bold mb-1 font-serif">🧾 Gastos y Compras Operativas</h1>
-<p class="text-sm text-slate-500 mb-3">Alquileres (6311) · Honorarios (6322) · Planilla (6211) · Activos Fijos (3341) — asiento automático Debe gasto/activo + Debe 40111 / Haber 4212</p>
+<p class="text-sm text-slate-500 mb-3">Registra tus gastos del negocio. La cuenta contable se asigna sola según la categoría que elijas.</p>
 
 <div class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880] overflow-visible">
   <h2 class="font-bold text-sm mb-2">Registrar nuevo gasto</h2>
@@ -11,30 +11,30 @@
     <label class="block min-w-0">Fecha
       <input name="fecha" type="date" value="{{ '' }}" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
     </label>
-    <label class="block min-w-0">Proveedor
+    <label class="block min-w-0">Categoría
+      <select name="categoria" id="g-cat" onchange="gastoModo()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate">
+        {% for cat in categorias %}<option value="{{ cat }}">{{ cat|replace('_', ' ')|title }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="block min-w-0 col-span-2" id="f-glosa">Glosa / Descripción
+      <input name="glosa" placeholder="Ej. Sueldos julio, Recibo L. Prado…" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0" id="f-proveedor"><span id="lb-proveedor">Proveedor</span>
       <select name="proveedor_id" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate">
         <option value="">— Sin proveedor —</option>
         {% for s in proveedores %}<option value="{{ s.id }}">{{ s.nombre }}</option>{% endfor %}
       </select>
     </label>
-    <label class="block min-w-0">RUC
+    <label class="block min-w-0" id="f-ruc"><span id="lb-ruc">RUC</span>
       <input name="ruc" placeholder="RUC/DNI" maxlength="11" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
     </label>
-    <label class="block min-w-0">Tipo comprobante
+    <label class="block min-w-0" id="f-tipo">Tipo comprobante
       <select name="tipo_comprobante" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
         <option>FACTURA</option><option>RECIBO_HONORARIOS</option><option>BOLETA</option><option>PLANILLA</option><option>OTRO</option>
       </select>
     </label>
-    <label class="block min-w-0">N° Comprobante
+    <label class="block min-w-0" id="f-numero"><span id="lb-numero">N° Comprobante</span>
       <input name="numero_comprobante" placeholder="F001-123" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
-    </label>
-  <label class="block min-w-0">Categoría
-    <select name="categoria" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate" title="{% for cat in categorias %}{{ cat }} → {{ map[cat][0] }}&#10;{% endfor %}">
-      {% for cat in categorias %}<option value="{{ cat }}">{{ cat }} → {{ map[cat][0] }}</option>{% endfor %}
-    </select>
-  </label>
-    <label class="block min-w-0">Cuenta PCGE
-      <input name="cuenta_codigo" placeholder="vacío = auto" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
     </label>
     <label class="block min-w-0">Centro de costo
       <select name="centro_costo_id" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate">
@@ -55,14 +55,48 @@
   </form>
 </div>
 <script>
-function gastoCalc() {
+var GASTO_SIN_IGV = ['PLANILLA', 'HONORARIOS_RXH', 'ALQUILER_NATURAL'];
+function gastoModo() {
+  var cat = document.getElementById('g-cat').value;
+  var sinIgv = GASTO_SIN_IGV.indexOf(cat) !== -1;
+  var esPlanilla = cat === 'PLANILLA';
+  var esRxh = cat === 'HONORARIOS_RXH';
+  function vis(id, mostrar) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = mostrar ? '' : 'none';
+  }
+  // Planilla: solo Fecha, Glosa, Centro de costo y Monto.
+  vis('f-proveedor', !esPlanilla);
+  vis('f-ruc', !esPlanilla);
+  vis('f-tipo', !esPlanilla);
+  vis('f-numero', !esPlanilla);
+  var lbP = document.getElementById('lb-proveedor');
+  var lbR = document.getElementById('lb-ruc');
+  var lbN = document.getElementById('lb-numero');
+  if (esRxh) {
+    if (lbP) lbP.textContent = 'Nombre / DNI del Profesional';
+    if (lbR) lbR.textContent = 'DNI';
+    if (lbN) lbN.textContent = 'N° Recibo por Honorarios';
+  } else {
+    if (lbP) lbP.textContent = 'Proveedor';
+    if (lbR) lbR.textContent = 'RUC';
+    if (lbN) lbN.textContent = 'N° Comprobante';
+  }
+  gastoCalc(sinIgv);
+}
+function gastoCalc(sinIgv) {
+  if (sinIgv === undefined) {
+    var cat = document.getElementById('g-cat').value;
+    sinIgv = GASTO_SIN_IGV.indexOf(cat) !== -1;
+  }
   var t = parseFloat(document.getElementById('g-total-in').value) || 0;
-  var base = Math.round((t / 1.18) * 100) / 100;
+  var base = sinIgv ? t : Math.round((t / 1.18) * 100) / 100;
   var igv = Math.round((t - base) * 100) / 100;
   var f = function (n) { return n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); };
-  document.getElementById('g-split').textContent = 'S/ ' + f(base) + ' + S/ ' + f(igv);
+  document.getElementById('g-split').textContent = 'S/ ' + f(base) + ' + S/ ' + f(igv) + (sinIgv ? ' (sin IGV)' : '');
   document.getElementById('g-total').textContent = 'S/ ' + f(t);
 }
+gastoModo();
 </script>
 
 <form method="get" class="flex gap-2 text-xs mb-3">
@@ -73,16 +107,16 @@ function gastoCalc() {
 
 <div class="bg-white rounded-xl shadow overflow-x-auto">
   <table class="w-full text-xs">
-    <thead class="bg-slate-50 text-slate-500"><tr><th class="text-left p-2">ID</th><th>Fecha</th><th>Proveedor/RUC</th><th>Comprobante</th><th>Categoría</th><th>Cuenta</th><th class="text-right">Base</th><th class="text-right">IGV</th><th class="text-right">Total</th><th>Estado</th><th></th></tr></thead>
+    <thead class="bg-slate-50 text-slate-500"><tr><th class="text-left p-2">ID</th><th>Fecha</th><th>Proveedor/RUC</th><th>Comprobante</th><th>Categoría</th><th class="hidden md:table-cell">Cuenta</th><th class="text-right">Base</th><th class="text-right">IGV</th><th class="text-right">Total</th><th>Estado</th><th></th></tr></thead>
     <tbody>
     {% for g in gastos %}
       <tr class="border-b hover:bg-amber-50">
         <td class="p-2 font-mono">{{ g.id }}</td>
         <td>{{ g.fecha_emision }}</td>
-        <td>{{ prov_map.get(g.proveedor_id, '') }}{% if g.ruc_proveedor %} ({{ g.ruc_proveedor }}){% elif not g.proveedor_id %}—{% endif %}</td>
+        <td>{{ prov_map.get(g.proveedor_id, '') }}{% if g.ruc_proveedor %} ({{ g.ruc_proveedor }}){% elif not g.proveedor_id %}—{% endif %}{% if g.glosa %}<br><span class="text-slate-400">{{ g.glosa }}</span>{% endif %}</td>
         <td class="font-mono">{{ g.tipo_comprobante or '' }} {{ g.numero_comprobante or '' }}</td>
-        <td><span class="px-1.5 py-0.5 rounded bg-slate-100">{{ g.categoria or '—' }}</span><div class="text-slate-400">{{ g.clasificacion }}</div></td>
-        <td class="font-mono">{{ cuentas_map.get(g.cuenta_id, g.cuenta_id or '—') }}</td>
+        <td><span class="px-1.5 py-0.5 rounded bg-slate-100">{{ g.categoria.replace('_', ' ')|title if g.categoria else '—' }}</span></td>
+        <td class="font-mono hidden md:table-cell">{{ cuentas_map.get(g.cuenta_id, g.cuenta_id or '—') }}</td>
         <td class="text-right">{{ soles(g.monto_base or 0) }}</td>
         <td class="text-right">{{ soles(g.monto_igv or 0) }}</td>
         <td class="text-right font-bold">{{ soles(g.monto_total or 0) }}</td>
