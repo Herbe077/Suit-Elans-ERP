@@ -3,9 +3,10 @@
 {% from "components/badge.html" import badge %}
 {% block title %}Cuentas por Cobrar{% endblock %}
 {% block finanzas %}
+<div class="w-full max-w-full overflow-x-hidden">
 <h1 class="text-2xl font-bold mb-1 font-serif" style="color:#370003">💳 Cuentas por Cobrar</h1>
 <p class="text-sm text-slate-500 mb-3">Cobranzas a clientes (particulares y B2B) con abonos parciales o totales.</p>
-<form method="get" class="flex gap-2 text-xs mb-3 items-end">
+<form method="get" class="flex flex-col gap-2 sm:flex-row sm:items-end mb-3 text-xs">
   <label class="block">Estado
     <select name="estado" class="border rounded px-2 py-1.5 block mt-0.5 bg-white"><option value="">Todos</option><option value="PENDIENTE" {% if estado=='PENDIENTE' %}selected{% endif %}>PENDIENTE</option><option value="VENCIDO" {% if estado=='VENCIDO' %}selected{% endif %}>VENCIDO</option><option value="COBRADO_PARCIAL" {% if estado=='COBRADO_PARCIAL' %}selected{% endif %}>COBRADO_PARCIAL</option><option value="COBRADO" {% if estado=='COBRADO' %}selected{% endif %}>COBRADO</option></select>
   </label>
@@ -18,8 +19,7 @@
   <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold self-end">Filtrar</button>
   <a href="/finanzas/cuentas-por-cobrar" class="bg-slate-200 rounded px-2 py-1.5 self-end">Limpiar</a>
 </form>
-<div class="bg-white rounded-xl shadow">
-<div class="w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+<div class="w-full overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
   <table class="w-full text-xs">
     <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left px-3 py-2 whitespace-nowrap min-w-[60px]">ID</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Orden</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Cliente</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Total</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Pagado</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Saldo</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Vencimiento</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Estado</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Abono</th></tr></thead>
     <tbody class="font-mono tabular-nums">
@@ -49,6 +49,6 @@
     </tbody>
   </table>
 </div>
-</div>
 <p class="text-xs text-slate-400 mt-2">Registro de abonos manuales / conciliar cobros Ventas → actualiza MovimientoFinanciero INGRESO.</p>
+</div>
 {% endblock %}
