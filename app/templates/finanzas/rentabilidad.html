@@ -7,6 +7,12 @@
   <label>Umbral <input name="umbral" type="number" step="1" value="{{ umbral }}" class="border rounded px-2 py-1 w-20"> %</label>
   <button class="bg-borgo text-white rounded px-3">Aplicar</button>
 </form>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4 text-xs">
+  <div class="bg-white rounded-xl shadow p-3 border-t-2 border-[#C5A880]"><p class="text-slate-500">Margen Bruto Promedio</p><p class="text-lg font-bold font-mono">{{ kpis.margen_prom }}% <span class="text-xs font-sans font-normal text-slate-400">({{ kpis.n_cerrados }} cerrados)</span></p></div>
+  <div class="bg-white rounded-xl shadow p-3 border-t-2 border-[#C5A880]"><p class="text-slate-500">Punto de Equilibrio {{ kpis.mes }}</p><p class="text-lg font-bold font-mono">S/ {{ "%.2f"|format(kpis.punto_equilibrio) }}</p></div>
+  <div class="bg-white rounded-xl shadow p-3 border-t-2 border-[#C5A880]"><p class="text-slate-500">Eficiencia Taller (SAM)</p><p class="text-lg font-bold font-mono">{{ kpis.eficiencia }}%</p></div>
+  <div class="bg-white rounded-xl shadow p-3 border-t-2 border-[#C5A880]"><p class="text-slate-500">EBITDA {{ kpis.mes }}</p><p class="text-lg font-bold font-mono">S/ {{ "%.2f"|format(kpis.ebitda) }}</p></div>
+</div>
 <div class="bg-white rounded-xl shadow overflow-x-auto">
   <table class="w-full text-xs">
     <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left p-2 whitespace-nowrap">Pedido</th><th class="text-left p-2">Prenda(s)</th><th class="text-right p-2 whitespace-nowrap" style="min-width:120px">Valor Venta (Sin IGV)</th><th class="text-right p-2 whitespace-nowrap" style="min-width:130px">Costo Materiales</th><th class="text-right p-2 whitespace-nowrap" style="min-width:110px">Costo M.O.</th><th class="text-right p-2 whitespace-nowrap" style="min-width:110px">Costo Total</th><th class="text-right p-2 whitespace-nowrap" style="min-width:120px">Margen Bruto</th><th class="text-right p-2 whitespace-nowrap" style="min-width:110px">% Margen</th></tr></thead>
@@ -16,7 +22,7 @@
         <td class="p-2 font-mono whitespace-nowrap">{{ r.order.folio }} <span class="text-slate-400">{{ r.order.estado }}</span></td>
         <td class="font-sans">{% for g in r.garments %}<span class="inline-block bg-slate-100 rounded px-1 mr-1">{{ g.tipo }}</span>{% endfor %}</td>
         <td class="text-right whitespace-nowrap">S/ {{ "%.2f"|format(r.precio) }}</td>
-        <td class="text-right whitespace-nowrap">{% if r.pendiente_costeo %}<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-sans font-semibold text-xs">⏳ Pendiente de Costeo</span>{% else %}S/ {{ "%.2f"|format(r.costo_telas) }}{% if r.fuente_costo == 'kardex' %} <span class="font-sans text-slate-400" title="Costo real de Kardex">●</span>{% endif %}{% endif %}</td>
+        <td class="text-right whitespace-nowrap">{% if r.pendiente_liquidacion %}<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-sans font-semibold text-xs">⏳ Pendiente de Liquidación</span>{% elif r.pendiente_costeo %}<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-sans font-semibold text-xs">⏳ Pendiente de Costeo</span>{% else %}S/ {{ "%.2f"|format(r.costo_telas) }}{% if r.fuente_costo == 'kardex' %} <span class="font-sans text-slate-400" title="Costo real de Kardex">●</span>{% endif %}{% endif %}</td>
         <td class="text-right whitespace-nowrap">S/ {{ "%.2f"|format(r.costo_destajo) }}</td>
         <td class="text-right whitespace-nowrap">S/ {{ "%.2f"|format(r.costo_total) }}</td>
         <td class="text-right whitespace-nowrap font-bold {% if r.margen is not none and r.margen<0 %}text-red-600{% elif r.margen is not none %}text-emerald-700{% endif %}">{% if r.margen is none %}—{% else %}S/ {{ "%.2f"|format(r.margen) }}{% endif %}</td>

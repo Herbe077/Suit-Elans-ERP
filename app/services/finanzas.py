@@ -98,6 +98,31 @@ PCGE_PADRES_EXTRA = [
     ("681", "Depreciación de activos", "GASTO", 2, "68", 6),
 ]
 
+# Catálogo de Centros de Costo adaptado a sastrería a medida (PCGE Elemento 9).
+# (codigo, nombre, tipo) — el tipo define el destino 921/941/951.
+CENTROS_COSTO_SASTRERIA = [
+    ("921", "Taller: Confección, Ensamblaje y Máquinas", "TALLER"),
+    ("922", "Taller: Mesa de Corte y Patronaje", "TALLER"),
+    ("923", "Taller: Calidad, Acabados y Planchado", "TALLER"),
+    ("941", "Administración y Gestión General", "ADMINISTRACION"),
+    ("951", "Comercial: Showroom, Tienda y Mostrador", "COMERCIAL"),
+    ("952", "Comercial: Marketing, Catálogo y Publicidad", "COMERCIAL"),
+]
+
+
+def seed_centros_costo_sastreria(db: Session) -> int:
+    """Asegura el catálogo de centros de costo. Idempotente. Retorna creados."""
+    creados = 0
+    for codigo, nombre, tipo in CENTROS_COSTO_SASTRERIA:
+        ex = db.query(CentroCosto).filter(CentroCosto.codigo == codigo).first()
+        if not ex:
+            db.add(CentroCosto(codigo=codigo, nombre=nombre, tipo=tipo, activo=True))
+            creados += 1
+    if creados:
+        db.commit()
+    return creados
+
+
 # Mapeo categoría operativa -> (cuenta PCGE por defecto, clasificación de costos)
 CATEGORIA_GASTO_MAP: dict[str, tuple[str, str]] = {
     "ALQUILER": ("6311", "CIF"),
@@ -194,6 +219,7 @@ def seed_pcge_basico(db: Session):
         if padre and not get_cuenta_by_codigo(db, padre):
             get_or_create_cuenta(db, padre, f"Agrupadora {padre}", tipo, max(nivel - 1, 1), None, elemento=elemento)
         get_or_create_cuenta(db, codigo, nombre, tipo, nivel, padre, elemento=elemento, es_analitica=analitica)
+    seed_centros_costo_sastreria(db)
 
 
 def seed_pcge_detallado(db: Session) -> int:

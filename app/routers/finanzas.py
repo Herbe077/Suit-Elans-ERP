@@ -517,7 +517,7 @@ def rentabilidad(request: Request, umbral: float = Query(40.0), db: Session = De
         # Valor de venta NETO (sin IGV): el total comercial incluye IGV.
         bruto=o.total or sum(g.precio for g in garments) or 0
         precio=round(bruto/1.18,2)
-        # Costo de materiales: primero Kardex real (SALIDA_TALLER por pedido).
+        # Costo de materiales: consumo real de Kardex; si no, BOM estándar.
         from app.models.inventario import MovimientoKardex
         salidas=db.query(MovimientoKardex).filter(
             MovimientoKardex.orden_venta_id==o.id,
@@ -525,9 +525,8 @@ def rentabilidad(request: Request, umbral: float = Query(40.0), db: Session = De
         if salidas:
             costo_telas=round(sum(k.costo_total or 0 for k in salidas),2)
             fuente_costo="kardex"
-            pendiente_costeo=False
+            material_ok=True
         else:
-            # Estimación BOM estándar (consumo × costo de tela asignada).
             costo_telas=0.0
             con_insumo=False
             for g in garments:
@@ -541,29 +540,47 @@ def rentabilidad(request: Request, umbral: float = Query(40.0), db: Session = De
                     if prod:
                         con_insumo=True
                         costo_telas+=consumo*(prod.costo_unitario or 0)
-            if con_insumo:
-                costo_telas=round(costo_telas,2)
-                fuente_costo="bom"
-                pendiente_costeo=False
-            else:
-                # Sin consumo ni insumo: no inventar S/ 0.00 (margen falso 100%).
-                fuente_costo="pendiente"
-                pendiente_costeo=True
+            costo_telas=round(costo_telas,2)
+            fuente_costo="bom" if con_insumo else "pendiente"
+            material_ok=con_insumo
+        # Costo de M.O.: destajo/tareo completado (WorkLog terminado).
         from app.models.order import WorkLog
-        minutos=db.query(func.coalesce(func.sum(WorkLog.minutos_reales),0)).filter(WorkLog.garment_id.in_([gg.id for gg in garments])).scalar() or 0
+        minutos=db.query(func.coalesce(func.sum(WorkLog.minutos_reales),0)).filter(
+            WorkLog.garment_id.in_([gg.id for gg in garments]),
+            WorkLog.estado=="terminado").scalar() or 0
         costo_destajo=round(minutos*tarifa_media,2)
-        if pendiente_costeo:
-            costo_total=round(costo_destajo,2)
-            margen=None
-            margen_pct=None
-            alerta=True
-        else:
+        mo_ok=minutos>0
+        if material_ok and mo_ok:
+            # Costeo cerrado: margen real.
             costo_total=round(costo_telas+costo_destajo,2)
             margen=round(precio-costo_total,2) if precio else 0
             margen_pct=round((margen/precio*100) if precio else 0,1)
             alerta=margen_pct<umbral
-        rows.append({"order":o,"precio":precio,"costo_telas":round(costo_telas,2),"costo_destajo":costo_destajo,"costo_total":costo_total,"margen":margen,"margen_pct":margen_pct,"alerta":alerta,"garments":garments,"fuente_costo":fuente_costo,"pendiente_costeo":pendiente_costeo})
-    return templates.TemplateResponse(request, "finanzas/rentabilidad.html", {"user":user,"tab":"rentabilidad","rows":rows,"umbral":umbral,"tarifa_media":tarifa_media})
+            pendiente_liquidacion=False
+        else:
+            # Sin costeo cerrado: sin margen ficticio.
+            costo_total=round(costo_telas+costo_destajo,2)
+            margen=None
+            margen_pct=None
+            alerta=True
+            pendiente_liquidacion=True
+        rows.append({"order":o,"precio":precio,"costo_telas":round(costo_telas,2),"costo_destajo":costo_destajo,"costo_total":costo_total,"margen":margen,"margen_pct":margen_pct,"alerta":alerta,"garments":garments,"fuente_costo":fuente_costo,"pendiente_costeo":not material_ok,"pendiente_liquidacion":pendiente_liquidacion})
+    # KPIs de control de gestión.
+    from datetime import date as _date
+    cerrados=[r for r in rows if not r["pendiente_liquidacion"] and r["margen_pct"] is not None]
+    margen_prom=round(sum(r["margen_pct"] for r in cerrados)/len(cerrados),1) if cerrados else 0.0
+    mes_ini=_date.today().replace(day=1)
+    er_mes=svc.obtener_estado_resultados(db, desde=mes_ini)
+    opex_mes=round(er_mes["gastos_admin"]+er_mes["gastos_ventas"]+er_mes["gastos_financieros"]+er_mes["gastos_operativos"],2)
+    punto_equilibrio=round(opex_mes/(margen_prom/100),2) if margen_prom>0 else 0.0
+    sam_est=float(db.query(func.coalesce(func.sum(Garment.sam_estimado),0)).scalar() or 0)
+    sam_real=float(db.query(func.coalesce(func.sum(Garment.sam_real),0)).scalar() or 0)
+    eficiencia=round(sam_est/sam_real*100,1) if sam_real>0 else 0.0
+    ebitda=round(er_mes["utilidad_bruta"]-opex_mes,2)
+    kpis={"margen_prom":margen_prom,"n_cerrados":len(cerrados),"opex_mes":float(opex_mes),
+          "punto_equilibrio":punto_equilibrio,"eficiencia":eficiencia,
+          "ebitda":ebitda,"mes":mes_ini.strftime("%Y-%m")}
+    return templates.TemplateResponse(request, "finanzas/rentabilidad.html", {"user":user,"tab":"rentabilidad","rows":rows,"umbral":umbral,"tarifa_media":tarifa_media,"kpis":kpis})
 
 @router.get("/reportes-contables", response_class=HTMLResponse)
 def reportes(request: Request, desde: str = Query(""), hasta: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
