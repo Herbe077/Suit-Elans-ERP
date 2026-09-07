@@ -113,17 +113,20 @@
   <p class="text-xs text-slate-500 mb-2" x-text="sub === 'pt' ? 'INGRESO_PRODUCCION suma · SALIDA_VENTA, AJUSTE_MERMA y MUESTRA restan.' : 'INGRESO_COMPRA suma · SALIDA_TALLER y AJUSTE_INVENTARIO restan.'"></p>
   <form method="post" action="/inventario/almacen/kardex" class="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs items-end">
     <input type="hidden" name="alcance" :value="sub === 'pt' ? 'pt' : 'mp'">
-    <label class="block md:col-span-2" id="kx-field-producto" x-show="sub !== 'pt'">Producto / Insumo
+    <label class="block md:col-span-2" id="kx-field-producto" x-show="sub !== 'pt'">Insumo / Tela
       <select name="producto_id" id="kx-producto" :disabled="sub === 'pt'" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
         <option value="">-- Opcional / Ninguno --</option>
         {% for i in insumos %}<option value="{{ i.id }}">{{ i.sku }} — {{ i.nombre }} (disp. {{ "%.1f"|format(i.stock_disponible) }})</option>{% endfor %}
       </select>
     </label>
-    <label class="block md:col-span-2" id="kx-field-variante" x-show="sub === 'pt'">Variante / SKU terminado
-      <select name="variant_id" id="kx-variante" :disabled="sub !== 'pt'" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
-        <option value="">-- Opcional / Ninguno --</option>
-        {% for v in pts %}<option value="{{ v.id }}">{{ v.sku }} — {{ prods.get(v.product_id).nombre if prods.get(v.product_id) else '' }} ({{ v.talla }}) · {{ v.stock }} u.</option>{% endfor %}
+    <label class="block md:col-span-2" id="kx-field-variante" x-show="sub === 'pt'">Producto Terminado / SKU
+      <select name="variant_id" id="kx-variante" :disabled="sub !== 'pt'" onchange="kxAutocompletarCosto()" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option value="" data-costo="">-- Opcional / Ninguno --</option>
+        {% for v in pts %}<option value="{{ v.id }}" data-costo="{{ v.costo_unitario or 0 }}">{{ v.sku }} - {{ prods.get(v.product_id).nombre if prods.get(v.product_id) else '' }} {{ v.talla }} (Stock: {{ v.stock|int }})</option>{% endfor %}
       </select>
+    </label>
+    <label class="block" id="kx-field-costo">Costo Unitario S/
+      <input name="costo_unitario" id="kx-costo" type="number" step="0.01" min="0" placeholder="80.00" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
     </label>
     <label class="block md:col-span-2" id="kx-field-pedido">Pedido / Ficha de Taller (opcional)
       <select name="orden_venta_id" id="kx-pedido" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
@@ -152,11 +155,26 @@
     };
     // Solo los egresos/consumos aceptan referencia de pedido/ficha.
     var TIPOS_SALIDA = ['SALIDA_TALLER', 'SALIDA', 'SALIDA_VENTA'];
+    window.kxAutocompletarCosto = function () {
+      var sel = document.getElementById('kx-variante');
+      var inp = document.getElementById('kx-costo');
+      if (!sel || !inp) return;
+      var opt = sel.options[sel.selectedIndex];
+      var c = opt ? (opt.getAttribute('data-costo') || '') : '';
+      if (c) inp.value = c;
+    };
     window.kxActualizarCampos = function () {
       var s = document.getElementById('kx-tipo');
       var tipo = s ? s.value : '';
       var fPed = document.getElementById('kx-field-pedido');
       var selPed = document.getElementById('kx-pedido');
+      var fCosto = document.getElementById('kx-field-costo');
+      var inpCosto = document.getElementById('kx-costo');
+      // Costo solo en ingresos PT (autocompletado del SKU); fuera de ahí se
+      // oculta y limpia para no enviar valores ambiguos.
+      var esIngresoPT = (kxScope() === 'pt' && tipo === 'INGRESO_PRODUCCION');
+      if (fCosto) fCosto.style.display = esIngresoPT ? '' : 'none';
+      if (!esIngresoPT && inpCosto) inpCosto.value = '';
       if (!fPed) return;
       // Pedido/Ficha solo aplica a movimientos de consumo (salidas a taller/venta).
       // En INGRESO/ENTRADA/MERMA/AJUSTE se oculta y se limpia para no enviar refs.
@@ -182,9 +200,12 @@
       var init = document.querySelector('[data-kx-init]');
       return init ? init.getAttribute('data-kx-init') : 'mp';
     }
+    window.kxScopeActual = kxCurrent();
+    function kxScope() { return window.kxScopeActual || 'mp'; }
     document.querySelectorAll('[role="tab"][data-scope]').forEach(function (b) {
       b.addEventListener('click', function () {
         var t = b.getAttribute('data-scope');
+        window.kxScopeActual = t;
         window.kxSetTipos(t === 'wip' ? 'mp' : t);
         // Limpia el campo del otro ámbito para evitar envíos ambiguos.
         var selP = document.getElementById('kx-producto');

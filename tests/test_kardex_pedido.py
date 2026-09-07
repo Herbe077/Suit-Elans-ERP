@@ -165,5 +165,25 @@ def test_pestanas_pcge_y_pos_inmediato(client, auth_cookies):
     t = client.get("/inventario/almacen", cookies=auth_cookies).text
     assert "Productos en Proceso / Taller (Cta 23)" in t
     assert "Productos Terminados / RTW (Cta 21)" in t
+    assert "Producto Terminado / SKU" in t and "Insumo / Tela" in t
+    assert 'name="costo_unitario"' in t and "data-costo" in t
     tp = client.get("/ventas/pos", cookies=auth_cookies).text
     assert "Saco RTW Test - M (Stock: 5) - S/" in tp
+
+
+def test_pt_ingreso_actualiza_costo_y_no_exige_insumo(client, auth_cookies):
+    """PT con solo SKU (sin insumo) + costo autocompletado en ingreso."""
+    vid = _setup_variante()
+    r = client.post("/inventario/almacen/kardex",
+                    data={"producto_id": "", "variant_id": str(vid),
+                          "tipo_movimiento": "INGRESO_PRODUCCION",
+                          "cantidad": "2", "costo_unitario": "80",
+                          "alcance": "pt"},
+                    cookies=auth_cookies, follow_redirects=False)
+    assert r.status_code == 303 and "error" not in r.headers.get("location", "")
+    from app.core.database import SessionLocal
+    from app.models.catalog import ProductVariant
+    db = SessionLocal()
+    v = db.get(ProductVariant, vid)
+    assert v.costo_unitario == 80.0
+    db.close()

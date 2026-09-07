@@ -520,7 +520,7 @@ TIPOS_KARDEX_PT = {"INGRESO_PRODUCCION": 1, "SALIDA_VENTA": -1,
 def kardex_mov(producto_id: int = Form(0), tipo_movimiento: str = Form(...),
                cantidad: float = Form(...), observacion: str = Form(""),
                orden_venta_id: str = Form(""), alcance: str = Form("mp"),
-               variant_id: int = Form(0),
+               variant_id: int = Form(0), costo_unitario: str = Form(""),
                db: Session = Depends(get_db), user=Almacen):
     """Kardex por ámbito: mp (insumos Cta 24) o pt (variantes Cta 21).
 
@@ -549,6 +549,14 @@ def kardex_mov(producto_id: int = Form(0), tipo_movimiento: str = Form(...),
             if _o:
                 obs_pt = f"{obs_pt} · Pedido {_o.folio}".strip(" ·")
         try:
+            # Costo autocompletado del SKU en ingresos/ajustes positivos.
+            if tipo == "INGRESO_PRODUCCION":
+                try:
+                    cu = float((costo_unitario or "").strip() or 0)
+                except (ValueError, AttributeError):
+                    cu = 0.0
+                if cu > 0:
+                    var.costo_unitario = cu
             from app.services.inventory import apply_movement
             apply_movement(db, "variant", var.id, signo * cantidad, tipo.lower(),
                            f"[{tipo}] {obs_pt}".strip(), user.id)
