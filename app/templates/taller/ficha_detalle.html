@@ -30,23 +30,23 @@
     <button @click="tab='saco'" :class="tab==='saco' ? 'bg-borgo text-white' : 'bg-slate-200'" class="rounded px-3 py-1">Saco</button>
     <button @click="tab='pantalon'" :class="tab==='pantalon' ? 'bg-borgo text-white' : 'bg-slate-200'" class="rounded px-3 py-1">Pantalón</button>
   </div>
-  <form method="post" action="/produccion/fichas/{{ c.id }}/medidas" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+  <form method="post" action="/produccion/fichas/{{ c.id }}/medidas" class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full text-sm">
     <input type="hidden" name="tipo_prenda" :value="tab">
     <div x-show="tab==='saco'" class="contents">
       {% for f in ['cuello','hombro','sisa','pecho','cintura_saco','cadera','largo_manga','ancho_manga','largo_espalda','largo_saco','caida_hombro'] %}
       {% set v = ultima[f] if ultima else none %}
-      <label>{{ f.replace('_', ' ')|capitalize }} (cm)<input name="{{ f }}" type="number" step="0.1" inputmode="decimal" value="{{ v if v is not none else '' }}" class="w-full border rounded px-2 py-1.5"></label>
+      <div class="flex flex-col gap-1 w-full"><label class="text-xs font-medium" for="med-{{ f }}">{{ f.replace('_', ' ')|capitalize }} (cm)</label><input id="med-{{ f }}" name="{{ f }}" type="number" step="0.1" inputmode="decimal" value="{{ v if v is not none else '' }}" class="w-full px-3 py-2 border rounded-md"></div>
       {% endfor %}
     </div>
     <div x-show="tab==='pantalon'" class="contents">
       {% for f in ['cintura_pantalon','cadera_pantalon','tiro','muslo','rodilla','tobillo','largo_pantalon'] %}
       {% set v = ultima[f] if ultima else none %}
-      <label>{{ f.replace('_', ' ')|capitalize }} (cm)<input name="{{ f }}" type="number" step="0.1" inputmode="decimal" value="{{ v if v is not none else '' }}" class="w-full border rounded px-2 py-1.5"></label>
+      <div class="flex flex-col gap-1 w-full"><label class="text-xs font-medium" for="med-{{ f }}">{{ f.replace('_', ' ')|capitalize }} (cm)</label><input id="med-{{ f }}" name="{{ f }}" type="number" step="0.1" inputmode="decimal" value="{{ v if v is not none else '' }}" class="w-full px-3 py-2 border rounded-md"></div>
       {% endfor %}
     </div>
-    <input name="postura" placeholder="Postura" value="{{ ultima.postura if ultima and ultima.postura else '' }}" class="col-span-2 border rounded px-2 py-1">
-    <textarea name="observaciones" placeholder="Observaciones" class="col-span-2 border rounded px-2 py-1">{{ ultima.observaciones if ultima and ultima.observaciones else '' }}</textarea>
-    <button class="col-span-2 bg-borgo text-white rounded-lg py-2">Guardar como nueva versión</button>
+    <input name="postura" placeholder="Postura" value="{{ ultima.postura if ultima and ultima.postura else '' }}" class="sm:col-span-2 w-full px-3 py-2 border rounded-md">
+    <textarea name="observaciones" placeholder="Observaciones" class="sm:col-span-2 w-full px-3 py-2 border rounded-md">{{ ultima.observaciones if ultima and ultima.observaciones else '' }}</textarea>
+    <button class="sm:col-span-2 bg-borgo text-white rounded-lg py-2 font-semibold">Guardar como nueva versión</button>
   </form>
   <h3 class="font-bold mt-4 mb-1 text-sm">Historial ({{ medidas|length }})</h3>
   {% for m in medidas %}
