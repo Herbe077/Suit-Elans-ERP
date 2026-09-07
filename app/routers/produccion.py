@@ -56,9 +56,13 @@ FOTO_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 
 def _card(db: Session, g: Garment) -> dict:
     from app.models.client import Client
+    from app.models.company import Company
     from app.models.inventory import Fabric
     o = db.get(Order, g.order_id)
     c = db.get(Client, o.client_id) if o and o.client_id else None
+    e = db.get(Company, o.company_id) if o and o.company_id else None
+    nombre = c.nombre_completo if c else (e.nombre_comercial if e else "—")
+    cliente_full = f"{nombre} ({e.nombre_comercial})" if c and e else nombre
     tela = db.get(Fabric, g.tela_id) if g.tela_id else None
     dias = svc.dias_restantes(g, o)
     etiqueta, color = svc.urgencia(dias)
@@ -66,6 +70,7 @@ def _card(db: Session, g: Garment) -> dict:
     idx = KANBAN_STATES.index(col)
     return {"g": g, "folio": o.folio if o else "?",
             "cliente": c.nombre_completo if c else "—",
+            "cliente_full": cliente_full,
             "tela": tela, "dias": dias, "etiqueta": etiqueta, "color": color,
             "col": col, "pausada": g.estado_taller == "pausado",
             "prev": KANBAN_STATES[idx - 1] if idx > 0 else None,

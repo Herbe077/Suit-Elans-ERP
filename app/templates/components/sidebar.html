@@ -32,7 +32,7 @@
   {% endcall %}
 
   {% call sec('🏭', 'Producción y Confección', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre','ventas','VENTA','operario_taller','operario-taller','maestro_sastre','sastre-maestro'], ['/produccion']) %}
-    {{ sub('/produccion/kanban', 'Tablero kanban', ['taller','operario_taller','operario-taller','sastre','SASTRE-MAESTRO','SASTRE-ASISTENTE','sastre-maestro','sastre-asistente']) }}
+    {{ sub('/produccion/kanban', 'Tablero de producción', ['taller','operario_taller','operario-taller','sastre','SASTRE-MAESTRO','SASTRE-ASISTENTE','sastre-maestro','sastre-asistente']) }}
     {{ sub('/produccion/fichas', 'Fichas técnicas y medidas', ['sastre','SASTRE-MAESTRO','SASTRE-ASISTENTE','maestro_sastre','sastre_asistente','ventas','VENTA','comercial']) }}
     {{ sub('/produccion/pruebas', 'Pruebas de entalle', ['taller','operario_taller','operario-taller','sastre','SASTRE-MAESTRO','SASTRE-ASISTENTE']) }}
     {{ sub('/produccion/calidad', 'Control de calidad', ['taller','operario_taller','sastre','SASTRE-MAESTRO','sastre-maestro']) }}

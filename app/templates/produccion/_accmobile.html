@@ -1,0 +1,18 @@
+{# Acordeón móvil por estado (etapas colapsables). Se refresca por OOB igual que las columnas. #}
+{% set ns = namespace(primero=true) %}
+{% for key, label in kanban %}
+{% set cards = cols[key] %}
+{% set abierto = ns.primero and (cards|length > 0) %}
+{% if cards|length > 0 %}{% set ns.primero = false %}{% endif %}
+<div class="bg-white rounded-xl shadow border border-[#C5A880]/30" id="accbox-{{ key }}" {% if oob %}hx-swap-oob="true"{% endif %}>
+  <div x-data="{ open: {{ 'true' if abierto else 'false' }} }">
+    <button @click="open = !open" class="w-full flex items-center justify-between px-3 py-2.5 text-sm font-bold">
+      <span>{{ label }} <span class="font-normal text-slate-400">({{ cards|length }})</span></span>
+      <span x-text="open ? '▾' : '▸'" class="text-laton-dark"></span>
+    </button>
+    <div x-show="open" class="px-2 pb-2 space-y-2">
+      {% for card in cards %}{% set pfx = 'm' %}{% include "produccion/_card.html" %}{% endfor %}
+    </div>
+  </div>
+</div>
+{% endfor %}
