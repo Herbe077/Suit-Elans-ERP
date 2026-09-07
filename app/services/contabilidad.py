@@ -11,7 +11,9 @@ Mapa de eventos (cuentas analíticas):
     - Ready-to-wear / stock (venta de variantes) → 7011
   COBRO          : DEBE 1011 (efectivo) o 1041 (transferencia/tarjeta/yape) / HABER 1212 + INGRESO flujo
   COMPRA / GASTO : DEBE 602 (materias primas) + DEBE 40111 / HABER 4212 (+ CxP)
-  COSTO VENTAS   : DEBE 6911 / HABER 2111 (solo ready-to-wear, al vender)
+  COSTO VENTAS   : DEBE 6911 / HABER 2111 (solo ready-to-wear, al vender;
+                   exige saldo deudor previo en 2111 por producción)
+  INGRESO PT     : DEBE 2111 / HABER 7111 (producción terminada a stock)
   PAGO CxP       : DEBE 4212 / HABER 1011/1041 + EGRESO flujo
   KARDEX         : ver app/services/compras_kardex.py (2411/6111, 6591/2411)
 
@@ -42,6 +44,7 @@ CTA_VENTAS_BESPOKE = "7032"  # Servicios prestados (sastrería a medida)
 CTA_VENTAS_RTW = "7011"      # Productos terminados (colecciones stock)
 CTA_COSTO_VTAS = "6911"  # Costo de ventas — productos terminados
 CTA_PT = "2111"          # Productos terminados (activo)
+CTA_PROD_PT = "7111"     # Variación — productos terminados (ingreso)
 CTA_CAJA = "1011"    # Caja operativa (solo efectivo)
 CTA_BANCO = "1041"   # Cuentas corrientes (transferencia/tarjeta/yape)
 CTA_ANTICIPOS = "1221"  # Anticipos de clientes
@@ -239,6 +242,38 @@ def emitir_factura_venta(db: Session, order_id: int, serie: str, igv_pct: float,
         raise
 
 
+# ── INGRESO PT: 2111 / 7111 ──────────────────────────────────────
+def registrar_ingreso_pt(db: Session, monto: float, doc_ref: str | None = None,
+                         usuario_id: int | None = None,
+                         fecha: date | None = None) -> dict:
+    """Ingreso de producción terminada a stock (base para el costo de ventas).
+
+    Evita saldos acreedores anómalos en 2111: el costo solo se reconoce hasta
+    el saldo deudor previamente ingresado por producción.
+    """
+    from app.services.finanzas import crear_asiento_flush
+
+    seed_pcge_basico(db)
+    try:
+        exigir_periodo_abierto(db, fecha)
+        monto_d = _d(monto)
+        if monto_d <= 0:
+            raise ValueError("Monto de ingreso inválido")
+        c_pt = _cuenta(db, CTA_PT)
+        c_var = _cuenta(db, CTA_PROD_PT)
+        asiento = crear_asiento_flush(
+            db, fecha or date.today(), f"Ingreso PT {doc_ref or ''}".strip(),
+            "PRODUCCION", None,
+            [{"cuenta_id": c_pt.id, "debe": monto_d, "haber": Decimal("0")},
+             {"cuenta_id": c_var.id, "debe": Decimal("0"), "haber": monto_d}])
+        db.commit()
+        return {"asiento_id": asiento.id, "asiento_numero": asiento.numero,
+                "monto": float(monto_d)}
+    except Exception:
+        db.rollback()
+        raise
+
+
 # ── COSTO DE VENTAS RTW: 6911 / 2111 ────────────────────────────────
 def registrar_costo_ventas(db: Session, order_id: int, monto: float,
                            usuario_id: int | None = None,
@@ -246,8 +281,9 @@ def registrar_costo_ventas(db: Session, order_id: int, monto: float,
     """Costo de ventas de productos en stock (ready-to-wear) valorizado a CPP.
 
     Solo para ventas sin prendas a medida. Atómico con el mismo commit final.
+    Exige saldo deudor en 2111 (ingreso por producción previa).
     """
-    from app.services.finanzas import crear_asiento_flush
+    from app.services.finanzas import crear_asiento_flush, saldo_cuenta
 
     seed_pcge_basico(db)
     try:
@@ -258,6 +294,10 @@ def registrar_costo_ventas(db: Session, order_id: int, monto: float,
         monto_d = _d(monto)
         if monto_d <= 0:
             raise ValueError("Monto de costo inválido")
+        if saldo_cuenta(db, CTA_PT) < monto_d:
+            raise ValueError(
+                "2111 sin saldo deudor suficiente: registra el ingreso por "
+                "producción previa antes del costo de ventas")
         c_costo = _cuenta(db, CTA_COSTO_VTAS)
         c_pt = _cuenta(db, CTA_PT)
         asiento = crear_asiento_flush(

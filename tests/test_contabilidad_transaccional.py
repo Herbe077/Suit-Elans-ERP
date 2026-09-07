@@ -114,11 +114,73 @@ def test_costo_ventas_6911_2111():
     from app.services import contabilidad as C
     db = _db(); _limpia(db)
     o = _order(db, "CT-COGS-001", 500.0)
+    C.registrar_ingreso_pt(db, 500.0, "SKU-TEST")
     r = C.registrar_costo_ventas(db, o.id, 300.0, None)
     mapa = _lineas(db, r["asiento_id"])
     assert _balanceado(mapa) == Decimal("300")
     assert mapa["6911"] == (Decimal("300"), Decimal("0"))
     assert mapa["2111"] == (Decimal("0"), Decimal("300"))
+    _limpia(db); db.close()
+
+
+def test_2111_sin_saldo_bloquea_costo():
+    """Sin ingreso por producción previa no hay costo (evita acreedor anómalo)."""
+    from app.services import contabilidad as C
+    from app.services import finanzas as f
+    db = _db(); _limpia(db)
+    assert f.saldo_cuenta(db, "2111") == Decimal("0")
+    o = _order(db, "CT-COGS-002", 500.0)
+    try:
+        C.registrar_costo_ventas(db, o.id, 100.0, None)
+        assert False, "debió exigir saldo en 2111"
+    except ValueError as e:
+        assert "2111" in str(e)
+    r = C.registrar_ingreso_pt(db, 500.0, "SKU-TEST")
+    assert _lineas(db, r["asiento_id"])["2111"] == (Decimal("500"), Decimal("0"))
+    C.registrar_costo_ventas(db, o.id, 100.0, None)  # ahora sí
+    assert f.saldo_cuenta(db, "2111") == Decimal("400")
+    _limpia(db); db.close()
+
+
+def test_patrimonio_incluye_utilidad():
+    """Patrimonio Total = Capital (50) + Resultados (59) + Utilidad."""
+    from app.services import contabilidad as C
+    from app.services import finanzas as f
+    db = _db(); _limpia(db)
+    c101 = f.get_cuenta_by_codigo(db, "1011")
+    c5011 = f.get_cuenta_by_codigo(db, "5011")
+    f.crear_asiento(db, date.today(), "Capital", "APERTURA", None, [
+        {"cuenta_id": c101.id, "debe": Decimal("40000"), "haber": Decimal("0")},
+        {"cuenta_id": c5011.id, "debe": Decimal("0"), "haber": Decimal("40000")},
+    ])
+    o = _order(db, "CT-PAT-001", 118.0)
+    C.emitir_factura_venta(db, o.id, "B001", 18.0, None)
+    bg = f.obtener_balance_general(db)
+    assert bg["capital"] == Decimal("40000")
+    assert bg["resultado"] == Decimal("100")  # base 100 de la venta
+    assert bg["patrimonio_total"] == Decimal("40100")
+    assert bg["activo"] == Decimal("40118") and bg["pasivo"] == Decimal("18")
+    assert bg["valida"] is True
+    _limpia(db); db.close()
+
+
+def test_mayor_agrupado_con_saldo_acumulado():
+    """Mayor por cuenta con fechas YYYY-MM-DD y saldo acumulado."""
+    from app.services import contabilidad as C
+    from app.services import finanzas as f
+    db = _db(); _limpia(db)
+    o = _order(db, "CT-MAY-001", 1000.0)
+    C.cobrar_venta(db, o.id, 400.0, "efectivo", "1011", usuario_id=None)
+    C.cobrar_venta(db, o.id, 600.0, "transferencia", "1041", usuario_id=None)
+    grupos = f.obtener_mayor_agrupado(db)
+    g1011 = next(g for g in grupos if g["codigo"] == "1011")
+    assert g1011["total_debe"] == Decimal("400")
+    assert g1011["lineas"][0]["saldo_acum"] == Decimal("400")
+    assert len(g1011["lineas"][0]["fecha"]) == 10  # YYYY-MM-DD
+    g1212 = next(g for g in grupos if g["codigo"] == "1212")
+    saldos = [l["saldo_acum"] for l in g1212["lineas"]]
+    assert saldos == [Decimal("-400"), Decimal("-1000")]  # acumulado por fecha
+    assert saldos[-1] == g1212["saldo"] == Decimal("-1000")
     _limpia(db); db.close()
 
 
@@ -369,7 +431,7 @@ def test_gastos_grid_y_apertura_web():
     r = c.post("/auth/login", data={"username": "admin@suitelans.mx", "password": "admin123"})
     ck = {"suitelans_token": r.cookies.get("suitelans_token")}
     t = c.get("/finanzas/gastos", cookies=ck).text
-    assert "Monto Total S/" in t and "IGV S/" in t and "gastoCalc" in t
+    assert "Monto Total S/ (IGV incl.)" in t and "gastoCalc" in t
     assert c.get("/finanzas/apertura", cookies=ck).status_code == 200
     r = c.post("/finanzas/apertura",
                data={"caja": "1000", "banco": "2000", "inventario": "500",

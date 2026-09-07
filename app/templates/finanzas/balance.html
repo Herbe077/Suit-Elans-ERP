@@ -8,16 +8,29 @@
 </form>
 <div class="grid md:grid-cols-2 gap-4">
   <div class="bg-white rounded-xl shadow p-4">
-    <h2 class="font-bold text-sm mb-2">Balance de Comprobación</h2>
-    <table class="w-full text-xs">
-      <thead class="bg-slate-50"><tr><th class="text-left">Cuenta</th><th class="text-right">Debe</th><th class="text-right">Haber</th><th class="text-right">Saldo Deudor</th><th class="text-right">Saldo Acreedor</th></tr></thead>
-      <tbody>
+    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+      <h2 class="font-bold text-sm">Balance de Comprobación</h2>
+      <label class="text-xs text-slate-500 flex items-center gap-1"><input type="checkbox" id="ocultar-ceros" onchange="filtrarCeros()" class="accent-[#370003]"> Ocultar cuentas con saldo 0.00</label>
+    </div>
+    <div class="overflow-x-auto">
+    <table class="w-full text-xs" style="table-layout:auto">
+      <thead class="bg-slate-50"><tr><th class="text-left whitespace-nowrap" style="min-width:220px">Cuenta</th><th class="text-right whitespace-nowrap" style="min-width:110px">Debe</th><th class="text-right whitespace-nowrap" style="min-width:110px">Haber</th><th class="text-right whitespace-nowrap" style="min-width:130px">Saldo Deudor</th><th class="text-right whitespace-nowrap" style="min-width:130px">Saldo Acreedor</th></tr></thead>
+      <tbody class="font-mono">
         {% for r in bal %}
-        <tr class="border-b"><td>{{ r.codigo }} - {{ r.nombre }}</td><td class="text-right">S/ {{ "%.2f"|format(r.debe) }}</td><td class="text-right">S/ {{ "%.2f"|format(r.haber) }}</td><td class="text-right">S/ {{ "%.2f"|format(r.saldo_deudor) }}</td><td class="text-right">S/ {{ "%.2f"|format(r.saldo_acreedor) }}</td></tr>
+        <tr class="border-b" data-cero="{{ 1 if (r.saldo_deudor == 0 and r.saldo_acreedor == 0) else 0 }}"><td class="whitespace-nowrap">{{ r.codigo }} - {{ r.nombre }}</td><td class="text-right whitespace-nowrap">S/ {{ "%.2f"|format(r.debe) }}</td><td class="text-right whitespace-nowrap">S/ {{ "%.2f"|format(r.haber) }}</td><td class="text-right whitespace-nowrap">S/ {{ "%.2f"|format(r.saldo_deudor) }}</td><td class="text-right whitespace-nowrap">S/ {{ "%.2f"|format(r.saldo_acreedor) }}</td></tr>
         {% else %}<tr><td colspan="5" class="text-center p-2 text-slate-400">Sin movimientos</td></tr>{% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
+<script>
+function filtrarCeros() {
+  var ocultar = document.getElementById('ocultar-ceros').checked;
+  document.querySelectorAll('tr[data-cero="1"]').forEach(function (tr) {
+    tr.style.display = ocultar ? 'none' : '';
+  });
+}
+</script>
   <div class="space-y-4">
     <div class="bg-white rounded-xl shadow p-4">
       <h2 class="font-bold text-sm mb-2">Estado de Resultados</h2>
@@ -30,9 +43,10 @@
     </div>
     <div class="bg-white rounded-xl shadow p-4">
       <h2 class="font-bold text-sm mb-2">Balance General</h2>
-      <p class="text-xs">Activo: <b>S/ {{ "%.2f"|format(bg.activo) }}</b></p>
-      <p class="text-xs">Pasivo: <b>S/ {{ "%.2f"|format(bg.pasivo) }}</b></p>
-      <p class="text-xs">Patrimonio: <b>S/ {{ "%.2f"|format(bg.patrimonio) }}</b> (total {{ "%.2f"|format(bg.patrimonio_total) }})</p>
+      <p class="text-xs">Activo: <b class="font-mono">S/ {{ "%.2f"|format(bg.activo) }}</b></p>
+      <p class="text-xs">Pasivo: <b class="font-mono">S/ {{ "%.2f"|format(bg.pasivo) }}</b></p>
+      <p class="text-xs">Patrimonio: <b class="font-mono">S/ {{ "%.2f"|format(bg.patrimonio_total) }}</b></p>
+      <p class="text-xs text-slate-500 font-mono">= Capital S/ {{ "%.2f"|format(bg.capital) }} + Resultados S/ {{ "%.2f"|format(bg.resultados_59) }} + Utilidad S/ {{ "%.2f"|format(bg.resultado) }}</p>
       <p class="text-xs {% if bg.valida %}text-emerald-700{% else %}text-red-700{% endif %}">Valida: {{ bg.valida }} (Activo = Pasivo + Patrimonio)</p>
     </div>
   </div>

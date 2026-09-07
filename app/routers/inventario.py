@@ -560,6 +560,18 @@ def kardex_mov(producto_id: int = Form(0), tipo_movimiento: str = Form(...),
             from app.services.inventory import apply_movement
             apply_movement(db, "variant", var.id, signo * cantidad, tipo.lower(),
                            f"[{tipo}] {obs_pt}".strip(), user.id)
+            # Ingreso contable a producción (2111/7111): base del costo de
+            # ventas. No bloquea el movimiento físico si falla.
+            if tipo == "INGRESO_PRODUCCION":
+                try:
+                    from app.services import contabilidad as contab
+                    db.refresh(var)
+                    ming = round(float(var.costo_unitario or 0) * cantidad, 2)
+                    if ming > 0:
+                        contab.registrar_ingreso_pt(db, ming, f"SKU {var.sku}",
+                                                    user.id)
+                except Exception:
+                    pass
         except ValueError as e:
             return _err("/inventario/almacen?sub=pt", str(e))
         return RedirectResponse("/inventario/almacen?sub=pt", status_code=303)

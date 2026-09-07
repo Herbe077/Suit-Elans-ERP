@@ -62,6 +62,7 @@ PCGE_ANALITICAS = [
     ("6511", "Gastos de Gestión (OPEX)", "GASTO", 2, "65", 6, True),
     ("7011", "Ventas Locales - Productos Terminados", "INGRESO", 3, "701", 7, True),
     ("7032", "Servicios Prestados - Mercado Local", "INGRESO", 3, "703", 7, True),
+    ("7111", "Variación - Productos Terminados", "INGRESO", 3, "711", 7, True),
     ("6911", "Costo de Ventas - Productos Terminados", "GASTO", 3, "691", 6, True),
     ("2111", "Productos Terminados", "ACTIVO", 3, "211", 2, True),
 ]
@@ -518,6 +519,20 @@ def contabilizar(db: Session, asiento_id: int):
     return a
 
 # ── Mayor y balances ───────────────────────────────────────────────────
+def saldo_cuenta(db: Session, codigo: str, periodo_id: int | None = None) -> Decimal:
+    """Saldo neto (debe − haber) de una cuenta analítica."""
+    from decimal import Decimal as _D
+    q = db.query(func.coalesce(func.sum(LineaAsientoContable.debe), 0),
+                 func.coalesce(func.sum(LineaAsientoContable.haber), 0)) \
+        .join(AsientoContable, LineaAsientoContable.asiento_id == AsientoContable.id) \
+        .join(CuentaContable, LineaAsientoContable.cuenta_id == CuentaContable.id) \
+        .filter(CuentaContable.codigo == codigo)
+    if periodo_id:
+        q = q.filter(AsientoContable.periodo_id == periodo_id)
+    debe, haber = q.first() or (0, 0)
+    return _D(str(debe or 0)) - _D(str(haber or 0))
+
+
 def obtener_mayor(db: Session, cuenta_id: int | None = None, periodo_id: int | None = None, desde: date | None = None, hasta: date | None = None, centro_costo_id: int | None = None):
     q = db.query(LineaAsientoContable).join(AsientoContable, LineaAsientoContable.asiento_id==AsientoContable.id)
     if cuenta_id:
@@ -531,6 +546,36 @@ def obtener_mayor(db: Session, cuenta_id: int | None = None, periodo_id: int | N
     if centro_costo_id:
         q = q.filter((LineaAsientoContable.centro_costo_id==centro_costo_id) | (LineaAsientoContable.centro_gestion_id==centro_costo_id))
     return q.order_by(AsientoContable.fecha).all()
+
+def obtener_mayor_agrupado(db: Session, cuenta_id: int | None = None, periodo_id: int | None = None, desde: date | None = None, hasta: date | None = None, centro_costo_id: int | None = None):
+    """Mayor agrupado por cuenta para la vista.
+
+    Retorna [{"cuenta_id","codigo","nombre","lineas","total_debe","total_haber",
+    "saldo"}] con `lineas` ordenadas por (fecha, asiento) y cada una con
+    `saldo_acum` (acumulado debe − haber) y `fecha` en YYYY-MM-DD.
+    """
+    from decimal import Decimal as _D
+    lineas = obtener_mayor(db, cuenta_id, periodo_id, desde, hasta, centro_costo_id)
+    grupos: dict[int, dict] = {}
+    for l in lineas:
+        g = grupos.setdefault(l.cuenta_id, {"cuenta_id": l.cuenta_id,
+            "codigo": l.cuenta.codigo if l.cuenta else "?", 
+            "nombre": l.cuenta.nombre if l.cuenta else "—",
+            "lineas": [], "total_debe": _D("0"), "total_haber": _D("0")})
+        debe, haber = _D(str(l.debe or 0)), _D(str(l.haber or 0))
+        g["total_debe"] += debe
+        g["total_haber"] += haber
+        acum = g["total_debe"] - g["total_haber"]
+        f = l.asiento.fecha if l.asiento and l.asiento.fecha else None
+        g["lineas"].append({"id": l.id,
+            "fecha": f.isoformat() if f else "—",
+            "asiento": l.asiento.numero if l.asiento else f"#{l.asiento_id}",
+            "debe": debe, "haber": haber, "saldo_acum": acum,
+            "descripcion": l.descripcion or ""})
+    out = sorted(grupos.values(), key=lambda g: g["codigo"])
+    for g in out:
+        g["saldo"] = g["total_debe"] - g["total_haber"]
+    return out
 
 def obtener_diario(db: Session, periodo_id: int | None = None,
                    origen_tipo: str | None = None, cuenta_id: int | None = None,
@@ -628,24 +673,26 @@ def obtener_balance_general(db: Session, periodo_id: int | None = None):
     # PASIVO saldo acreedor - deudor
     pasivo = sum(r["saldo_acreedor"] - r["saldo_deudor"] for r in bal if r["tipo"]=="PASIVO")
     patrimonio = sum(r["saldo_acreedor"] - r["saldo_deudor"] for r in bal if r["tipo"]=="PATRIMONIO")
-    # incluye resultado del periodo en patrimonio (no separado)
-    # Para validar: activo == pasivo + patrimonio + resultado? En nuestro esquema resultado está en PATRIMONIO 59 o en GASTO/INGRESO no cerrado, así que ajustamos
-    # Simplificamos: validación con ingresos/gastos ya incluidos en patrimonio via 59
-    # Pero para test usamos activo == pasivo + patrimonio + (ingresos - gastos) si no hay 59
-    # Calculamos neto
+    # Desglose patrimonial: Capital (50) + Resultados acumulados (59) + Utilidad del ejercicio.
+    capital = sum(r["saldo_acreedor"] - r["saldo_deudor"] for r in bal if r["codigo"].startswith("50"))
+    resultados_59 = sum(r["saldo_acreedor"] - r["saldo_deudor"] for r in bal if r["codigo"].startswith("59"))
     ingresos = sum(r["saldo_acreedor"] - r["saldo_deudor"] for r in bal if r["tipo"]=="INGRESO")
     gastos = sum(r["saldo_deudor"] - r["saldo_acreedor"] for r in bal if r["tipo"]=="GASTO")
     resultado = ingresos - gastos
-    # patrimonio total incluye resultado si no está en 59
-    patrimonio_total = patrimonio + resultado
-    # si 59 ya tiene saldo, no duplicar — tolerancia 0.01 por Float/Decimal
+    # Patrimonio Total = Capital (50) + Resultados acumulados (59) + Utilidad.
+    # Si el libro ya cuadra sin sumar el resultado, 59 ya lo incorpora (cierre):
+    # no duplicar.
     def _eq(a, b, tol=Decimal("0.01")):
         try:
             return abs(Decimal(str(a)) - Decimal(str(b))) <= tol
         except Exception:
             return a == b
+    if _eq(activo, pasivo + patrimonio):
+        patrimonio_total = patrimonio
+    else:
+        patrimonio_total = patrimonio + resultado
     valida = _eq(activo, pasivo + patrimonio_total) or _eq(activo, pasivo + patrimonio)
-    return {"activo": activo, "pasivo": pasivo, "patrimonio": patrimonio, "patrimonio_total": patrimonio_total, "resultado": resultado, "valida": valida, "detalle": bal}
+    return {"activo": activo, "pasivo": pasivo, "patrimonio": patrimonio, "patrimonio_total": patrimonio_total, "capital": capital, "resultados_59": resultados_59, "resultado": resultado, "valida": valida, "detalle": bal}
 
 # ── Costos ─────────────────────────────────────────────────────────────
 def calcular_mod_devengada(db: Session, periodo_id: int | None = None, desde: date | None = None, hasta: date | None = None, orden_produccion_id: int | None = None) -> Decimal:

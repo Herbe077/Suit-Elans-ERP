@@ -1,4 +1,3 @@
-{% from "components/money.html" import soles %}
 {% extends "finanzas/base_finanzas.html" %}
 {% block title %}Mayor Contable{% endblock %}
 {% block finanzas %}
@@ -13,18 +12,38 @@
   </label>
   <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold self-end">Filtrar</button>
 </form>
-{% set nombres_cuenta = {} %}
-{% for c in cuentas %}{% set _ = nombres_cuenta.update({c.id: c.codigo ~ ' — ' ~ c.nombre}) %}{% endfor %}
-<div class="bg-white rounded-xl shadow overflow-x-auto border-t-2 border-[#C5A880]">
+{% for g in grupos %}
+<div class="bg-white rounded-xl shadow overflow-x-auto border-t-2 border-[#C5A880] mb-4">
+  <h2 class="font-bold text-sm px-3 pt-2">Mayor de la Cta {{ g.codigo }} — {{ g.nombre }}</h2>
   <table class="w-full text-xs">
-    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="p-2 text-left">Fecha</th><th class="p-2 text-left">Asiento</th><th class="p-2 text-left">Cuenta</th><th class="p-2 text-right">Debe</th><th class="p-2 text-right">Haber</th><th class="p-2 text-left">Centro</th><th class="p-2 text-left">Descripción</th></tr></thead>
-    <tbody>
-      {% for l in lineas %}
+    <thead class="bg-[#FAF8F5] text-slate-500"><tr>
+      <th class="p-2 text-left whitespace-nowrap">Fecha</th>
+      <th class="p-2 text-left whitespace-nowrap">Asiento</th>
+      <th class="p-2 text-right whitespace-nowrap" style="min-width:110px">Debe</th>
+      <th class="p-2 text-right whitespace-nowrap" style="min-width:110px">Haber</th>
+      <th class="p-2 text-right whitespace-nowrap" style="min-width:130px">Saldo Acumulado</th>
+      <th class="p-2 text-left">Descripción</th>
+    </tr></thead>
+    <tbody class="font-mono">
+      {% for l in g.lineas %}
       <tr class="border-b hover:bg-marfil">
-        <td class="p-2">{{ l.asiento_id }}</td><td class="font-mono">#{{ l.asiento_id }}</td><td>{{ nombres_cuenta.get(l.cuenta_id, 'Cuenta #' ~ l.cuenta_id) }}</td><td class="text-right">{{ soles(l.debe) }}</td><td class="text-right">{{ soles(l.haber) }}</td><td>{{ l.centro_costo_id or '—' }}</td><td>{{ l.descripcion or '' }}</td>
+        <td class="p-2 whitespace-nowrap">{{ l.fecha }}</td>
+        <td class="p-2 whitespace-nowrap">{{ l.asiento }}</td>
+        <td class="p-2 text-right whitespace-nowrap">S/ {{ "%.2f"|format(l.debe) }}</td>
+        <td class="p-2 text-right whitespace-nowrap">S/ {{ "%.2f"|format(l.haber) }}</td>
+        <td class="p-2 text-right whitespace-nowrap font-bold">S/ {{ "%.2f"|format(l.saldo_acum) }}</td>
+        <td class="p-2 font-sans">{{ l.descripcion or '' }}</td>
       </tr>
-      {% else %}<tr><td colspan="7" class="text-center p-3 text-slate-400">Sin movimientos para este filtro.</td></tr>{% endfor %}
+      {% endfor %}
+      <tr class="bg-[#FAF8F5] font-bold">
+        <td class="p-2" colspan="2">Total Cta {{ g.codigo }}</td>
+        <td class="p-2 text-right whitespace-nowrap">S/ {{ "%.2f"|format(g.total_debe) }}</td>
+        <td class="p-2 text-right whitespace-nowrap">S/ {{ "%.2f"|format(g.total_haber) }}</td>
+        <td class="p-2 text-right whitespace-nowrap">S/ {{ "%.2f"|format(g.saldo) }}</td>
+        <td></td>
+      </tr>
     </tbody>
   </table>
 </div>
+{% else %}<div class="bg-white rounded-xl shadow p-3 text-xs text-center text-slate-400">Sin movimientos para este filtro.</div>{% endfor %}
 {% endblock %}

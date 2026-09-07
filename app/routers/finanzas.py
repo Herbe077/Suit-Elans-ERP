@@ -235,8 +235,9 @@ def mayor(request: Request, cuenta: str=Query(""), periodo: str=Query(""), db: S
         except Exception:
             pass
     lineas=svc.obtener_mayor(db, cuenta_id=cuenta_id, periodo_id=pid)
+    grupos=svc.obtener_mayor_agrupado(db, cuenta_id=cuenta_id, periodo_id=pid)
     cuentas=db.query(CuentaContable).order_by(CuentaContable.codigo).all()
-    return templates.TemplateResponse(request, "finanzas/mayor.html", {"user":user,"tab":"mayor","lineas":lineas,"cuentas":cuentas,"cuenta":cuenta,"periodo":periodo})
+    return templates.TemplateResponse(request, "finanzas/mayor.html", {"user":user,"tab":"mayor","lineas":lineas,"grupos":grupos,"cuentas":cuentas,"cuenta":cuenta,"periodo":periodo})
 
 @router.get("/balance", response_class=HTMLResponse)
 def balance(request: Request, periodo: str=Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
