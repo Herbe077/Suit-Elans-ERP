@@ -498,19 +498,169 @@ def flujo_caja(request: Request, periodo: str = Query("mes"), db: Session = Depe
     flujo_act = contab.flujo_por_actividad(db)
     return templates.TemplateResponse(request, "finanzas/flujo_caja.html", {"user":user,"tab":"flujo","total_ing":total_ing,"total_egr":total_egr,"liquidez":liquidez,"apertura":apertura,"cats":cats,"monthly":monthly,"movs":movs,"flujo_act":flujo_act})
 
-@router.get("/rentabilidad", response_class=HTMLResponse)
-def rentabilidad(request: Request, umbral: float = Query(40.0), db: Session = Depends(get_db), user=FinanzasAuth):
+def _fila_rentabilidad(db: Session, o, umbral: float, tarifa_media: float) -> dict:
+    """Calcula una fila de rentabilidad de forma defensiva (None-safe).
+
+    - Sin prendas asociadas → costos 0.0 y pendiente (no falla).
+    - Materiales: suma Kardex con `(k.costo_total or 0)`; si no hay salidas,
+      usa BOM estándar con `(precio_metro or 0)` / `(costo_unitario or 0)`.
+    - M.O.: minutos de WorkLog terminado (coalesce); `sam`/`minutos_estandar`
+      None se tratan como 0; sin registros → costo 0.0.
+    - Nunca lanza por datos nulos; cualquier error inesperado lo debe
+      capturar el llamante (ver `rentabilidad`).
+    """
     from app.core.constants import CONSUMO_TELA_M
     from app.models.inventory import Fabric
-    from app.models.inventario import ProductoInsumo
+    from app.models.inventario import MovimientoKardex, ProductoInsumo
+    from app.models.order import WorkLog
+
+    try:
+        tarifa = float(tarifa_media or 0.35)
+    except (TypeError, ValueError):
+        tarifa = 0.35
+    if not tarifa or tarifa <= 0:
+        tarifa = 0.35
+    try:
+        umbral_f = float(umbral if umbral is not None else 40.0)
+    except (TypeError, ValueError):
+        umbral_f = 40.0
+
+    garments = db.query(Garment).filter(Garment.order_id == o.id).all() or []
+    if not garments:
+        # Orden sin prendas/insumos: costo 0.0, pendiente (no tumba la página).
+        try:
+            precio = round(float(o.total or 0) / 1.18, 2)
+        except (TypeError, ValueError):
+            precio = 0.0
+        return {"order": o, "precio": precio, "costo_telas": 0.0,
+                "costo_destajo": 0.0, "costo_total": 0.0, "margen": None,
+                "margen_pct": None, "alerta": True, "garments": [],
+                "fuente_costo": "pendiente", "pendiente_costeo": True,
+                "pendiente_liquidacion": True}
+    # Valor de venta NETO (sin IGV): el total comercial incluye IGV.
+    try:
+        bruto = float(o.total or 0) or sum(float(g.precio or 0) for g in garments) or 0
+    except (TypeError, ValueError):
+        bruto = 0.0
+    precio = round(bruto / 1.18, 2) if bruto else 0.0
+    # Costo de materiales: consumo real de Kardex (None-safe); si no, BOM.
+    try:
+        salidas = db.query(MovimientoKardex).filter(
+            MovimientoKardex.orden_venta_id == o.id,
+            MovimientoKardex.tipo_movimiento == "SALIDA_TALLER").all() or []
+    except Exception:
+        salidas = []
+    if salidas:
+        try:
+            costo_telas = round(sum(float(k.costo_total or 0) for k in salidas), 2)
+        except (TypeError, ValueError):
+            costo_telas = 0.0
+        fuente_costo = "kardex"
+        material_ok = True
+    else:
+        costo_telas = 0.0
+        con_insumo = False
+        for g in garments or []:
+            try:
+                consumo = float(CONSUMO_TELA_M.get(getattr(g, "tipo", None), 1.5) or 0)
+            except (TypeError, ValueError):
+                consumo = 0.0
+            tela = None
+            try:
+                tela = db.get(Fabric, g.tela_id) if getattr(g, "tela_id", None) else None
+            except Exception:
+                tela = None
+            if tela is not None:
+                con_insumo = True
+                try:
+                    costo_telas += consumo * float(tela.precio_metro or 0)
+                except (TypeError, ValueError):
+                    pass
+            else:
+                prod = None
+                try:
+                    prod = db.query(ProductoInsumo).filter(
+                        ProductoInsumo.sku == str(g.tela_id)).first() if getattr(g, "tela_id", None) else None
+                except Exception:
+                    prod = None
+                if prod is not None:
+                    con_insumo = True
+                    try:
+                        costo_telas += consumo * float(prod.costo_unitario or 0)
+                    except (TypeError, ValueError):
+                        pass
+        costo_telas = round(costo_telas, 2)
+        fuente_costo = "bom" if con_insumo else "pendiente"
+        material_ok = bool(con_insumo)
+    # Costo de M.O.: destajo/tareo completado (WorkLog terminado, None-safe).
+    # Si no hay prendas/operaciones SAM o minutos es None → 0.0.
+    try:
+        gids = [gg.id for gg in (garments or []) if getattr(gg, "id", None) is not None]
+        if gids:
+            minutos = db.query(func.coalesce(func.sum(WorkLog.minutos_reales), 0)).filter(
+                WorkLog.garment_id.in_(gids),
+                WorkLog.estado == "terminado").scalar() or 0
+        else:
+            minutos = 0
+    except Exception:
+        minutos = 0
+    try:
+        minutos = float(minutos or 0)
+    except (TypeError, ValueError):
+        minutos = 0.0
+    if minutos < 0:
+        minutos = 0.0
+    costo_destajo = round(minutos * tarifa, 2)
+    mo_ok = minutos > 0
+    # Liquidación: entregada o con registros (Kardex/SAM/insumo) → margen
+    # real y sin etiqueta; cotizada o sin inicio → pendiente informativa.
+    try:
+        tiene_registros = bool(salidas) or bool(mo_ok) or bool(material_ok)
+    except Exception:
+        tiene_registros = False
+    try:
+        liquidada = (getattr(o, "estado", None) == "entregado") or tiene_registros
+    except Exception:
+        liquidada = bool(tiene_registros)
+    if liquidada:
+        costo_total = round((costo_telas or 0) + (costo_destajo or 0), 2)
+        margen = round(precio - costo_total, 2) if precio else 0
+        margen_pct = round((margen / precio * 100) if precio else 0, 1)
+        alerta = margen_pct < umbral_f
+        pendiente_liquidacion = False
+    else:
+        # Sin costeo cerrado: sin margen ficticio.
+        costo_total = round((costo_telas or 0) + (costo_destajo or 0), 2)
+        margen = None
+        margen_pct = None
+        alerta = True
+        pendiente_liquidacion = True
+    return {"order": o, "precio": precio, "costo_telas": round(costo_telas or 0, 2),
+            "costo_destajo": costo_destajo, "costo_total": costo_total,
+            "margen": margen, "margen_pct": margen_pct, "alerta": alerta,
+            "garments": garments, "fuente_costo": fuente_costo,
+            "pendiente_costeo": not material_ok,
+            "pendiente_liquidacion": pendiente_liquidacion}
+
+
+@router.get("/rentabilidad", response_class=HTMLResponse)
+def rentabilidad(request: Request, umbral: float = Query(40.0), db: Session = Depends(get_db), user=FinanzasAuth):
     # Costeo absorbente: tarifa de planilla del taller (blindada, nunca None).
+    # Si la consulta de gastos 921 retorna None/0 o la capacidad es <= 0,
+    # tarifa_minuto_taller ya aplica fallback 0.35 / 11520 sin dividir por cero.
     try:
         tarifa_media = svc.tarifa_minuto_taller(db) or 0.35
     except Exception as e:
         logger.error("rentabilidad: tarifa taller falló (%s), uso 0.35", e)
         tarifa_media = 0.35
-    orders=db.query(Order).order_by(Order.id.desc()).limit(100).all()
-    rows=[]
+    try:
+        tarifa_media = float(tarifa_media or 0.35)
+    except (TypeError, ValueError):
+        tarifa_media = 0.35
+    if not tarifa_media or tarifa_media <= 0:
+        tarifa_media = 0.35
+    orders = db.query(Order).order_by(Order.id.desc()).limit(100).all()
+    rows = []
     for o in orders:
         try:
             rows.append(_fila_rentabilidad(db, o, umbral, tarifa_media))
@@ -522,62 +672,6 @@ def rentabilidad(request: Request, umbral: float = Query(40.0), db: Session = De
                          "margen_pct": None, "alerta": True, "garments": [],
                          "fuente_costo": "pendiente", "pendiente_costeo": True,
                          "pendiente_liquidacion": True})
-        garments=db.query(Garment).filter(Garment.order_id==o.id).all()
-        if not garments: continue
-        # Valor de venta NETO (sin IGV): el total comercial incluye IGV.
-        bruto=o.total or sum(g.precio for g in garments) or 0
-        precio=round(bruto/1.18,2)
-        # Costo de materiales: consumo real de Kardex; si no, BOM estándar.
-        from app.models.inventario import MovimientoKardex
-        salidas=db.query(MovimientoKardex).filter(
-            MovimientoKardex.orden_venta_id==o.id,
-            MovimientoKardex.tipo_movimiento=="SALIDA_TALLER").all()
-        if salidas:
-            costo_telas=round(sum(k.costo_total or 0 for k in salidas),2)
-            fuente_costo="kardex"
-            material_ok=True
-        else:
-            costo_telas=0.0
-            con_insumo=False
-            for g in garments:
-                consumo=CONSUMO_TELA_M.get(g.tipo,1.5)
-                tela=db.get(Fabric,g.tela_id) if g.tela_id else None
-                if tela:
-                    con_insumo=True
-                    costo_telas+=consumo*(tela.precio_metro or 0)
-                else:
-                    prod=db.query(ProductoInsumo).filter(ProductoInsumo.sku==str(g.tela_id)).first() if g.tela_id else None
-                    if prod:
-                        con_insumo=True
-                        costo_telas+=consumo*(prod.costo_unitario or 0)
-            costo_telas=round(costo_telas,2)
-            fuente_costo="bom" if con_insumo else "pendiente"
-            material_ok=con_insumo
-        # Costo de M.O.: destajo/tareo completado (WorkLog terminado).
-        from app.models.order import WorkLog
-        minutos=db.query(func.coalesce(func.sum(WorkLog.minutos_reales),0)).filter(
-            WorkLog.garment_id.in_([gg.id for gg in garments]),
-            WorkLog.estado=="terminado").scalar() or 0
-        costo_destajo=round(minutos*tarifa_media,2)
-        mo_ok=minutos>0
-        # Liquidación: entregada o con registros (Kardex/SAM/insumo) → margen
-        # real y sin etiqueta; cotizada o sin inicio → pendiente informativa.
-        tiene_registros=bool(salidas) or mo_ok or material_ok
-        liquidada=(o.estado == "entregado") or tiene_registros
-        if liquidada:
-            costo_total=round(costo_telas+costo_destajo,2)
-            margen=round(precio-costo_total,2) if precio else 0
-            margen_pct=round((margen/precio*100) if precio else 0,1)
-            alerta=margen_pct<umbral
-            pendiente_liquidacion=False
-        else:
-            # Sin costeo cerrado: sin margen ficticio.
-            costo_total=round(costo_telas+costo_destajo,2)
-            margen=None
-            margen_pct=None
-            alerta=True
-            pendiente_liquidacion=True
-        rows.append({"order":o,"precio":precio,"costo_telas":round(costo_telas,2),"costo_destajo":costo_destajo,"costo_total":costo_total,"margen":margen,"margen_pct":margen_pct,"alerta":alerta,"garments":garments,"fuente_costo":fuente_costo,"pendiente_costeo":not material_ok,"pendiente_liquidacion":pendiente_liquidacion})
     # KPIs de control de gestión.
     from datetime import date as _date
     cerrados=[r for r in rows if not r["pendiente_liquidacion"] and r["margen_pct"] is not None]

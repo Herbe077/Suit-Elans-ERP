@@ -91,7 +91,7 @@ def test_tarifa_por_planilla_taller():
     g, _a = f.registrar_gasto_operativo(
         db, fecha=date.today(), categoria="PLANILLA", monto_base=6000,
         centro_costo_id=cc.id, numero_comprobante="PL-TAR-001")
-    assert f.tarifa_minuto_taller(db) == 0.5  # 6000 / 12000
+    assert f.tarifa_minuto_taller(db) == round(6000 / 11520, 4)  # 6000 / capacidad 11520
     assert f.planilla_taller_mes(db, date.today().year, date.today().month) > 0
     # limpieza
     aids = [a.id for a in db.query(AsientoContable).filter(
