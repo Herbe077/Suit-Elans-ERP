@@ -16,9 +16,12 @@
 </div>
 <div class="bg-white rounded-xl shadow p-4 mb-4">
   <h2 class="font-bold mb-2 text-sm">Cotización rápida</h2>
-  <form method="post" action="/ventas/ordenes" class="grid md:grid-cols-4 gap-2 text-sm items-end">
+  <form method="post" action="/ventas/ordenes" class="grid md:grid-cols-5 gap-2 text-sm items-end">
     <label class="block">Cliente
       <select name="client_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for c in clientes %}<option value="{{ c.id }}">{{ c.nombre }} {{ c.apellidos }}</option>{% endfor %}</select>
+    </label>
+    <label class="block">Tipo de prenda / servicio *
+      <select name="garment_tipo" required class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="">— Seleccionar —</option><option value="saco">Saco</option><option value="pantalon">Pantalón</option><option value="chaleco">Chaleco</option><option value="camisa">Camisa</option><option value="abrigo">Abrigo</option><option value="smoking">Smoking</option><option value="vestido">Vestido</option><option value="falda">Falda</option><option value="blusa">Blusa</option></select>
     </label>
     <label class="block md:col-span-2">Concepto
       <input name="concepto" placeholder="Ej. terno 2 piezas (referencial)" class="border rounded px-2 py-1.5 w-full mt-0.5">
@@ -39,24 +42,56 @@
       <span class="font-bold">S/ {{ "%.2f"|format(o.total) }} <span class="font-normal text-slate-500">(anticipo S/ {{ "%.2f"|format(o.anticipo) }} · saldo S/ {{ "%.2f"|format(o.saldo) }})</span></span>
     </div>
     <div class="flex gap-2 mt-1 items-center flex-wrap">
-      <form method="post" action="/ventas/cobro" class="flex gap-1 text-xs items-end">
-        <input type="hidden" name="order_id" value="{{ o.id }}">
-        <input type="hidden" name="back" value="/ventas/ordenes">
-        <label>Monto S/<input name="monto" type="number" step="0.01" min="0.01" placeholder="0.00" class="border rounded px-1 py-0.5 w-24 block mt-0.5"></label>
-        <label>Método<select name="metodo" class="border rounded px-1 py-0.5 block mt-0.5 bg-white"><option>efectivo</option><option>yape</option><option>plin</option><option>tarjeta</option><option>transferencia</option></select></label>
-        <label>Tipo<select name="tipo" class="border rounded px-1 py-0.5 block mt-0.5 bg-white"><option value="">Auto</option><option value="ADELANTO">Adelanto</option><option value="SALDO_FINAL">Saldo</option></select></label>
-        <button class="bg-borgo text-white rounded px-2 py-0.5 font-semibold self-end">Cobrar</button>
-      </form>
-      {% if o.estado != 'entregado' and o.estado != 'cancelado' %}
-        {% if not taller_ok.get(o.id, True) %}
+      {% if o.estado == 'cotizado' %}
+        <button type="button" onclick="abrirCobro({{ o.id }}, '{{ o.folio }}', {{ (o.total * min_anticipo / 100 - o.anticipo)|round(2) if (o.total * min_anticipo / 100 - o.anticipo) > 0 else o.saldo }}, 'Anticipo (≥ {{ min_anticipo }}%)')" class="text-xs bg-borgo text-white rounded-full px-3 py-1.5 font-bold">Confirmar y Cobrar Anticipo (≥ {{ min_anticipo }}%)</button>
+        <span class="text-xs text-slate-400">Cotización pendiente de confirmación.</span>
+      {% elif o.estado == 'confirmado' %}
+        <button type="button" onclick="abrirCobro({{ o.id }}, '{{ o.folio }}', {{ o.saldo }}, 'Saldo')" class="text-xs bg-borgo text-white rounded-full px-3 py-1.5 font-bold">💳 Registrar Pago / Saldo</button>
+        {% if o.saldo <= 0 and taller_ok.get(o.id, True) %}
+          <form method="post" action="/ventas/ordenes/{{ o.id }}/entregar" onsubmit="return confirm('¿Marcar {{ o.folio }} como entregado?')"><button class="text-xs underline text-laton-dark">Marcar entregado</button></form>
+        {% elif not taller_ok.get(o.id, True) %}
           <span class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-0.5" title="Requiere CALIDAD_OK en taller">⏳ En taller — no listo para entrega</span>
         {% else %}
-          <form method="post" action="/ventas/ordenes/{{ o.id }}/entregar" onsubmit="{% if o.saldo > 0 %}alert('Bloqueado: saldo pendiente S/ {{ '%.2f'|format(o.saldo) }}'); return false;{% elif not taller_ok.get(o.id, True) %}alert('Bloqueado: prenda no está en CALIDAD_OK'); return false;{% else %}return confirm('¿Marcar {{ o.folio }} como entregado?'){% endif %}"><button class="text-xs underline text-laton-dark">Marcar entregado</button></form>
+          <span class="text-xs text-slate-400">Saldo pendiente S/ {{ "%.2f"|format(o.saldo) }} para entregar.</span>
         {% endif %}
+        <a href="/ventas/comprobantes" class="text-xs underline text-slate-500">Facturar →</a>
       {% endif %}
-      <a href="/ventas/comprobantes" class="text-xs underline text-slate-500">Facturar →</a>
     </div>
   </div>
-  {% else %}<p class="p-4 text-sm text-slate-500">Sin órdenes.</p>{% endfor %}
+    {% else %}<p class="p-4 text-sm text-slate-500">Sin órdenes.</p>{% endfor %}
 </div>
+<div id="modal-cobro" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" onclick="cerrarCobro()"></div>
+  <form method="post" action="/ventas/cobro" class="relative bg-white rounded-xl shadow p-4 w-full max-w-sm text-sm">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="font-bold">💳 Cobro unificado <span id="cobro-folio" class="font-mono font-normal text-slate-500"></span></h2>
+      <button type="button" onclick="cerrarCobro()" class="text-slate-400 border rounded-full w-7 h-7" aria-label="Cerrar">✕</button>
+    </div>
+    <input type="hidden" name="order_id" id="cobro-order" value="">
+    <input type="hidden" name="back" value="/ventas/ordenes">
+    <label class="block mb-2">Monto S/ <span id="cobro-etiqueta" class="text-slate-400"></span>
+      <input name="monto" id="cobro-monto" type="number" step="0.01" min="0.01" required class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block mb-2">Método / cuenta
+      <select name="metodo" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="efectivo">Efectivo → Caja 1011</option><option value="transferencia">Transferencia → Banco 1041</option><option value="tarjeta">Tarjeta → Banco 1041</option><option value="yape">Yape → Banco 1041</option><option value="plin">Plin → Banco 1041</option></select>
+    </label>
+    <label class="block mb-3">Tipo
+      <select name="tipo" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="">Auto</option><option value="ADELANTO">Adelanto</option><option value="SALDO_FINAL">Saldo final</option></select>
+    </label>
+    <button class="w-full bg-borgo text-white rounded-lg py-2 font-bold">Confirmar cobro</button>
+    <p class="text-xs text-slate-400 mt-1">El comprobante se emite desde Facturación.</p>
+  </form>
+</div>
+<script>
+function abrirCobro(oid, folio, sugerido, etiqueta) {
+  document.getElementById('cobro-order').value = oid;
+  document.getElementById('cobro-folio').textContent = folio;
+  document.getElementById('cobro-monto').value = sugerido;
+  document.getElementById('cobro-etiqueta').textContent = '(' + etiqueta + ' sugerido)';
+  document.getElementById('modal-cobro').classList.remove('hidden');
+}
+function cerrarCobro() {
+  document.getElementById('modal-cobro').classList.add('hidden');
+}
+</script>
 {% endblock %}

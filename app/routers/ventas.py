@@ -339,13 +339,22 @@ def ordenes(request: Request, estado: str = "", error: str = "", msg: str = "",
 
 @router.post("/ordenes")
 def crear_orden(client_id: str = Form(""), concepto: str = Form(...),
-                total: float = Form(...), db: Session = Depends(get_db), user=Auth):
+                total: float = Form(...), garment_tipo: str = Form(""),
+                db: Session = Depends(get_db), user=Auth):
     from app.services.orders import next_folio
-    if not client_id or total <= 0:
+    if not client_id or total <= 0 or not (garment_tipo or "").strip():
         return RedirectResponse("/ventas/ordenes", status_code=303)
     o = Order(folio=next_folio(db), client_id=int(client_id), sastre_id=user.id,
-              estado="cotizado", canal="sastreria", total=round(total, 2))
+              estado="cotizado", canal="sastreria", total=round(total, 2),
+              concepto=(concepto or "").strip() or None)
     db.add(o)
+    db.flush()
+    # Prenda base: la venta confirmada deriva al taller con su ficha.
+    g = Garment(order_id=o.id, tipo=garment_tipo.strip(), precio=round(total, 2))
+    db.add(g)
+    db.flush()
+    from app.services.taller import codigo_qr as _qr
+    g.codigo_qr = _qr(o.folio, g.id)
     db.commit()
     _sync_orden_venta(db, o)
     return RedirectResponse("/ventas/ordenes", status_code=303)
