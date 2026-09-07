@@ -24,9 +24,10 @@ def _limpia(db):
     from app.models.billing import CashMovement, Invoice
     from app.models.finanzas import (AsientoContable, CuentaPorCobrar, CuentaPorPagar,
                                      GastoRegistrado, LineaAsientoContable, MovimientoFinanciero)
-    from app.models.order import Order, Payment
+    from app.models.order import Garment, Order, Payment
     for m in (LineaAsientoContable, AsientoContable, MovimientoFinanciero, CashMovement,
-              GastoRegistrado, CuentaPorCobrar, CuentaPorPagar, Payment, Invoice, Order):
+              GastoRegistrado, CuentaPorCobrar, CuentaPorPagar, Payment, Invoice,
+              Garment, Order):
         db.query(m).delete()
     db.commit()
 

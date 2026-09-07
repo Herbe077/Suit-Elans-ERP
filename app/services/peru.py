@@ -36,5 +36,18 @@ def validar_doc(tipo: str, numero: str | None) -> None:
         raise ValueError(f"{tipo} inválido: {numero}")
 
 
+def normalizar_ruc(ruc: str | None) -> str | None:
+    """Normaliza un RUC sin bloquear: quita espacios, guiones y puntos.
+
+    Devuelve el string normalizado (o None si vacío). Acepta cualquier
+    formato/longitud para no frenar el guardado; la verificación SUNAT
+    (11 dígitos + checksum) queda como advertencia no bloqueante.
+    """
+    if not ruc:
+        return None
+    norm = ruc.strip().replace(" ", "").replace("-", "").replace(".", "")
+    return norm or None
+
+
 def soles(monto: float) -> str:
     return f"{MONEDA} {monto:,.2f}"

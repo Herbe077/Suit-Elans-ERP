@@ -121,12 +121,16 @@ def _igv(db: Session) -> float:
 @router.get("/pos", response_class=HTMLResponse)
 def pos(request: Request, ok: str = "", error: str = "",
         db: Session = Depends(get_db), user=Auth):
+    empresas = db.query(Company).order_by(Company.nombre_comercial).all()
+    colabs: dict[int, list] = {}
+    for c in db.query(Client).filter(Client.company_id.is_not(None)).all():
+        colabs.setdefault(c.company_id, []).append(c)
     return templates.TemplateResponse(request, "ventas/pos.html", {
         "user": user, "ok": ok, "error": error,
         "turno": ventas_svc.turno_abierto(db, user.id),
         "min_anticipo": ventas_svc.anticipo_min_pct(db),
         "clientes": db.query(Client).order_by(Client.apellidos).limit(200).all(),
-        "empresas": db.query(Company).order_by(Company.nombre_comercial).all(),
+        "empresas": empresas, "colabs": colabs,
         "variantes": db.query(ProductVariant).filter(ProductVariant.stock > 0).order_by(
             ProductVariant.sku).limit(200).all(),
         "telas": db.query(Fabric).filter(Fabric.stock_metros > 0).order_by(
@@ -137,6 +141,8 @@ def pos(request: Request, ok: str = "", error: str = "",
 
 @router.post("/pos/vender")
 def vender(client_id: str = Form(""), company_id: str = Form(""),
+           colaborador_id: str = Form(""), colab_nombre: str = Form(""),
+           colab_apellidos: str = Form(""), colab_telefono: str = Form(""),
            variant_id: str = Form(""), cantidad: float = Form(1),
            concepto: str = Form(""), precio: float = Form(0),
            garment_tipo: str = Form(""), tela_id: str = Form(""),
@@ -144,7 +150,28 @@ def vender(client_id: str = Form(""), company_id: str = Form(""),
            db: Session = Depends(get_db), user=Auth):
     from app.models.inventory import StockMovement
     from app.services.orders import next_folio
-    if not client_id and not company_id:
+    emp_id = int(company_id) if company_id and company_id.isdigit() else None
+    # Colaborador / beneficiario: la prenda y ficha van a su nombre,
+    # la facturación queda a nombre de la empresa (company_id).
+    beneficiario_id: int | None = None
+    if emp_id:
+        if colaborador_id and colaborador_id.isdigit():
+            col = db.get(Client, int(colaborador_id))
+            if col:
+                if col.company_id != emp_id:
+                    col.company_id = emp_id
+                beneficiario_id = col.id
+        elif (colab_nombre or "").strip():
+            col = Client(nombre=colab_nombre.strip(),
+                         apellidos=(colab_apellidos or "").strip(),
+                         telefono=(colab_telefono or "").strip() or None,
+                         tipo_doc="DNI", nro_doc=None, clasificacion="Nuevo",
+                         company_id=emp_id)
+            db.add(col)
+            db.flush()
+            beneficiario_id = col.id
+    cli_id = int(client_id) if client_id and client_id.isdigit() else beneficiario_id
+    if not cli_id and not emp_id:
         return RedirectResponse("/ventas/pos", status_code=303)
     if not variant_id and not (concepto and precio > 0):
         return RedirectResponse("/ventas/pos", status_code=303)
@@ -158,9 +185,9 @@ def vender(client_id: str = Form(""), company_id: str = Form(""),
         total = round(variante.precio * cantidad, 2)
     else:
         total = round(precio, 2)
-    order = Order(folio=next_folio(db), client_id=int(client_id) if client_id else None,
-                  company_id=int(company_id) if company_id else None,
-                  sastre_id=user.id, estado="cotizado", canal="comercial", total=total)
+    order = Order(folio=next_folio(db), client_id=cli_id, company_id=emp_id,
+                  sastre_id=user.id, estado="cotizado", canal="comercial",
+                  concepto=(concepto or "").strip() or None, total=total)
     db.add(order)
     db.flush()
     if variante:

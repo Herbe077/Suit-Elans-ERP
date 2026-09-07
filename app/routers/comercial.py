@@ -38,6 +38,7 @@ def _ctx(base: dict, tab: str) -> dict:
 @router.get("/clientes", response_class=HTMLResponse)
 def clientes(request: Request, q: str = "", tab: str = "personas",
              tipo: str = "", clasificacion: str = "", error: str = "",
+             warn: str = "",
              db: Session = Depends(get_db), user=Ventas):
     personas = db.query(Client)
     empresas = db.query(Company)
@@ -54,6 +55,7 @@ def clientes(request: Request, q: str = "", tab: str = "personas",
         personas = personas.filter(Client.clasificacion == clasificacion)
     return templates.TemplateResponse(request, "comercial/clientes.html", _ctx({
         "user": user, "q": q, "clasificacion": clasificacion, "error": error,
+        "warn": warn,
         "clasificaciones": CLASIFICACION_CLIENTE,
         "personas": personas.order_by(Client.apellidos).limit(100).all(),
         "empresas": empresas.order_by(Company.nombre_comercial).all()}, tab))
@@ -64,20 +66,31 @@ def crear_persona(nombre: str = Form(...), apellidos: str = Form(...),
                   telefono: str = Form(""), email: str = Form(""),
                   tipo_doc: str = Form("DNI"), nro_doc: str = Form(""),
                   distrito: str = Form(""), clasificacion: str = Form("Nuevo"),
+                  concepto: str = Form(""),
                   db: Session = Depends(get_db), user=Ventas):
-    try:
-        peru_svc.validar_doc(tipo_doc, nro_doc or None)
-    except ValueError:
-        return RedirectResponse("/comercial/clientes", status_code=303)
+    doc = (nro_doc or "").strip() or None
+    if tipo_doc == "RUC":
+        # RUC flexible: normaliza sin bloquear el guardado.
+        doc = peru_svc.normalizar_ruc(doc)
+    else:
+        try:
+            peru_svc.validar_doc(tipo_doc, doc)
+        except ValueError:
+            return RedirectResponse("/comercial/clientes", status_code=303)
     if clasificacion not in CLASIFICACION_CLIENTE:
         clasificacion = "Nuevo"
     c = Client(nombre=nombre.strip(), apellidos=apellidos.strip(),
-               telefono=telefono or None, email=email or None,
-               tipo_doc=tipo_doc, nro_doc=(nro_doc.strip() or None),
+               telefono=telefono.strip() or None, email=(email or "").strip() or None,
+               tipo_doc=tipo_doc, nro_doc=doc,
                distrito=distrito.strip() or None, clasificacion=clasificacion)
     db.add(c)
     db.commit()
-    return RedirectResponse(f"/produccion/fichas/{c.id}", status_code=303)
+    db.refresh(c)
+    back = f"/produccion/fichas/{c.id}"
+    if (concepto or "").strip():
+        from urllib.parse import quote
+        back += f"?concepto={quote(concepto.strip())}"
+    return RedirectResponse(back, status_code=303)
 
 
 @router.post("/clientes/persona-rapido")
@@ -106,26 +119,18 @@ def crear_empresa(nombre_comercial: str = Form(...), ruc: str = Form(""),
     """Alta de empresa B2B → tabla `companies` (personas van a `clients`).
 
     Payload esperado del formulario: nombre_comercial, ruc, telefono,
-    distrito, clasificacion, descuento_pct. El RUC es opcional, pero si se
-    envía debe ser un string de 11 dígitos (con verificador SUNAT válido).
+    distrito, clasificacion, descuento_pct. El RUC es flexible: se normaliza
+    (sin espacios/guiones/puntos) y nunca bloquea el guardado; si no pasa la
+    verificación SUNAT se avisa con `?warn=ruc` de forma no bloqueante.
     """
     nombre = (nombre_comercial or "").strip()
     if not nombre:
         return RedirectResponse("/comercial/clientes?tab=empresas&error=nombre_requerido",
                                 status_code=303)
-    # Normaliza RUC: quita espacios/guiones; vacío = sin RUC.
-    ruc_norm = (ruc or "").strip().replace(" ", "").replace("-", "")
-    ruc_val: str | None = ruc_norm or None
-    if ruc_val is not None:
-        # Debe ser string de 11 dígitos antes del checksum.
-        if len(ruc_val) != 11 or not ruc_val.isdigit():
-            return RedirectResponse(
-                "/comercial/clientes?tab=empresas&error=ruc_invalido", status_code=303)
-        try:
-            peru_svc.validar_doc("RUC", ruc_val)
-        except ValueError:
-            return RedirectResponse(
-                "/comercial/clientes?tab=empresas&error=ruc_invalido", status_code=303)
+    ruc_val = peru_svc.normalizar_ruc(ruc)
+    warn = ""
+    if ruc_val and not peru_svc.validar_ruc(ruc_val):
+        warn = "&warn=ruc"
     if clasificacion not in CLASIFICACION_CLIENTE:
         clasificacion = "Nuevo"
     try:
@@ -142,7 +147,7 @@ def crear_empresa(nombre_comercial: str = Form(...), ruc: str = Form(""),
     db.commit()
     db.refresh(c)
     # Volver al listado para que la empresa se vea en la tabla "Empresas (N)".
-    return RedirectResponse("/comercial/clientes?tab=empresas", status_code=303)
+    return RedirectResponse(f"/comercial/clientes?tab=empresas{warn}", status_code=303)
 
 
 @router.get("/clientes/empresa/{cid}", response_class=HTMLResponse)
@@ -165,6 +170,134 @@ def add_contacto(cid: int, nombre: str = Form(...), cargo: str = Form(""),
     return RedirectResponse(f"/comercial/clientes/empresa/{cid}", status_code=303)
 
 
+# ---------- Edición de clientes ----------
+@router.get("/clientes/persona/{pid}/editar", response_class=HTMLResponse)
+def editar_persona_form(pid: int, request: Request,
+                        db: Session = Depends(get_db), user=Ventas):
+    c = db.get(Client, pid)
+    if not c:
+        return RedirectResponse("/comercial/clientes", status_code=303)
+    empresa = db.get(Company, c.company_id) if c.company_id else None
+    return templates.TemplateResponse(request, "comercial/cliente_editar.html", _ctx({
+        "user": user, "tipo": "persona", "cliente": c, "empresa": empresa,
+        "empresas": db.query(Company).order_by(Company.nombre_comercial).all(),
+        "clasificaciones": CLASIFICACION_CLIENTE}, "personas"))
+
+
+@router.post("/clientes/persona/{pid}/editar")
+def editar_persona(pid: int, nombre: str = Form(...), apellidos: str = Form(...),
+                   telefono: str = Form(""), email: str = Form(""),
+                   tipo_doc: str = Form("DNI"), nro_doc: str = Form(""),
+                   direccion: str = Form(""), distrito: str = Form(""),
+                   clasificacion: str = Form("Nuevo"), company_id: str = Form(""),
+                   db: Session = Depends(get_db), user=Ventas):
+    c = db.get(Client, pid)
+    if not c:
+        return RedirectResponse("/comercial/clientes", status_code=303)
+    doc = (nro_doc or "").strip() or None
+    if tipo_doc == "RUC":
+        doc = peru_svc.normalizar_ruc(doc)
+    else:
+        try:
+            peru_svc.validar_doc(tipo_doc, doc)
+        except ValueError:
+            return RedirectResponse("/comercial/clientes", status_code=303)
+    c.nombre = nombre.strip()
+    c.apellidos = apellidos.strip()
+    c.telefono = telefono.strip() or None
+    c.email = (email or "").strip() or None
+    c.tipo_doc = tipo_doc
+    c.nro_doc = doc
+    c.direccion = direccion.strip() or None
+    c.distrito = distrito.strip() or None
+    c.clasificacion = clasificacion if clasificacion in CLASIFICACION_CLIENTE else "Nuevo"
+    c.company_id = int(company_id) if company_id and company_id.isdigit() else None
+    db.commit()
+    return RedirectResponse("/comercial/clientes", status_code=303)
+
+
+@router.get("/clientes/empresa/{cid}/editar", response_class=HTMLResponse)
+def editar_empresa_form(cid: int, request: Request,
+                        db: Session = Depends(get_db), user=Ventas):
+    c = db.get(Company, cid)
+    if not c:
+        return RedirectResponse("/comercial/clientes?tab=empresas", status_code=303)
+    return templates.TemplateResponse(request, "comercial/cliente_editar.html", _ctx({
+        "user": user, "tipo": "empresa", "compania": c,
+        "clasificaciones": CLASIFICACION_CLIENTE}, "empresas"))
+
+
+@router.post("/clientes/empresa/{cid}/editar")
+def editar_empresa(cid: int, nombre_comercial: str = Form(...),
+                   ruc: str = Form(""), telefono: str = Form(""),
+                   email: str = Form(""), direccion: str = Form(""),
+                   distrito: str = Form(""), clasificacion: str = Form("Nuevo"),
+                   descuento_pct: str = Form("0"),
+                   db: Session = Depends(get_db), user=Ventas):
+    c = db.get(Company, cid)
+    if not c:
+        return RedirectResponse("/comercial/clientes?tab=empresas", status_code=303)
+    c.nombre_comercial = nombre_comercial.strip()
+    c.ruc = peru_svc.normalizar_ruc(ruc)
+    c.telefono = telefono.strip() or None
+    c.email = (email or "").strip() or None
+    c.direccion = direccion.strip() or None
+    c.distrito = distrito.strip() or None
+    c.clasificacion = clasificacion if clasificacion in CLASIFICACION_CLIENTE else "Nuevo"
+    try:
+        c.descuento_pct = max(0.0, min(100.0, float((descuento_pct or "0").strip() or 0)))
+    except (ValueError, AttributeError):
+        c.descuento_pct = 0.0
+    db.commit()
+    return RedirectResponse("/comercial/clientes?tab=empresas", status_code=303)
+
+
+# ---------- Colaboradores B2B (beneficiarios finales) ----------
+@router.post("/clientes/empresa/{cid}/colaboradores")
+def add_colaborador(cid: int, nombre: str = Form(...), apellidos: str = Form(""),
+                    telefono: str = Form(""), distrito: str = Form(""),
+                    clasificacion: str = Form("Nuevo"),
+                    db: Session = Depends(get_db), user=Ventas):
+    """Registra un colaborador (persona) vinculado a la empresa B2B."""
+    if not db.get(Company, cid):
+        return RedirectResponse("/comercial/clientes?tab=empresas", status_code=303)
+    if clasificacion not in CLASIFICACION_CLIENTE:
+        clasificacion = "Nuevo"
+    c = Client(nombre=nombre.strip(), apellidos=apellidos.strip(),
+               telefono=telefono.strip() or None, tipo_doc="DNI", nro_doc=None,
+               distrito=distrito.strip() or None, clasificacion=clasificacion,
+               company_id=cid)
+    db.add(c)
+    db.commit()
+    return RedirectResponse(f"/comercial/clientes/detalle?tipo=empresa&id={cid}",
+                            status_code=303)
+
+
+@router.post("/clientes/empresa/{cid}/colaboradores/vincular")
+def vincular_colaborador(cid: int, client_id: int = Form(...),
+                         db: Session = Depends(get_db), user=Ventas):
+    """Asocia una persona existente como colaborador de la empresa B2B."""
+    if not db.get(Company, cid):
+        return RedirectResponse("/comercial/clientes?tab=empresas", status_code=303)
+    c = db.get(Client, client_id)
+    if c:
+        c.company_id = cid
+        db.commit()
+    return RedirectResponse(f"/comercial/clientes/detalle?tipo=empresa&id={cid}",
+                            status_code=303)
+
+
+@router.post("/clientes/empresa/{cid}/colaboradores/{pid}/desvincular")
+def desvincular_colaborador(cid: int, pid: int,
+                            db: Session = Depends(get_db), user=Ventas):
+    c = db.get(Client, pid)
+    if c and c.company_id == cid:
+        c.company_id = None
+        db.commit()
+    return RedirectResponse(f"/comercial/clientes/detalle?tipo=empresa&id={cid}",
+                            status_code=303)
+
+
 @router.get("/clientes/detalle", response_class=HTMLResponse)
 def cliente_detalle(request: Request, tipo: str = "persona", id: int = 0,
                     db: Session = Depends(get_db), user=Ventas):
@@ -177,6 +310,12 @@ def cliente_detalle(request: Request, tipo: str = "persona", id: int = 0,
             return RedirectResponse("/comercial/clientes?tab=empresas", status_code=303)
         ctx.update(compania=c,
                    contactos=db.query(Contact).filter(Contact.company_id == id).all(),
+                   colaboradores=db.query(Client).filter(
+                       Client.company_id == id).order_by(Client.apellidos).all(),
+                   personas_libres=db.query(Client).filter(
+                       Client.company_id.is_(None)).order_by(
+                       Client.apellidos).limit(200).all(),
+                   clasificaciones=CLASIFICACION_CLIENTE,
                    pedidos=db.query(Order).filter(Order.company_id == id).order_by(
                        Order.id.desc()).all(),
                    inter=db.query(Interaccion).filter(

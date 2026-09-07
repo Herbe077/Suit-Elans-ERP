@@ -68,18 +68,24 @@ def test_cliente_dni_invalido_no_se_crea(client, auth_cookies):
     db.close()
 
 
-def test_empresa_ruc_invalido_no_se_crea(client, auth_cookies):
+def test_empresa_ruc_flexible_no_bloquea(client, auth_cookies):
+    """RUC flexible: cualquier formato se guarda (normalizado), sin bloquear."""
     from app.core.database import SessionLocal
     from app.models.company import Company
-    db = SessionLocal()
-    antes = db.query(Company).count()
-    db.close()
-    r = client.post("/comercial/clientes/empresa", data={"nombre_comercial": "Mala S.A.C.",
+    r = client.post("/comercial/clientes/empresa", data={"nombre_comercial": "Flex S.A.C.",
                                        "ruc": "20123456789"}, cookies=auth_cookies)
     assert r.status_code in (200, 303)
     db = SessionLocal()
-    assert db.query(Company).filter(Company.nombre_comercial == "Mala S.A.C.").first() is None
-    assert db.query(Company).count() == antes
+    c = db.query(Company).filter(Company.nombre_comercial == "Flex S.A.C.").first()
+    assert c is not None and c.ruc == "20123456789"
+    db.close()
+    # Con guiones/espacios se normaliza y también se guarda
+    r = client.post("/comercial/clientes/empresa", data={"nombre_comercial": "Flex2 S.A.C.",
+                                       "ruc": "20-12345678-9"}, cookies=auth_cookies)
+    assert r.status_code in (200, 303)
+    db = SessionLocal()
+    c = db.query(Company).filter(Company.nombre_comercial == "Flex2 S.A.C.").first()
+    assert c is not None and c.ruc == "20123456789"
     db.close()
 
 
@@ -89,10 +95,12 @@ def test_api_empresa_ruc(client, api_token):
                     json={"nombre_comercial": "API PE S.A.C.", "ruc": "20601234565"},
                     headers=h)
     assert r.status_code == 201
+    # RUC flexible en API: formato no estándar también se acepta
     r = client.post("/api/v1/companies",
-                    json={"nombre_comercial": "Mala", "ruc": "123"},
+                    json={"nombre_comercial": "Flex API", "ruc": "123"},
                     headers=h)
-    assert r.status_code == 422
+    assert r.status_code == 201
+    assert r.json()["ruc"] == "123"
 
 
 def test_moneda_en_dashboard(client, auth_cookies):

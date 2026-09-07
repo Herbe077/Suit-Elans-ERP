@@ -21,10 +21,11 @@
   </form>
 </div>
 {% if tab == 'empresas' %}
-{% if error == 'ruc_invalido' %}
-<div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2 mb-3 text-sm">⚠️ RUC inválido: debe ser un string de 11 dígitos con verificador SUNAT válido (o déjalo vacío). La empresa no fue creada.</div>
-{% elif error == 'nombre_requerido' %}
+{% if error == 'nombre_requerido' %}
 <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2 mb-3 text-sm">⚠️ El nombre comercial es obligatorio.</div>
+{% endif %}
+{% if warn == 'ruc' %}
+<div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-2 mb-3 text-sm">⚠️ Empresa guardada, pero el RUC no pasó la verificación SUNAT (11 dígitos + verificador). Revísalo antes de facturar.</div>
 {% endif %}
 <div class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880]">
   <h2 class="font-bold mb-2 text-sm">Nueva empresa B2B</h2>
@@ -33,7 +34,7 @@
       <input name="nombre_comercial" required placeholder="Textil Andina SAC" class="border rounded px-3 py-1.5 w-full mt-0.5">
     </label>
     <label class="block">RUC
-      <input name="ruc" placeholder="11 dígitos" class="border rounded px-3 py-1.5 w-full mt-0.5">
+      <input name="ruc" placeholder="Flexible: no bloquea el guardado" class="border rounded px-3 py-1.5 w-full mt-0.5">
     </label>
     <label class="block">Teléfono / WhatsApp
       <input name="telefono" placeholder="999 888 777" class="border rounded px-3 py-1.5 w-full mt-0.5">
@@ -78,6 +79,9 @@
     <label class="block">Email
       <input name="email" type="email" placeholder="rosa@mail.com" class="border rounded px-3 py-2 w-full mt-0.5">
     </label>
+    <label class="block col-span-2 md:col-span-4">Concepto / Detalle del servicio
+      <input name="concepto" placeholder="Ej. Terno 2 piezas para matrimonio (llega a la ficha y al pedido)" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
     <button class="col-span-2 md:col-span-4 bg-borgo text-white rounded-lg py-2 font-semibold">Guardar (va a su ficha de medidas)</button>
   </form>
 </div>
@@ -92,7 +96,7 @@
     <thead class="text-xs text-slate-500"><tr>
       <th class="text-left py-1">Nombre</th><th class="text-left py-1">Documento</th>
       <th class="text-left py-1">Teléfono</th><th class="text-left py-1">Distrito</th>
-      <th class="text-left py-1">Clasificación</th><th class="text-right py-1">Ficha</th>
+      <th class="text-left py-1">Clasificación</th><th class="text-right py-1">Acciones</th>
     </tr></thead>
     <tbody>
     {% if tab == 'empresas' %}
@@ -103,7 +107,7 @@
         <td class="text-xs">{{ e.telefono or '—' }}</td>
         <td class="text-xs">{{ e.distrito or '—' }}</td>
         <td>{{ badge(e.clasificacion, "laton" if e.clasificacion=='VIP' else "info") }}{% if e.descuento_pct %} <span class="text-xs font-semibold text-emerald-700">-{{ e.descuento_pct }}%</span>{% endif %}</td>
-        <td class="text-right"><a href="/comercial/clientes/detalle?tipo=empresa&id={{ e.id }}" class="font-semibold underline" style="color:#370003">Ver ficha →</a></td>
+        <td class="text-right whitespace-nowrap"><a href="/comercial/clientes/detalle?tipo=empresa&id={{ e.id }}" class="font-semibold underline" style="color:#370003">Ver ficha →</a> · <a href="/comercial/clientes/empresa/{{ e.id }}/editar" class="font-semibold underline text-laton-dark">✏️ Editar</a></td>
       </tr>
       {% else %}<tr><td colspan="6" class="p-4 text-sm text-slate-500">Sin empresas.</td></tr>{% endfor %}
     {% else %}
@@ -114,7 +118,7 @@
         <td class="text-xs">{{ c.telefono or '—' }}</td>
         <td class="text-xs">{{ c.distrito or '—' }}</td>
         <td>{{ badge(c.clasificacion, "laton" if c.clasificacion=='VIP' else "info") }}{% if c.vip %} {{ badge("VIP","warning") }}{% endif %}</td>
-        <td class="text-right"><a href="/comercial/clientes/detalle?tipo=persona&id={{ c.id }}" class="font-semibold underline" style="color:#370003">Ver ficha →</a></td>
+        <td class="text-right whitespace-nowrap"><a href="/comercial/clientes/detalle?tipo=persona&id={{ c.id }}" class="font-semibold underline" style="color:#370003">Ver ficha →</a> · <a href="/comercial/clientes/persona/{{ c.id }}/editar" class="font-semibold underline text-laton-dark">✏️ Editar</a></td>
       </tr>
       {% else %}<tr><td colspan="6" class="p-4 text-sm text-slate-500">Sin resultados.</td></tr>{% endfor %}
     {% endif %}

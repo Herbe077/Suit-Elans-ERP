@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from sqlalchemy import Date, DateTime, String, Text, func
+from sqlalchemy import Date, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -19,6 +19,9 @@ class Client(Base):
     distrito: Mapped[str | None] = mapped_column(String(100), nullable=True)
     clasificacion: Mapped[str] = mapped_column(String(20), default="Nuevo",
                                                server_default="Nuevo")
+    # Colaborador / beneficiario final de una empresa B2B (facturación a la empresa).
+    company_id: Mapped[int | None] = mapped_column(ForeignKey("companies.id"),
+                                                  nullable=True, index=True)
     fecha_nacimiento: Mapped[date | None] = mapped_column(Date, nullable=True)
     notas: Mapped[str | None] = mapped_column(Text, nullable=True)
     vip: Mapped[bool] = mapped_column(default=False)

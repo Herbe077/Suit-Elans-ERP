@@ -347,13 +347,17 @@ def crear_ficha(nombre: str = Form(...), apellidos: str = Form(...),
                 db: Session = Depends(get_db), user=AuthFichas):
     from app.models.client import Client
     from app.services import peru as peru_svc
-    try:
-        peru_svc.validar_doc(tipo_doc, nro_doc or None)
-    except ValueError:
-        return RedirectResponse("/produccion/fichas", status_code=303)
+    doc = (nro_doc or "").strip() or None
+    if tipo_doc == "RUC":
+        doc = peru_svc.normalizar_ruc(doc)
+    else:
+        try:
+            peru_svc.validar_doc(tipo_doc, doc)
+        except ValueError:
+            return RedirectResponse("/produccion/fichas", status_code=303)
     c = Client(nombre=nombre.strip(), apellidos=apellidos.strip(),
                telefono=telefono or None, email=email or None,
-               tipo_doc=tipo_doc, nro_doc=(nro_doc.strip() or None),
+               tipo_doc=tipo_doc, nro_doc=doc,
                distrito=distrito.strip() or None)
     db.add(c)
     db.commit()
@@ -361,7 +365,7 @@ def crear_ficha(nombre: str = Form(...), apellidos: str = Form(...),
 
 
 @router.get("/fichas/{cid}", response_class=HTMLResponse)
-def ficha_detalle(cid: int, request: Request, error: str = "",
+def ficha_detalle(cid: int, request: Request, error: str = "", concepto: str = "",
                   db: Session = Depends(get_db), user=AuthFichas):
     from app.models.client import Client
     from app.models.inventory import Fabric
@@ -374,7 +378,7 @@ def ficha_detalle(cid: int, request: Request, error: str = "",
     bloqueos = _bloqueos(db, cid) if error == "movimientos" else []
     return templates.TemplateResponse(request, "taller/ficha_detalle.html", {
         "user": user, "c": c, "medidas": medidas, "error": error,
-        "bloqueos": bloqueos,
+        "bloqueos": bloqueos, "concepto_sugerido": concepto,
         "ultima": medidas[0] if medidas else None,
         "pedidos": pedidos, "telas": telas,
         "tipos": ("saco", "pantalon", "chaleco", "camisa", "abrigo", "smoking")})
@@ -419,7 +423,7 @@ async def guardar_medidas(cid: int, request: Request,
 @router.post("/fichas/{cid}/pedidos")
 def crear_pedido(cid: int, tipo: str = Form(...), tela_id: str = Form(""),
                  precio: float = Form(0), fecha_entrega: str = Form(""),
-                 measurement_id: str = Form(""),
+                 measurement_id: str = Form(""), concepto: str = Form(""),
                  db: Session = Depends(get_db), user=AuthFichas):
     from datetime import date as date_cls
     from app.core.constants import CONSUMO_TELA_M
@@ -432,7 +436,8 @@ def crear_pedido(cid: int, tipo: str = Form(...), tela_id: str = Form(""),
     except ValueError:
         fentrega = None
     order = Order(folio=next_folio(db), client_id=cid, sastre_id=user.id,
-                  estado="confirmado", fecha_entrega=fentrega)
+                  estado="confirmado", fecha_entrega=fentrega,
+                  concepto=(concepto or "").strip() or None)
     db.add(order)
     db.flush()
     elegida = None

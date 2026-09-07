@@ -11,8 +11,34 @@
     {% for t in contactos %}<div class="text-xs border-b py-1"><b>{{ t.nombre }}</b> {{ t.cargo or '' }} {% if t.es_principal %}<span class="text-laton-dark">★</span>{% endif %}<br><span class="text-slate-500">{{ t.telefono or '' }} {{ t.email or '' }}</span></div>{% else %}<p class="text-xs text-slate-500">Sin contactos. <a class="underline" href="/comercial/clientes/empresa/{{ compania.id }}">Agregar →</a></p>{% endfor %}
   </div>
   <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">🧑‍💼 Colaboradores / Beneficiarios <span class="font-normal text-slate-400">({{ colaboradores|length }})</span></h2>
+    <p class="text-xs text-slate-500 mb-2">Las prendas y fichas de medidas van a su nombre; la facturación queda a nombre de la empresa.</p>
+    {% for p in colaboradores %}
+    <div class="text-xs border-b py-1 flex justify-between items-center">
+      <span><b>{{ p.nombre }} {{ p.apellidos }}</b><br><span class="text-slate-500">{{ p.telefono or '' }} {{ p.distrito or '' }}</span></span>
+      <span class="flex gap-2 items-center">
+        <a class="underline text-laton-dark" href="/produccion/fichas/{{ p.id }}">Ficha →</a>
+        <form method="post" action="/comercial/clientes/empresa/{{ compania.id }}/colaboradores/{{ p.id }}/desvincular"><button class="text-red-700 underline">Quitar</button></form>
+      </span>
+    </div>
+    {% else %}<p class="text-xs text-slate-500 mb-2">Sin colaboradores.</p>{% endfor %}
+    <form method="post" action="/comercial/clientes/empresa/{{ compania.id }}/colaboradores" class="grid grid-cols-2 gap-1 text-xs mt-2">
+      <input name="nombre" required placeholder="Nombres *" class="border rounded px-2 py-1">
+      <input name="apellidos" placeholder="Apellidos" class="border rounded px-2 py-1">
+      <input name="telefono" placeholder="Teléfono" class="border rounded px-2 py-1">
+      <input name="distrito" placeholder="Distrito" class="border rounded px-2 py-1">
+      <button class="col-span-2 bg-borgo text-white rounded py-1">+ Registrar colaborador</button>
+    </form>
+    {% if personas_libres %}
+    <form method="post" action="/comercial/clientes/empresa/{{ compania.id }}/colaboradores/vincular" class="flex gap-1 text-xs mt-2">
+      <select name="client_id" class="border rounded px-2 py-1 flex-1">{% for p in personas_libres %}<option value="{{ p.id }}">{{ p.nombre }} {{ p.apellidos }} · {{ p.doc_label }}</option>{% endfor %}</select>
+      <button class="bg-[#C5A880] text-[#370003] font-bold rounded px-3">Vincular existente</button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
     <h2 class="font-bold mb-2 text-sm">🧾 Historial de pedidos</h2>
-    {% for o in pedidos %}<div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ o.folio }} · {{ o.estado }}</span><b>S/ {{ "%.2f"|format(o.total) }}</b></div>{% else %}<p class="text-xs text-slate-500">Sin pedidos.</p>{% endfor %}
+    {% for o in pedidos %}<div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ o.folio }} · {{ o.estado }}{% if o.concepto %} · {{ o.concepto }}{% endif %}</span><b>S/ {{ "%.2f"|format(o.total) }}</b></div>{% else %}<p class="text-xs text-slate-500">Sin pedidos.</p>{% endfor %}
   </div>
   <div class="bg-white rounded-xl shadow p-4 md:col-span-2">
     <h2 class="font-bold mb-2 text-sm">💬 Interacciones</h2>
@@ -43,7 +69,7 @@
   </div>
   <div class="bg-white rounded-xl shadow p-4">
     <h2 class="font-bold mb-2 text-sm">🧾 Historial de compras</h2>
-    {% for o in pedidos %}<div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ o.folio }} · {{ o.estado }} · {{ o.canal }}</span><b>S/ {{ "%.2f"|format(o.total) }}</b></div>{% else %}<p class="text-xs text-slate-500">Sin pedidos.</p>{% endfor %}
+    {% for o in pedidos %}<div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ o.folio }} · {{ o.estado }} · {{ o.canal }}{% if o.concepto %} · {{ o.concepto }}{% endif %}</span><b>S/ {{ "%.2f"|format(o.total) }}</b></div>{% else %}<p class="text-xs text-slate-500">Sin pedidos.</p>{% endfor %}
     <h2 class="font-bold mb-1 mt-3 text-sm">🧾 Cotizaciones</h2>
     {% for q in cots %}<div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ q.folio }} · {{ q.estado }}</span><b>S/ {{ "%.2f"|format(q.total) }}</b></div>{% else %}<p class="text-xs text-slate-500">Sin cotizaciones.</p>{% endfor %}
   </div>

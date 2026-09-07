@@ -32,6 +32,15 @@
         {% endif %}
         <select name="client_id" id="select-cliente-pos" class="hidden"><option value="">— Persona —</option>{% for c in clientes %}<option value="{{ c.id }}">{{ c.nombre }} {{ c.apellidos }} · {{ c.doc_label }} · {{ c.telefono or '' }}</option>{% endfor %}</select>
         <select name="company_id" id="select-empresa-pos" class="hidden"><option value="">— Empresa —</option>{% for e in empresas %}<option value="{{ e.id }}">{{ e.nombre_comercial }} · {{ e.ruc or '' }}</option>{% endfor %}</select>
+        <div id="pos-colaborador" class="hidden mt-2 p-2 bg-[#FAF8F5] border rounded-lg text-xs" style="border-color:#C5A880">
+          <p class="font-bold mb-1" style="color:#370003">🧑‍💼 Colaborador / Beneficiario <span class="font-normal text-slate-500">(prenda y ficha a su nombre · factura a la empresa)</span></p>
+          <select name="colaborador_id" id="select-colaborador-pos" onchange="toggleNuevoColab(this.value)" class="w-full border rounded-lg px-2 py-1.5 bg-white"></select>
+          <div id="pos-nuevo-colab" class="hidden grid grid-cols-3 gap-1 mt-1">
+            <input name="colab_nombre" placeholder="Nombres *" class="border rounded px-2 py-1">
+            <input name="colab_apellidos" placeholder="Apellidos" class="border rounded px-2 py-1">
+            <input name="colab_telefono" placeholder="Teléfono" class="border rounded px-2 py-1">
+          </div>
+        </div>
         <div id="pos-cliente-vacio" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">Sin resultados para la búsqueda. <a href="/comercial/clientes" class="underline font-bold">Crear en Comercial y CRM →</a></div>
         <div class="mt-1 text-xs text-slate-500">¿Cliente no existe? <a href="/comercial/clientes" class="underline text-[#370003] font-bold">Alta en Comercial y CRM</a> (único punto maestro).</div>
         <button type="button" @click="paso = 2" class="mt-3 w-full bg-[#370003] text-white rounded-full py-2.5 font-bold hover:bg-[#1F1112]">Siguiente →</button>
@@ -102,6 +111,9 @@ const POS_CLIENTES = [
 const POS_EMPRESAS = [
   {% for e in empresas %} {id: "{{ e.id }}", texto: "{{ e.nombre_comercial }} {{ e.ruc or '' }}".toLowerCase(), display: "{{ e.nombre_comercial }} · {{ e.ruc or '' }}", tipo: "empresa"}, {% endfor %}
 ];
+const EMPRESA_COLABS = {
+  {% for e in empresas %} "{{ e.id }}": [{% for p in colabs.get(e.id, []) %} {id: "{{ p.id }}", nombre: "{{ p.nombre }} {{ p.apellidos }}{% if p.telefono %} · {{ p.telefono }}{% endif %}"}, {% endfor %}], {% endfor %}
+};
 function filtrarClientesPOS(qRaw) {
   const q = (qRaw || '').toLowerCase().trim();
   const cont = document.getElementById('pos-clientes-resultados');
@@ -163,9 +175,11 @@ function seleccionarClientePOS(m) {
   if (m.kind === 'persona') {
     selC.value = m.id;
     selE.value = '';
+    ocultarColaboradorPOS();
   } else {
     selE.value = m.id;
     selC.value = '';
+    mostrarColaboradorPOS(m.id);
   }
   if (input) input.value = m.display;
   if (badge && badgeText) {
@@ -186,7 +200,38 @@ function limpiarSeleccionPOS() {
   if (selE) selE.value = '';
   if (input) input.value = '';
   if (badge) badge.classList.add('hidden');
+  ocultarColaboradorPOS();
   filtrarClientesPOS('');
+}
+function mostrarColaboradorPOS(empId) {
+  const bloque = document.getElementById('pos-colaborador');
+  const sel = document.getElementById('select-colaborador-pos');
+  if (!bloque || !sel) return;
+  sel.innerHTML = '<option value="">— Sin colaborador (solo empresa) —</option>';
+  (EMPRESA_COLABS[empId] || []).forEach(function (p) {
+    const o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = p.nombre;
+    sel.appendChild(o);
+  });
+  const o = document.createElement('option');
+  o.value = '__nuevo__';
+  o.textContent = '＋ Nuevo colaborador…';
+  sel.appendChild(o);
+  sel.value = '';
+  toggleNuevoColab('');
+  bloque.classList.remove('hidden');
+}
+function ocultarColaboradorPOS() {
+  const bloque = document.getElementById('pos-colaborador');
+  const sel = document.getElementById('select-colaborador-pos');
+  if (sel) sel.value = '';
+  toggleNuevoColab('');
+  if (bloque) bloque.classList.add('hidden');
+}
+function toggleNuevoColab(v) {
+  const div = document.getElementById('pos-nuevo-colab');
+  if (div) div.classList.toggle('hidden', v !== '__nuevo__');
 }
 // Cerrar resultados al hacer click fuera
 document.addEventListener('click', (e) => {

@@ -77,16 +77,9 @@ class CompanyIn(BaseModel):
     @classmethod
     def _ruc_valido(cls, v: str | None) -> str | None:
         if v:
-            v = v.strip().replace(" ", "").replace("-", "")
-            if not v:
-                return None
-            # El RUC debe ser un string de 11 dígitos (más verificador SUNAT).
-            if len(v) != 11 or not v.isdigit():
-                raise ValueError("RUC inválido (11 dígitos)")
-            from app.services.peru import validar_ruc
-            if not validar_ruc(v):
-                raise ValueError("RUC inválido (11 dígitos con verificador)")
-            return v
+            # RUC flexible: normaliza sin bloquear el guardado.
+            from app.services.peru import normalizar_ruc
+            return normalizar_ruc(v)
         return v
 
 

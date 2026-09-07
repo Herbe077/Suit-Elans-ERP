@@ -16,6 +16,7 @@ class Order(Base):
     quotation_id: Mapped[int | None] = mapped_column(ForeignKey("quotations.id"), nullable=True)
     pricelist_id: Mapped[int | None] = mapped_column(ForeignKey("price_lists.id"), nullable=True)
     canal: Mapped[str] = mapped_column(String(20), default="sastreria", index=True)
+    concepto: Mapped[str | None] = mapped_column(String(255), nullable=True)  # detalle del servicio
     sastre_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     estado: Mapped[str] = mapped_column(String(20), default="cotizado", index=True)
     prioridad: Mapped[str] = mapped_column(String(20), default="normal")
