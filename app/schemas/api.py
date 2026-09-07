@@ -69,16 +69,24 @@ class CompanyIn(BaseModel):
     email: str | None = None
     telefono: str | None = None
     direccion: str | None = None
+    distrito: str | None = None
+    clasificacion: str = "Nuevo"
     descuento_pct: float = 0.0
 
     @field_validator("ruc")
     @classmethod
     def _ruc_valido(cls, v: str | None) -> str | None:
         if v:
+            v = v.strip().replace(" ", "").replace("-", "")
+            if not v:
+                return None
+            # El RUC debe ser un string de 11 dígitos (más verificador SUNAT).
+            if len(v) != 11 or not v.isdigit():
+                raise ValueError("RUC inválido (11 dígitos)")
             from app.services.peru import validar_ruc
-            if not validar_ruc(v.strip()):
+            if not validar_ruc(v):
                 raise ValueError("RUC inválido (11 dígitos con verificador)")
-            return v.strip()
+            return v
         return v
 
 

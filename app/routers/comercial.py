@@ -37,7 +37,7 @@ def _ctx(base: dict, tab: str) -> dict:
 # ---------- Clientes unificado ----------
 @router.get("/clientes", response_class=HTMLResponse)
 def clientes(request: Request, q: str = "", tab: str = "personas",
-             tipo: str = "", clasificacion: str = "",
+             tipo: str = "", clasificacion: str = "", error: str = "",
              db: Session = Depends(get_db), user=Ventas):
     personas = db.query(Client)
     empresas = db.query(Company)
@@ -53,7 +53,7 @@ def clientes(request: Request, q: str = "", tab: str = "personas",
     if tab != "empresas" and clasificacion:
         personas = personas.filter(Client.clasificacion == clasificacion)
     return templates.TemplateResponse(request, "comercial/clientes.html", _ctx({
-        "user": user, "q": q, "clasificacion": clasificacion,
+        "user": user, "q": q, "clasificacion": clasificacion, "error": error,
         "clasificaciones": CLASIFICACION_CLIENTE,
         "personas": personas.order_by(Client.apellidos).limit(100).all(),
         "empresas": empresas.order_by(Company.nombre_comercial).all()}, tab))
@@ -100,22 +100,49 @@ async def crear_persona_rapido(request: Request, db: Session = Depends(get_db),
 @router.post("/clientes/empresa")
 def crear_empresa(nombre_comercial: str = Form(...), ruc: str = Form(""),
                   telefono: str = Form(""), email: str = Form(""),
-                  descuento_pct: float = Form(0), distrito: str = Form(""),
+                  descuento_pct: str = Form("0"), distrito: str = Form(""),
                   clasificacion: str = Form("Nuevo"),
                   db: Session = Depends(get_db), user=Ventas):
-    try:
-        peru_svc.validar_doc("RUC", ruc.strip() or None)
-    except ValueError:
-        return RedirectResponse("/comercial/clientes?tab=empresas", status_code=303)
+    """Alta de empresa B2B → tabla `companies` (personas van a `clients`).
+
+    Payload esperado del formulario: nombre_comercial, ruc, telefono,
+    distrito, clasificacion, descuento_pct. El RUC es opcional, pero si se
+    envía debe ser un string de 11 dígitos (con verificador SUNAT válido).
+    """
+    nombre = (nombre_comercial or "").strip()
+    if not nombre:
+        return RedirectResponse("/comercial/clientes?tab=empresas&error=nombre_requerido",
+                                status_code=303)
+    # Normaliza RUC: quita espacios/guiones; vacío = sin RUC.
+    ruc_norm = (ruc or "").strip().replace(" ", "").replace("-", "")
+    ruc_val: str | None = ruc_norm or None
+    if ruc_val is not None:
+        # Debe ser string de 11 dígitos antes del checksum.
+        if len(ruc_val) != 11 or not ruc_val.isdigit():
+            return RedirectResponse(
+                "/comercial/clientes?tab=empresas&error=ruc_invalido", status_code=303)
+        try:
+            peru_svc.validar_doc("RUC", ruc_val)
+        except ValueError:
+            return RedirectResponse(
+                "/comercial/clientes?tab=empresas&error=ruc_invalido", status_code=303)
     if clasificacion not in CLASIFICACION_CLIENTE:
         clasificacion = "Nuevo"
-    c = Company(nombre_comercial=nombre_comercial.strip(), ruc=ruc.strip() or None,
-                telefono=telefono or None, email=email or None,
-                descuento_pct=descuento_pct, distrito=distrito.strip() or None,
+    try:
+        desc = float((descuento_pct or "0").strip() or 0)
+    except (ValueError, AttributeError):
+        desc = 0.0
+    desc = max(0.0, min(100.0, desc))
+    c = Company(nombre_comercial=nombre, ruc=ruc_val,
+                telefono=(telefono or "").strip() or None,
+                email=(email or "").strip() or None,
+                descuento_pct=desc, distrito=(distrito or "").strip() or None,
                 clasificacion=clasificacion)
     db.add(c)
     db.commit()
-    return RedirectResponse(f"/comercial/clientes/empresa/{c.id}", status_code=303)
+    db.refresh(c)
+    # Volver al listado para que la empresa se vea en la tabla "Empresas (N)".
+    return RedirectResponse("/comercial/clientes?tab=empresas", status_code=303)
 
 
 @router.get("/clientes/empresa/{cid}", response_class=HTMLResponse)

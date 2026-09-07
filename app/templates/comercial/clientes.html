@@ -21,6 +21,11 @@
   </form>
 </div>
 {% if tab == 'empresas' %}
+{% if error == 'ruc_invalido' %}
+<div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2 mb-3 text-sm">⚠️ RUC inválido: debe ser un string de 11 dígitos con verificador SUNAT válido (o déjalo vacío). La empresa no fue creada.</div>
+{% elif error == 'nombre_requerido' %}
+<div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2 mb-3 text-sm">⚠️ El nombre comercial es obligatorio.</div>
+{% endif %}
 <div class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880]">
   <h2 class="font-bold mb-2 text-sm">Nueva empresa B2B</h2>
   <form method="post" action="/comercial/clientes/empresa" class="grid grid-cols-2 md:grid-cols-7 gap-2 text-sm items-end">
