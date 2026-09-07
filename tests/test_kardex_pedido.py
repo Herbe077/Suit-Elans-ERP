@@ -82,8 +82,6 @@ def test_kardex_manual_con_pedido_y_folio(client, auth_cookies):
 
 
 def test_form_defaults_neutros_y_sin_producto_da_error(client, auth_cookies):
-    """Los selects inician en '-- Opcional / Ninguno --' y el backend exige
-    producto en MP en vez de autoseleccionar el primero."""
     t = client.get("/inventario/almacen", cookies=auth_cookies).text
     assert t.count("-- Opcional / Ninguno --") >= 3  # producto, variante, pedido
     assert "kxActualizarCampos" in t  # visibilidad dinámica por tipo
@@ -114,3 +112,58 @@ def test_pos_genera_salida_taller_vinculada(client, auth_cookies):
         MovimientoKardex.tipo_movimiento == "SALIDA_TALLER").first()
     assert k is not None and k.cantidad == 2.0
     db.close()
+
+
+def _setup_variante():
+    from app.core.database import SessionLocal
+    from app.models.catalog import Product, ProductVariant
+    db = SessionLocal()
+    p = db.query(Product).filter(Product.codigo == "KX-PT-001").first()
+    if not p:
+        p = Product(codigo="KX-PT-001", nombre="Saco RTW Test")
+        db.add(p)
+        db.commit()
+        db.refresh(p)
+    v = db.query(ProductVariant).filter(ProductVariant.sku == "KX-PT-001-M").first()
+    if not v:
+        v = ProductVariant(product_id=p.id, talla="M", sku="KX-PT-001-M",
+                           stock=0.0, precio=500.0, costo_unitario=300.0)
+        db.add(v)
+        db.commit()
+        db.refresh(v)
+    vid = v.id
+    db.close()
+    return vid
+
+
+def test_kardex_or_variante_sin_producto(client, auth_cookies):
+    """Solo SKU diligenciado (incluso con alcance mp) → resuelve PT sin
+    exigir Producto/Insumo; sin ninguno → error."""
+    vid = _setup_variante()
+    r = client.post("/inventario/almacen/kardex",
+                    data={"producto_id": "", "variant_id": str(vid),
+                          "tipo_movimiento": "INGRESO_PRODUCCION",
+                          "cantidad": "5", "alcance": "mp"},
+                    cookies=auth_cookies, follow_redirects=False)
+    assert r.status_code == 303 and "error" not in r.headers.get("location", "")
+    from app.core.database import SessionLocal
+    from app.models.catalog import ProductVariant
+    db = SessionLocal()
+    assert db.get(ProductVariant, vid).stock == 5.0
+    db.close()
+    r = client.post("/inventario/almacen/kardex",
+                    data={"producto_id": "", "variant_id": "",
+                          "tipo_movimiento": "INGRESO_COMPRA",
+                          "cantidad": "5", "alcance": "mp"},
+                    cookies=auth_cookies, follow_redirects=False)
+    assert r.status_code == 303 and "error=" in r.headers.get("location", "")
+
+
+def test_pestanas_pcge_y_pos_inmediato(client, auth_cookies):
+    """Etiquetas Cta 23/21 y variante con stock visible al instante en POS."""
+    vid = _setup_variante()
+    t = client.get("/inventario/almacen", cookies=auth_cookies).text
+    assert "Productos en Proceso / Taller (Cta 23)" in t
+    assert "Productos Terminados / RTW (Cta 21)" in t
+    tp = client.get("/ventas/pos", cookies=auth_cookies).text
+    assert "Saco RTW Test - M (Stock: 5) - S/" in tp

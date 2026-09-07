@@ -17,8 +17,8 @@
 {# ——— Sub-pestañas por cuenta contable ——— #}
 <div class="flex gap-2 mb-4 text-xs" role="tablist" aria-label="Existencias por cuenta">
   <button role="tab" data-scope="mp" :aria-selected="sub === 'mp'" @click="sub = 'mp'" :class="sub === 'mp' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">Materia Prima / Avíos (Cta 24)</button>
-  <button role="tab" data-scope="wip" :aria-selected="sub === 'wip'" @click="sub = 'wip'" :class="sub === 'wip' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">Lotes en Taller / WIP (Cta 21)</button>
-  <button role="tab" data-scope="pt" :aria-selected="sub === 'pt'" @click="sub = 'pt'" :class="sub === 'pt' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">Productos Terminados (Cta 23)</button>
+  <button role="tab" data-scope="wip" :aria-selected="sub === 'wip'" @click="sub = 'wip'" :class="sub === 'wip' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">Productos en Proceso / Taller (Cta 23)</button>
+  <button role="tab" data-scope="pt" :aria-selected="sub === 'pt'" @click="sub = 'pt'" :class="sub === 'pt' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">Productos Terminados / RTW (Cta 21)</button>
 </div>
 
 {# ——— A. Materia Prima / Avíos (Cta 24) ——— #}
@@ -49,9 +49,9 @@
   <p class="text-xs text-slate-400 mt-1" title="El stock reservado está comprometido en pedidos y no disponible para venta. Disponible = Físico − Reservado.">ⓘ Disponible = Físico − Reservado. El alta de maestros se realiza únicamente en <a href="/inventario/catalogo" class="underline" style="color:#370003">Catálogo</a>; Almacén solo registra entradas/salidas de Kardex.</p>
 </div>
 
-{# ——— B. Lotes en Taller / WIP (Cta 21) ——— #}
+{# ——— B. Productos en Proceso / Taller (Cta 23) ——— #}
 <div x-show="sub === 'wip'" class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880]">
-  <h2 class="font-bold mb-1">Lotes en Taller / WIP <span class="font-normal text-slate-400 text-xs">(Cta 21 · prendas no entregadas)</span></h2>
+  <h2 class="font-bold mb-1">Productos en Proceso / Taller <span class="font-normal text-slate-400 text-xs">(Cta 23 · prendas no entregadas)</span></h2>
   <p class="text-xs text-slate-500 mb-2">Prendas en confección y órdenes de producción abiertas. Solo lectura: se mueven desde el tablero Kanban.</p>
   <div class="overflow-x-auto">
     <table class="w-full text-xs">
@@ -79,9 +79,9 @@
   {% endif %}
 </div>
 
-{# ——— C. Productos Terminados (Cta 23) ——— #}
+{# ——— C. Productos Terminados / RTW (Cta 21) ——— #}
 <div x-show="sub === 'pt'" class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880]">
-  <h2 class="font-bold mb-1">Productos Terminados <span class="font-normal text-slate-400 text-xs">(Cta 23 · por SKU/talla)</span></h2>
+  <h2 class="font-bold mb-1">Productos Terminados / RTW <span class="font-normal text-slate-400 text-xs">(Cta 21 · por SKU/talla)</span></h2>
   <p class="text-xs text-slate-500 mb-2">Stock listo para la venta. Los ajustes exigen motivo y quedan auditados en Kardex.</p>
   <div class="overflow-x-auto">
     <table class="w-full text-xs">
@@ -97,7 +97,7 @@
         <td>{{ prods.get(v.product_id).nombre if prods.get(v.product_id) else '—' }}</td>
         <td class="text-center">{{ v.talla }}</td>
         <td class="text-center font-bold {% if v.stock <= v.stock_minimo %}text-red-600{% endif %}">{{ v.stock }}</td>
-        <td class="text-right" title="Costo unitario del activo (PCGE Cta 23)">{{ "%.2f"|format(v.costo_unitario or 0) }}</td>
+        <td class="text-right" title="Costo unitario del activo (PCGE Cta 21)">{{ "%.2f"|format(v.costo_unitario or 0) }}</td>
         <td class="text-center">{% if v.stock <= v.stock_minimo %}<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">⚠️ bajo</span>{% else %}<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">✔ ok</span>{% endif %}</td>
       </tr>
       {% else %}<tr><td colspan="6" class="text-center text-slate-400 py-2">Sin productos terminados.</td></tr>{% endfor %}
@@ -109,18 +109,18 @@
 
 {# ——— Registro de movimiento de Kardex (sigue la pestaña activa) ——— #}
 <div x-show="sub !== 'wip'" class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
-  <h2 class="font-bold mb-1 text-sm">Registro de Movimiento de Kardex <span class="font-normal text-slate-400" x-text="sub === 'pt' ? '(Cta 23 · productos terminados)' : '(Cta 24 · materia prima / avíos)'"></span></h2>
+  <h2 class="font-bold mb-1 text-sm">Registro de Movimiento de Kardex <span class="font-normal text-slate-400" x-text="sub === 'pt' ? '(Cta 21 · productos terminados)' : '(Cta 24 · materia prima / avíos)'"></span></h2>
   <p class="text-xs text-slate-500 mb-2" x-text="sub === 'pt' ? 'INGRESO_PRODUCCION suma · SALIDA_VENTA, AJUSTE_MERMA y MUESTRA restan.' : 'INGRESO_COMPRA suma · SALIDA_TALLER y AJUSTE_INVENTARIO restan.'"></p>
   <form method="post" action="/inventario/almacen/kardex" class="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs items-end">
     <input type="hidden" name="alcance" :value="sub === 'pt' ? 'pt' : 'mp'">
     <label class="block md:col-span-2" id="kx-field-producto" x-show="sub !== 'pt'">Producto / Insumo
-      <select name="producto_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+      <select name="producto_id" id="kx-producto" :disabled="sub === 'pt'" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
         <option value="">-- Opcional / Ninguno --</option>
         {% for i in insumos %}<option value="{{ i.id }}">{{ i.sku }} — {{ i.nombre }} (disp. {{ "%.1f"|format(i.stock_disponible) }})</option>{% endfor %}
       </select>
     </label>
     <label class="block md:col-span-2" id="kx-field-variante" x-show="sub === 'pt'">Variante / SKU terminado
-      <select name="variant_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+      <select name="variant_id" id="kx-variante" :disabled="sub !== 'pt'" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
         <option value="">-- Opcional / Ninguno --</option>
         {% for v in pts %}<option value="{{ v.id }}">{{ v.sku }} — {{ prods.get(v.product_id).nombre if prods.get(v.product_id) else '' }} ({{ v.talla }}) · {{ v.stock }} u.</option>{% endfor %}
       </select>
@@ -186,6 +186,11 @@
       b.addEventListener('click', function () {
         var t = b.getAttribute('data-scope');
         window.kxSetTipos(t === 'wip' ? 'mp' : t);
+        // Limpia el campo del otro ámbito para evitar envíos ambiguos.
+        var selP = document.getElementById('kx-producto');
+        var selV = document.getElementById('kx-variante');
+        if (t === 'pt') { if (selP) selP.value = ''; }
+        else { if (selV) selV.value = ''; }
       });
     });
     var kxTipo = document.getElementById('kx-tipo');

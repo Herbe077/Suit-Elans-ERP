@@ -522,16 +522,23 @@ def kardex_mov(producto_id: int = Form(0), tipo_movimiento: str = Form(...),
                orden_venta_id: str = Form(""), alcance: str = Form("mp"),
                variant_id: int = Form(0),
                db: Session = Depends(get_db), user=Almacen):
-    """Kardex por ámbito: mp (insumos Cta 24) o pt (variantes Cta 23)."""
+    """Kardex por ámbito: mp (insumos Cta 24) o pt (variantes Cta 21).
+
+    Desacoplado: el campo diligenciado manda (Producto/Insumo OR Variante/SKU).
+    En PT solo se valida la variante; el producto nunca es exigible si hay SKU.
+    """
     if not cantidad or cantidad <= 0:
         return _err("/inventario/almacen", "cantidad debe ser positiva")
     tipo = (tipo_movimiento or "").upper()
-    if (alcance or "mp").lower() == "pt":
+    scope = (alcance or "mp").lower()
+    var = db.get(ProductVariant, variant_id or 0)
+    prod_mp = db.get(ProductoInsumo, producto_id or 0)
+    # En PT el producto se ignora (solo variante); con SKU diligenciado se
+    # resuelve a PT aunque el alcance no lo indique.
+    use_pt = var is not None and (scope == "pt" or prod_mp is None)
+    if use_pt:
         if tipo not in TIPOS_KARDEX_PT:
             return _err("/inventario/almacen?sub=pt", f"tipo PT inválido: {tipo_movimiento}")
-        var = db.get(ProductVariant, variant_id or 0)
-        if not var:
-            return _err("/inventario/almacen?sub=pt", "variante no encontrada")
         signo = TIPOS_KARDEX_PT[tipo]
         # Referencia opcional al pedido / ficha de taller en la salida a venta
         obs_pt = (observacion or "").strip()
@@ -552,9 +559,10 @@ def kardex_mov(producto_id: int = Form(0), tipo_movimiento: str = Form(...),
         # normaliza legacy
         m = {"ENTRADA": "INGRESO_COMPRA", "SALIDA": "SALIDA_TALLER", "MERMA": "AJUSTE_MERMA"}
         tipo = m.get(tipo, "AJUSTE_MERMA")
-    if not producto_id:
-        # El selector inicia en "-- Opcional / Ninguno --": exige producto.
-        return _err("/inventario/almacen", "selecciona un producto/insumo")
+    if prod_mp is None:
+        # Sin variante válida: el movimiento MP exige Producto/Insumo.
+        return _err("/inventario/almacen", "selecciona un Producto/Insumo o una Variante/SKU")
+    producto_id = prod_mp.id
     try:
         from app.services.inventory import registrar_merma, registrar_ingreso_compra
         if tipo in ("AJUSTE_MERMA", "AJUSTE_INVENTARIO"):
