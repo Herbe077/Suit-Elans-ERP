@@ -61,7 +61,7 @@ h1 { font-family: Georgia, 'Times New Roman', serif; }
   {% if user and (user.role|lower == 'admin' or user.role in roles or user.role|lower in roles|map('lower') ) %}<a href="{{ href }}" class="p-2 whitespace-nowrap text-center min-w-[56px] {% if _on.v %}text-laton font-bold{% endif %}">{{ icon }}<br>{{ label }}</a>{% endif %}
   {%- endmacro %}
   {{ mlink('/dashboard', '📊', 'Panel', ['VENTA','SASTRE-MAESTRO','SASTRE-ASISTENTE','ALMACEN','FINANZAS','ventas','sastre','taller','almacen','gerente','contador'], ['/dashboard', '/']) }}
-  {{ mlink('/ventas/pos', '🛒', 'POS', ['VENTA','SASTRE-MAESTRO','ventas'], ['/ventas/pos']) }}
+  {{ mlink('/ventas/pos', '🛒', 'POS', ['VENTA','SASTRE-MAESTRO','ventas'], ['/ventas/pos', '/ventas/ordenes', '/ventas/facturacion', '/ventas/comprobantes']) }}
   {{ mlink('/produccion/kanban', '🧵', 'Taller', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre'], ['/produccion']) }}
   {{ mlink('/ventas/caja', '💰', 'Caja', ['VENTA','SASTRE-MAESTRO','ventas'], ['/ventas/caja']) }}
   <button @click="drawer = true" class="p-2 whitespace-nowrap text-center min-w-[56px] {% if not _main_on %}text-laton font-bold{% endif %}" aria-label="Abrir menú">☰<br>Menú</button>

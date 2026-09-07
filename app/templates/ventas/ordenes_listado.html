@@ -1,7 +1,7 @@
-{% extends "base.html" %}
+{% extends "ventas/base_ventas.html" %}
 {% from "components/badge.html" import badge %}
 {% block title %}Órdenes de venta{% endblock %}
-{% block content %}
+{% block ventas %}
 <h1 class="text-2xl font-bold mb-1 font-serif">🧾 Órdenes de venta</h1>
 <p class="text-sm text-slate-500 mb-3">COTIZACION → VENTA_CONFIRMADA (anticipo ≥ {{ min_anticipo }}%) → COMPLETADA (sin saldo y taller listo).</p>
 {% if error == 'saldo' %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-4 text-sm">🚫 Bloqueado: la orden tiene <b>saldo pendiente</b>. Cobra el saldo antes de entregar.</div>{% endif %}

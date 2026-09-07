@@ -1,10 +1,9 @@
-{% extends "base.html" %}
+{% extends "ventas/base_ventas.html" %}
 {% from "components/badge.html" import badge %}
 {% block title %}Caja — Arqueo{% endblock %}
-{% block content %}
+{% block ventas %}
 <div class="flex items-center justify-between mb-3">
   <h1 class="text-2xl font-bold">💰 Caja — Arqueo y Turno</h1>
-  <a href="/ventas/pos" class="bg-[#C5A880] text-[#1F1112] rounded-full px-4 py-1.5 text-sm font-bold shadow hover:bg-[#370003] hover:text-white border" style="border-color:#C5A880">← Volver a Punto de Venta</a>
 </div>
 {% if error == 'turno' %}<div class="bg-amber-50 border border-amber-300 text-amber-900 rounded-xl p-3 mb-4 text-sm">⚠️ Necesitas un <b>turno abierto</b> para cobrar. Abre tu turno abajo.</div>{% endif %}
 {% if error == 'monto' %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ Monto inválido.</div>{% endif %}
