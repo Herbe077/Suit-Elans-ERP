@@ -43,6 +43,7 @@ PCGE_ANALITICAS = [
     ("1011", "Caja Operativa", "ACTIVO", 3, "101", 1, True),
     ("1041", "Cuentas Corrientes Operativas", "ACTIVO", 3, "104", 1, True),
     ("1212", "Emitidas en Cartera", "ACTIVO", 3, "121", 1, True),
+    ("1221", "Anticipos de Clientes", "PASIVO", 3, "122", 4, True),
     ("2011", "Mercaderías Manufacturadas", "ACTIVO", 3, "201", 2, True),
     ("2411", "Materia Prima - Telas y Avíos", "ACTIVO", 3, "201", 2, True),
     ("40111", "IGV - Cuenta Propia", "PASIVO", 4, "4011", 4, True),

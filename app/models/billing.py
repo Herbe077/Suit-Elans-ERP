@@ -57,6 +57,8 @@ class Invoice(Base):
     igv: Mapped[float] = mapped_column(Float, default=0.0)
     total: Mapped[float] = mapped_column(Float, default=0.0)
     estado: Mapped[str] = mapped_column(String(20), default="emitida", index=True)
+    # TOTAL: orden completa · ANTICIPO: adelanto (1221) · FINAL: saldo contra entrega
+    tipo: Mapped[str] = mapped_column(String(20), default="TOTAL", server_default="TOTAL")
     usuario_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 

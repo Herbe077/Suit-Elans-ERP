@@ -442,6 +442,28 @@ def cobrar(order_id: int = Form(...), monto: float = Form(...),
 
 
 # ---------- Facturación / comprobantes ----------
+def _nombre_orden(db: Session, o: Order) -> str:
+    if o.company_id and db.get(Company, o.company_id):
+        return db.get(Company, o.company_id).nombre_comercial
+    if o.client_id and db.get(Client, o.client_id):
+        c = db.get(Client, o.client_id)
+        return f"{c.nombre} {c.apellidos}"
+    return "—"
+
+
+def _info_facturar(db: Session, pendientes: list) -> dict:
+    """Desglose por pedido para el formulario: anticipo pendiente, saldo y modo."""
+    from app.services import contabilidad as contab
+    info = {}
+    for o in pendientes:
+        pend = contab.anticipo_pendiente_facturar(db, o)
+        saldo = round(max((o.total or 0) - (o.anticipo or 0), 0.0), 2)
+        info[o.id] = {"nombre": _nombre_orden(db, o),
+                      "anticipo": pend, "saldo": saldo, "total": o.total or 0,
+                      "modo": "ANTICIPO" if pend > 0 else "TOTAL"}
+    return info
+
+
 def _nombre(db: Session, inv: Invoice) -> str:
     if inv.company_id and db.get(Company, inv.company_id):
         e = db.get(Company, inv.company_id)
@@ -470,6 +492,7 @@ def facturacion(request: Request, db: Session = Depends(get_db), user=Auth):
         # Pedidos de empresa (RUC) fuerzan Factura F001.
         "serie_forzada": {o.id: ("F001" if o.company_id else "B001")
                           for o in pendientes},
+        "info_fact": _info_facturar(db, pendientes),
         "igv": _igv(db),
         "sede": config_svc.get(db, "sede_nombre", "Suit Elans")})
 
@@ -487,6 +510,7 @@ def comprobantes(request: Request, db: Session = Depends(get_db), user=Auth):
             "pendientes": pendientes,
             "serie_forzada": {o.id: ("F001" if o.company_id else "B001")
                               for o in pendientes},
+            "info_fact": _info_facturar(db, pendientes),
             "igv": _igv(db),
             "sede": config_svc.get(db, "sede_nombre", "Suit Elans")})
     return facturacion(request, db, user)
@@ -494,15 +518,18 @@ def comprobantes(request: Request, db: Session = Depends(get_db), user=Auth):
 
 @router.post("/facturacion/emitir")
 def emitir(serie: str = Form("B001"), order_id: str = Form(""),
+           modo: str = Form("TOTAL"), monto: str = Form(""),
            db: Session = Depends(get_db), user=Auth):
-    # Emisión atómica: comprobante + asiento 1212/40111+7011 + CxC (bloquea período cerrado)
+    # Emisión atómica: comprobante + asiento (TOTAL/ANTICIPO/SALDO) + CxC.
     from app.services import contabilidad as contab
     order = db.get(Order, int(order_id)) if order_id else None
     if order and order.company_id:
         serie = "F001"  # Empresa con RUC: comprobante forzado a Factura
     try:
         if order:
-            res = contab.emitir_factura_venta(db, order.id, serie, _igv(db), user.id)
+            res = contab.emitir_factura_venta(
+                db, order.id, serie, _igv(db), user.id, modo=modo,
+                monto=float(monto) if monto.strip() else None)
             inv = db.get(Invoice, res["invoice_id"])
         else:
             inv = billing_svc.emit_invoice(db, serie, None, None, None, _igv(db), user.id)
@@ -514,7 +541,8 @@ def emitir(serie: str = Form("B001"), order_id: str = Form(""),
 
 @router.post("/comprobantes", response_class=HTMLResponse)
 def crear_comprobante(serie: str = Form("B001"), order_id: str = Form(""), tipo: str = Form(""),
-                     db: Session = Depends(get_db), user=Auth):
+                      modo: str = Form("TOTAL"), monto: str = Form(""),
+                      db: Session = Depends(get_db), user=Auth):
     # Spec: POST /ventas/comprobantes crea BOLETA/FACTURA (emisión atómica si hay pedido)
     from app.services import contabilidad as contab
     order = db.get(Order, int(order_id)) if order_id and order_id.isdigit() else None
@@ -524,7 +552,9 @@ def crear_comprobante(serie: str = Form("B001"), order_id: str = Form(""), tipo:
         serie = "B001" if tipo.upper() == "BOLETA" else "F001"
     try:
         if order:
-            res = contab.emitir_factura_venta(db, order.id, serie, _igv(db), user.id)
+            res = contab.emitir_factura_venta(
+                db, order.id, serie, _igv(db), user.id, modo=modo,
+                monto=float(monto) if monto.strip() else None)
             inv = db.get(Invoice, res["invoice_id"])
         else:
             inv = billing_svc.emit_invoice(db, serie, None, None, None, _igv(db), user.id)
@@ -536,8 +566,10 @@ def crear_comprobante(serie: str = Form("B001"), order_id: str = Form(""), tipo:
 
 @router.post("/comprobantes/emitir")
 def emitir_alias(serie: str = Form("B001"), order_id: str = Form(""),
-                db: Session = Depends(get_db), user=Auth):
-    return emitir(serie, order_id, db, user)
+                 modo: str = Form("TOTAL"), monto: str = Form(""),
+                 db: Session = Depends(get_db), user=Auth):
+    return emitir(serie=serie, order_id=order_id, modo=modo, monto=monto,
+                  db=db, user=user)
 
 
 @router.post("/facturacion/{iid}/anular")

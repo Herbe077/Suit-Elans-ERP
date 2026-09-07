@@ -44,6 +44,7 @@ CTA_COSTO_VTAS = "6911"  # Costo de ventas — productos terminados
 CTA_PT = "2111"          # Productos terminados (activo)
 CTA_CAJA = "1011"    # Caja operativa (solo efectivo)
 CTA_BANCO = "1041"   # Cuentas corrientes (transferencia/tarjeta/yape)
+CTA_ANTICIPOS = "1221"  # Anticipos de clientes
 CTA_COMPRAS = "602"  # Compras de materias primas
 CTA_PROV = "4212"    # Proveedores
 
@@ -117,9 +118,34 @@ def es_caja(cuenta_origen: str | None) -> bool:
 
 
 # ── VENTA: factura 1212 / 40111 + 70 (7032 bespoke / 7011 RTW) ──────
+def anticipo_pendiente_facturar(db: Session, order: Order) -> float:
+    """Anticipo cobrado aún no comprobantado (facturas ANTICIPO no anuladas)."""
+    from app.models.billing import Invoice
+    fact = sum(i.total for i in db.query(Invoice).filter(
+        Invoice.order_id == order.id, Invoice.tipo == "ANTICIPO",
+        Invoice.estado != "anulada").all())
+    return round(max(float(order.anticipo or 0) - fact, 0.0), 2)
+
+
+def base_anticipos_facturados(db: Session, order_id: int) -> float:
+    """Base (1221) acumulada en facturas de anticipo: lo diferido a aplicar."""
+    from app.models.billing import Invoice
+    return round(sum(i.subtotal for i in db.query(Invoice).filter(
+        Invoice.order_id == order_id, Invoice.tipo == "ANTICIPO",
+        Invoice.estado != "anulada").all()), 2)
+
+
 def emitir_factura_venta(db: Session, order_id: int, serie: str, igv_pct: float,
-                         usuario_id: int | None, fecha: date | None = None) -> dict:
-    """Emite comprobante + asiento de venta + CxC en UNA transacción."""
+                         usuario_id: int | None, fecha: date | None = None,
+                         modo: str = "TOTAL", monto: float | None = None) -> dict:
+    """Emite comprobante + asiento de venta + CxC en UNA transacción.
+
+    modos (montos finales con IGV incluido):
+      TOTAL    : orden completa → 1212 / 40111 + 70 (línea de negocio).
+      ANTICIPO : adelanto → 1212 / 40111 + 1221 Anticipos de Clientes.
+      SALDO    : comprobante final → aplica 1221 previa, 1212 por el saldo y
+                 base total a 70 (7032 bespoke).
+    """
     from app.services import billing as billing_svc
 
     seed_pcge_basico(db)
@@ -128,15 +154,67 @@ def emitir_factura_venta(db: Session, order_id: int, serie: str, igv_pct: float,
         order = db.query(Order).with_for_update().filter(Order.id == order_id).first()
         if not order:
             raise ValueError("Pedido no encontrado")
-        inv = billing_svc.emit_invoice_flush(
-            db, serie, order_id, order.client_id, order.company_id, igv_pct, usuario_id)
-        base, igv = _d(inv.subtotal), _d(inv.igv)
-        c1212, c40111 = _cuenta(db, CTA_CXC), _cuenta(db, CTA_IGV)
-        c_ing = _cuenta(db, cuenta_ingreso_por_pedido(db, order.id))
-        lineas = [{"cuenta_id": c1212.id, "debe": base + igv, "haber": Decimal("0")}]
-        if igv > 0:
-            lineas.append({"cuenta_id": c40111.id, "debe": Decimal("0"), "haber": igv})
-        lineas.append({"cuenta_id": c_ing.id, "debe": Decimal("0"), "haber": base})
+        modo = (modo or "TOTAL").upper()
+        if modo not in ("TOTAL", "ANTICIPO", "SALDO"):
+            modo = "TOTAL"
+        pend_anticipo = anticipo_pendiente_facturar(db, order)
+        saldo = round(max(float(order.total or 0) - float(order.anticipo or 0), 0.0), 2)
+        if modo == "ANTICIPO":
+            if pend_anticipo <= 0:
+                raise ValueError("Sin anticipo pendiente de facturar")
+            m = float(monto) if monto else pend_anticipo
+            m = round(min(max(m, 0.01), pend_anticipo), 2)
+            inv = billing_svc.emit_invoice_flush(
+                db, serie, order_id, order.client_id, order.company_id, igv_pct,
+                usuario_id, lineas=[{"concepto": f"Anticipo pedido {order.folio}",
+                                     "importe": m}])
+            inv.tipo = "ANTICIPO"
+            db.flush()
+            base, igv = _d(inv.subtotal), _d(inv.igv)
+            c1212, c40111 = _cuenta(db, CTA_CXC), _cuenta(db, CTA_IGV)
+            c1221 = _cuenta(db, CTA_ANTICIPOS)
+            lineas = [{"cuenta_id": c1212.id, "debe": base + igv, "haber": Decimal("0")},
+                      {"cuenta_id": c40111.id, "debe": Decimal("0"), "haber": igv},
+                      {"cuenta_id": c1221.id, "debe": Decimal("0"), "haber": base}]
+        elif modo == "SALDO":
+            if saldo <= 0:
+                raise ValueError("Sin saldo pendiente de facturar")
+            m = float(monto) if monto else saldo
+            m = round(min(max(m, 0.01), saldo), 2)
+            inv = billing_svc.emit_invoice_flush(
+                db, serie, order_id, order.client_id, order.company_id, igv_pct,
+                usuario_id, lineas=[{"concepto": f"Saldo pedido {order.folio}",
+                                     "importe": m}])
+            inv.tipo = "FINAL"
+            db.flush()
+            base_s, igv_s = _d(inv.subtotal), _d(inv.igv)
+            # Base total de la orden (neta) y aplicación de anticipos previos.
+            total_full = _d(order.total)
+            div = Decimal("1") + _d(igv_pct) / Decimal("100")
+            base_full = (total_full / div).quantize(Decimal("0.01"))
+            aplic = min(_d(base_anticipos_facturados(db, order.id)),
+                        max(base_full - base_s, Decimal("0")))
+            base_70 = aplic + base_s  # cuadra por construcción
+            c1221 = _cuenta(db, CTA_ANTICIPOS)
+            c1212, c40111 = _cuenta(db, CTA_CXC), _cuenta(db, CTA_IGV)
+            c_ing = _cuenta(db, cuenta_ingreso_por_pedido(db, order.id))
+            lineas = []
+            if aplic > 0:
+                lineas.append({"cuenta_id": c1221.id, "debe": aplic, "haber": Decimal("0")})
+            lineas += [{"cuenta_id": c1212.id, "debe": base_s + igv_s, "haber": Decimal("0")},
+                       {"cuenta_id": c40111.id, "debe": Decimal("0"), "haber": igv_s},
+                       {"cuenta_id": c_ing.id, "debe": Decimal("0"), "haber": base_70}]
+            base, igv = base_s, igv_s
+        else:
+            inv = billing_svc.emit_invoice_flush(
+                db, serie, order_id, order.client_id, order.company_id, igv_pct, usuario_id)
+            base, igv = _d(inv.subtotal), _d(inv.igv)
+            c1212, c40111 = _cuenta(db, CTA_CXC), _cuenta(db, CTA_IGV)
+            c_ing = _cuenta(db, cuenta_ingreso_por_pedido(db, order.id))
+            lineas = [{"cuenta_id": c1212.id, "debe": base + igv, "haber": Decimal("0")}]
+            if igv > 0:
+                lineas.append({"cuenta_id": c40111.id, "debe": Decimal("0"), "haber": igv})
+            lineas.append({"cuenta_id": c_ing.id, "debe": Decimal("0"), "haber": base})
         asiento = crear_asiento_flush(
             db, fecha or date.today(), f"Factura {inv.serie}-{inv.numero} {order.folio}",
             "VENTA", inv.id, lineas)

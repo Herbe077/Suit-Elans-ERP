@@ -12,13 +12,24 @@
       <select name="serie" id="serie-fact" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option>B001</option><option>F001</option></select>
     </label>
     <label class="block col-span-2">Pedido pendiente
-      <select name="order_id" id="pedido-fact" onchange="forzarSerie(this.value)" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for o in pendientes %}<option value="{{ o.id }}">{{ o.folio }} · S/ {{ "%.2f"|format(o.total) }}{% if o.company_id %} · 🏢{% endif %}</option>{% endfor %}</select>
+      <select name="order_id" id="pedido-fact" onchange="forzarSerie(this.value); sugerirMonto()" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for o in pendientes %}<option value="{{ o.id }}">{{ o.folio }} · {{ info_fact[o.id].nombre }} (Anticipo pend. de facturar: S/ {{ "%.2f"|format(info_fact[o.id].anticipo) }} / Total: S/ {{ "%.2f"|format(info_fact[o.id].total) }}){% if o.company_id %} · 🏢{% endif %}</option>{% endfor %}</select>
+    </label>
+    <label class="block col-span-2">Concepto a facturar
+      <select name="modo" id="modo-fact" onchange="sugerirMonto()" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option value="ANTICIPO">Anticipo cobrado (→ 1221)</option>
+        <option value="SALDO">Saldo restante / Final (aplica 1221 → 70)</option>
+        <option value="TOTAL">Total de la orden</option>
+      </select>
+    </label>
+    <label class="block">Monto a comprobantar S/ (inc. IGV)
+      <input name="monto" id="monto-fact" type="number" step="0.01" min="0.01" placeholder="0.00" class="border rounded px-2 py-1.5 w-full mt-0.5">
     </label>
     <p id="aviso-serie" class="col-span-3 text-amber-700 hidden">🏢 Pedido de empresa (RUC): el comprobante se fuerza a <b>Factura F001</b>.</p>
     <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold col-span-3">Emitir (IGV {{ igv }}%)</button>
   </form>
 <script>
 const SERIE_FORZADA = { {% for o in pendientes %}"{{ o.id }}": "{{ serie_forzada[o.id] }}",{% endfor %} };
+const INFO_FACT = { {% for o in pendientes %}"{{ o.id }}": {"anticipo": {{ info_fact[o.id].anticipo }}, "saldo": {{ info_fact[o.id].saldo }}, "total": {{ info_fact[o.id].total }}, "modo": "{{ info_fact[o.id].modo }}"},{% endfor %} };
 function forzarSerie(oid) {
   var s = document.getElementById('serie-fact');
   var aviso = document.getElementById('aviso-serie');
@@ -26,12 +37,28 @@ function forzarSerie(oid) {
   if (s) s.value = forzada;
   if (aviso) aviso.classList.toggle('hidden', forzada !== 'F001');
 }
-forzarSerie(document.getElementById('pedido-fact') ? document.getElementById('pedido-fact').value : '');
+function sugerirMonto() {
+  var ped = document.getElementById('pedido-fact');
+  var modo = document.getElementById('modo-fact');
+  var inp = document.getElementById('monto-fact');
+  if (!ped || !modo || !inp) return;
+  var info = INFO_FACT[ped.value] || {"anticipo": 0, "saldo": 0, "total": 0, "modo": "TOTAL"};
+  if (modo.value === 'ANTICIPO') inp.value = info.anticipo > 0 ? info.anticipo.toFixed(2) : '';
+  else if (modo.value === 'SALDO') inp.value = info.saldo > 0 ? info.saldo.toFixed(2) : '';
+  else inp.value = info.total > 0 ? info.total.toFixed(2) : '';
+}
+(function () {
+  var ped = document.getElementById('pedido-fact');
+  var modo = document.getElementById('modo-fact');
+  if (ped && modo && INFO_FACT[ped.value]) modo.value = INFO_FACT[ped.value].modo;
+  forzarSerie(ped ? ped.value : '');
+  sugerirMonto();
+})();
 </script>
   <h2 class="font-bold mb-2 text-sm">Emitidos</h2>
   {% for f in facturas %}
   <div class="text-xs border-b py-1.5 flex justify-between items-center gap-2">
-    <span><span class="font-mono font-bold">{{ f.serie }}-{{ f.numero }}</span> · {{ nombres[f.id] }} · <b>S/ {{ "%.2f"|format(f.total) }}</b> · {{ badge(f.estado, "success" if f.estado=='emitida' else "danger") }}</span>
+    <span><span class="font-mono font-bold">{{ f.serie }}-{{ f.numero }}</span> · {{ nombres[f.id] }} · <b>S/ {{ "%.2f"|format(f.total) }}</b> · <span class="text-slate-400">{{ f.tipo or 'TOTAL' }}</span> · {{ badge(f.estado, "success" if f.estado=='emitida' else "danger") }}</span>
     <span class="flex gap-1">
       <a href="/ventas/facturacion/{{ f.id }}.pdf" target="_blank" class="underline">PDF</a>
       {% if f.estado == 'emitida' %}

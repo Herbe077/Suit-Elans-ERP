@@ -15,13 +15,24 @@
         <select name="serie" id="serie-comp" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option>B001</option><option>F001</option></select>
       </label>
       <label class="block md:col-span-2">Orden de venta
-        <select name="order_id" id="pedido-comp" onchange="forzarSerieComp(this.value)" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for o in pendientes %}<option value="{{ o.id }}">{{ o.folio }} · S/ {{ "%.2f"|format(o.total) }}{% if o.company_id %} · 🏢{% endif %}</option>{% endfor %}</select>
+        <select name="order_id" id="pedido-comp" onchange="forzarSerieComp(this.value); sugerirMontoComp()" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for o in pendientes %}<option value="{{ o.id }}">{{ o.folio }} · {{ info_fact[o.id].nombre }} (Anticipo: S/ {{ "%.2f"|format(info_fact[o.id].anticipo) }} / Total: S/ {{ "%.2f"|format(info_fact[o.id].total) }}){% if o.company_id %} · 🏢{% endif %}</option>{% endfor %}</select>
+      </label>
+      <label class="block">Concepto
+        <select name="modo" id="modo-comp" onchange="sugerirMontoComp()" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+          <option value="ANTICIPO">Anticipo</option>
+          <option value="SALDO">Saldo/Final</option>
+          <option value="TOTAL">Total</option>
+        </select>
+      </label>
+      <label class="block">Monto S/ (inc. IGV)
+        <input name="monto" id="monto-comp" type="number" step="0.01" min="0.01" placeholder="0.00" class="border rounded px-2 py-1.5 w-full mt-0.5">
       </label>
       <p id="aviso-serie-comp" class="col-span-2 md:col-span-4 text-amber-700 hidden">🏢 Pedido de empresa (RUC): el comprobante se fuerza a <b>Factura F001</b>.</p>
       <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold col-span-2 md:col-span-4">Emitir (IGV {{ igv }}%)</button>
     </form>
 <script>
 const SERIE_FORZADA_COMP = { {% for o in pendientes %}"{{ o.id }}": "{{ serie_forzada[o.id] }}",{% endfor %} };
+const INFO_FACT_COMP = { {% for o in pendientes %}"{{ o.id }}": {"anticipo": {{ info_fact[o.id].anticipo }}, "saldo": {{ info_fact[o.id].saldo }}, "total": {{ info_fact[o.id].total }}, "modo": "{{ info_fact[o.id].modo }}"},{% endfor %} };
 function forzarSerieComp(oid) {
   var t = document.getElementById('tipo-comp');
   var s = document.getElementById('serie-comp');
@@ -31,7 +42,23 @@ function forzarSerieComp(oid) {
   if (s) s.value = forzada;
   if (aviso) aviso.classList.toggle('hidden', forzada !== 'F001');
 }
+function sugerirMontoComp() {
+  var ped = document.getElementById('pedido-comp');
+  var modo = document.getElementById('modo-comp');
+  var inp = document.getElementById('monto-comp');
+  if (!ped || !modo || !inp) return;
+  var info = INFO_FACT_COMP[ped.value] || {"anticipo": 0, "saldo": 0, "total": 0, "modo": "TOTAL"};
+  if (modo.value === 'ANTICIPO') inp.value = info.anticipo > 0 ? info.anticipo.toFixed(2) : '';
+  else if (modo.value === 'SALDO') inp.value = info.saldo > 0 ? info.saldo.toFixed(2) : '';
+  else inp.value = info.total > 0 ? info.total.toFixed(2) : '';
+}
 forzarSerieComp(document.getElementById('pedido-comp') ? document.getElementById('pedido-comp').value : '');
+(function () {
+  var ped = document.getElementById('pedido-comp');
+  var modo = document.getElementById('modo-comp');
+  if (ped && modo && INFO_FACT_COMP[ped.value]) modo.value = INFO_FACT_COMP[ped.value].modo;
+  sugerirMontoComp();
+})();
 </script>
     <h2 class="font-bold mb-2 text-sm">Emitidos ({{ facturas|length }})</h2>
     {% for f in facturas %}
