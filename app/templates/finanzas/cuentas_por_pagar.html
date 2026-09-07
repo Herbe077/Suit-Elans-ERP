@@ -38,23 +38,24 @@
     <button class="bg-borgo text-white rounded py-1.5 font-semibold self-end">Registrar POR_PAGAR</button>
   </form>
 </div>
-<div class="bg-white rounded-xl shadow overflow-x-auto">
+<div class="bg-white rounded-xl shadow">
+<div class="w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
   <table class="w-full text-xs">
-    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left p-2">ID</th><th>Proveedor</th><th>Factura</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Retención</th><th>Emisión</th><th>Vencimiento</th><th>Estado</th><th>Pago</th></tr></thead>
-    <tbody>
+    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left px-3 py-2 whitespace-nowrap min-w-[60px]">ID</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Proveedor</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Factura</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Total</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Pagado</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Saldo</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Retención</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Emisión</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Vencimiento</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Estado</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Pago</th></tr></thead>
+    <tbody class="font-mono tabular-nums">
     {% for c in cuentas %}
       <tr class="border-b hover:bg-marfil">
-        <td class="p-2 font-mono">#{{ c.id }}</td>
-        <td>{{ proveedores.get(c.proveedor_id).nombre if proveedores.get(c.proveedor_id) else c.proveedor_id }}</td>
-        <td class="font-mono">{{ c.numero_factura or '—' }}</td>
-        <td class="text-right">{{ soles(c.monto_total) }}</td>
-        <td class="text-right text-emerald-700">{{ soles(c.monto_pagado) }}</td>
-        <td class="text-right font-bold {% if c.saldo_pendiente>0 %}text-red-600{% endif %}">{{ soles(c.saldo_pendiente) }}</td>
-        <td class="text-right">{{ soles(c.retencion) }}</td>
-        <td>{{ c.fecha_emision or '—' }}</td>
-        <td>{{ c.fecha_vencimiento or '—' }}</td>
-        <td>{{ badge(c.estado, "danger" if c.estado=='POR_PAGAR' else "warning" if c.estado=='PARCIAL' else "success") }}</td>
-        <td>
+        <td class="px-3 py-2 whitespace-nowrap">#{{ c.id }}</td>
+        <td class="whitespace-nowrap px-3 py-2 font-sans">{{ proveedores.get(c.proveedor_id).nombre if proveedores.get(c.proveedor_id) else c.proveedor_id }}</td>
+        <td class="whitespace-nowrap px-3 py-2">{{ c.numero_factura or '—' }}</td>
+        <td class="text-right whitespace-nowrap px-3 py-2">{{ soles(c.monto_total) }}</td>
+        <td class="text-right whitespace-nowrap px-3 py-2 text-emerald-700">{{ soles(c.monto_pagado) }}</td>
+        <td class="text-right whitespace-nowrap px-3 py-2 font-bold {% if c.saldo_pendiente>0 %}text-red-600{% endif %}">{{ soles(c.saldo_pendiente) }}</td>
+        <td class="text-right whitespace-nowrap px-3 py-2">{{ soles(c.retencion) }}</td>
+        <td class="whitespace-nowrap px-3 py-2">{{ c.fecha_emision or '—' }}</td>
+        <td class="whitespace-nowrap px-3 py-2">{{ c.fecha_vencimiento or '—' }}</td>
+        <td class="whitespace-nowrap px-3 py-2 font-sans">{{ badge(c.estado, "danger" if c.estado=='POR_PAGAR' else "warning" if c.estado=='PARCIAL' else "success") }}</td>
+        <td class="whitespace-nowrap px-3 py-2 font-sans">
           {% if c.saldo_pendiente>0.01 %}
           <form method="post" action="/finanzas/cuentas-por-pagar/{{ c.id }}/pagar" class="flex gap-1 items-end">
             <label>Monto S/<input name="monto" type="number" step="0.01" min="0.01" max="{{ c.saldo_pendiente }}" placeholder="0.00" class="border rounded px-1 py-0.5 w-20 block mt-0.5"></label>
@@ -67,6 +68,7 @@
     {% else %}<tr><td colspan="11" class="text-center p-3 text-slate-400">Sin cuentas por pagar.</td></tr>{% endfor %}
     </tbody>
   </table>
+</div>
 </div>
 <p class="text-xs text-slate-400 mt-2">Egresos bancarios / caja general → MovimientoFinanciero EGRESO.</p>
 {% endblock %}

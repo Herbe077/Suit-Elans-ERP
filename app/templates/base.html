@@ -52,15 +52,19 @@ h1 { font-family: Georgia, 'Times New Roman', serif; }
 {% if user %}
 {# Mobile bottom nav — 5 accesos máximos; el resto vive en el drawer (sidebar) #}
 <div x-data="{ drawer: false }">
+{% set _path = (request.url.path if request is defined and request else "") %}
+{% set _main_on = _path == '/' or _path.startswith('/dashboard') or _path.startswith('/ventas/pos') or _path.startswith('/produccion') or _path.startswith('/ventas/caja') %}
 <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-ink text-white flex justify-around py-2 text-[11px] z-40" style="padding-bottom: env(safe-area-inset-bottom)">
-  {% macro mlink(href, icon, label, roles) -%}
-  {% if user and (user.role|lower == 'admin' or user.role in roles or user.role|lower in roles|map('lower') ) %}<a href="{{ href }}" class="p-2 whitespace-nowrap text-center min-w-[56px]">{{ icon }}<br>{{ label }}</a>{% endif %}
+  {% macro mlink(href, icon, label, roles, prefixes) -%}
+  {% set _p2 = (request.url.path if request is defined and request else "") %}
+  {% set _on = namespace(v=(_p2 == '/')) %}{% for x in prefixes %}{% if x != '/' and _p2.startswith(x) %}{% set _on.v = true %}{% endif %}{% endfor %}
+  {% if user and (user.role|lower == 'admin' or user.role in roles or user.role|lower in roles|map('lower') ) %}<a href="{{ href }}" class="p-2 whitespace-nowrap text-center min-w-[56px] {% if _on.v %}text-laton font-bold{% endif %}">{{ icon }}<br>{{ label }}</a>{% endif %}
   {%- endmacro %}
-  {{ mlink('/dashboard', '📊', 'Panel', ['VENTA','SASTRE-MAESTRO','SASTRE-ASISTENTE','ALMACEN','FINANZAS','ventas','sastre','taller','almacen','gerente','contador']) }}
-  {{ mlink('/ventas/pos', '🛒', 'POS', ['VENTA','SASTRE-MAESTRO','ventas']) }}
-  {{ mlink('/produccion/kanban', '🧵', 'Taller', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre']) }}
-  {{ mlink('/ventas/caja', '💰', 'Caja', ['VENTA','SASTRE-MAESTRO','ventas']) }}
-  <button @click="drawer = true" class="p-2 whitespace-nowrap text-center min-w-[56px]" aria-label="Abrir menú">☰<br>Menú</button>
+  {{ mlink('/dashboard', '📊', 'Panel', ['VENTA','SASTRE-MAESTRO','SASTRE-ASISTENTE','ALMACEN','FINANZAS','ventas','sastre','taller','almacen','gerente','contador'], ['/dashboard', '/']) }}
+  {{ mlink('/ventas/pos', '🛒', 'POS', ['VENTA','SASTRE-MAESTRO','ventas'], ['/ventas/pos']) }}
+  {{ mlink('/produccion/kanban', '🧵', 'Taller', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre'], ['/produccion']) }}
+  {{ mlink('/ventas/caja', '💰', 'Caja', ['VENTA','SASTRE-MAESTRO','ventas'], ['/ventas/caja']) }}
+  <button @click="drawer = true" class="p-2 whitespace-nowrap text-center min-w-[56px] {% if not _main_on %}text-laton font-bold{% endif %}" aria-label="Abrir menú">☰<br>Menú</button>
 </nav>
 <div x-show="drawer" x-cloak class="lg:hidden fixed inset-0 z-50">
   <div class="absolute inset-0 bg-black/60" @click="drawer = false"></div>

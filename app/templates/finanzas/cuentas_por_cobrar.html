@@ -18,22 +18,23 @@
   <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold self-end">Filtrar</button>
   <a href="/finanzas/cuentas-por-cobrar" class="bg-slate-200 rounded px-2 py-1.5 self-end">Limpiar</a>
 </form>
-<div class="bg-white rounded-xl shadow overflow-x-auto">
+<div class="bg-white rounded-xl shadow">
+<div class="w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
   <table class="w-full text-xs">
-    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left p-2">ID</th><th class="text-left">Orden</th><th>Cliente</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Vencimiento</th><th>Estado</th><th>Abono</th></tr></thead>
-    <tbody>
+    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left px-3 py-2 whitespace-nowrap min-w-[60px]">ID</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Orden</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Cliente</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Total</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Pagado</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Saldo</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Vencimiento</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Estado</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Abono</th></tr></thead>
+    <tbody class="font-mono tabular-nums">
     {% for c in cuentas %}
       {% set o = orders_map.get(c.order_id) %}
       <tr class="border-b hover:bg-marfil {% if c.estado=='VENCIDO' %}bg-red-50{% endif %}">
-        <td class="p-2 font-mono">#{{ c.id }}</td>
-        <td class="font-mono">{{ o.folio if o else c.orden_venta_id }}</td>
-        <td>{{ clientes.get(c.id, '—') }}</td>
-        <td class="text-right">{{ soles(c.monto_total) }}</td>
-        <td class="text-right text-emerald-700">{{ soles(c.monto_pagado) }}</td>
-        <td class="text-right font-bold {% if c.saldo_pendiente>0 %}text-red-600{% endif %}">{{ soles(c.saldo_pendiente) }}</td>
-        <td>{{ c.fecha_vencimiento or '—' }}</td>
-        <td>{{ badge(c.estado, "danger" if c.estado=='VENCIDO' else "warning" if c.estado=='PENDIENTE' else "info" if c.estado=='COBRADO_PARCIAL' else "success") }}</td>
-        <td>
+        <td class="px-3 py-2 whitespace-nowrap">#{{ c.id }}</td>
+        <td class="whitespace-nowrap px-3 py-2">{{ o.folio if o else c.orden_venta_id }}</td>
+        <td class="whitespace-nowrap px-3 py-2 font-sans">{{ clientes.get(c.id, '—') }}</td>
+        <td class="text-right whitespace-nowrap px-3 py-2">{{ soles(c.monto_total) }}</td>
+        <td class="text-right whitespace-nowrap px-3 py-2 text-emerald-700">{{ soles(c.monto_pagado) }}</td>
+        <td class="text-right whitespace-nowrap px-3 py-2 font-bold {% if c.saldo_pendiente>0 %}text-red-600{% endif %}">{{ soles(c.saldo_pendiente) }}</td>
+        <td class="whitespace-nowrap px-3 py-2">{{ c.fecha_vencimiento or '—' }}</td>
+        <td class="whitespace-nowrap px-3 py-2 font-sans">{{ badge(c.estado, "danger" if c.estado=='VENCIDO' else "warning" if c.estado=='PENDIENTE' else "info" if c.estado=='COBRADO_PARCIAL' else "success") }}</td>
+        <td class="whitespace-nowrap px-3 py-2 font-sans">
           {% if c.saldo_pendiente>0.01 %}
           <form method="post" action="/finanzas/cuentas-por-cobrar/abono" class="flex gap-1 items-end">
             <input type="hidden" name="cuenta_id" value="{{ c.id }}">
@@ -47,6 +48,7 @@
     {% else %}<tr><td colspan="9" class="text-center p-3 text-slate-400">Sin cuentas por cobrar.</td></tr>{% endfor %}
     </tbody>
   </table>
+</div>
 </div>
 <p class="text-xs text-slate-400 mt-2">Registro de abonos manuales / conciliar cobros Ventas → actualiza MovimientoFinanciero INGRESO.</p>
 {% endblock %}

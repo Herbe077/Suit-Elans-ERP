@@ -7,7 +7,7 @@
 
 {% if ok %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-4 text-sm flex items-center gap-2">{{ badge("✓ Venta registrada","success") }} <span>Pedido creado; si hubo anticipo ≥ {{ min_anticipo }}% ya está <b>VENTA_CONFIRMADA</b> y en taller.</span></div>{% endif %}
 {% if error == 'turno' %}<div class="bg-amber-50 border border-amber-300 text-amber-900 rounded-xl p-3 mb-4 text-sm flex items-center gap-2">{{ badge("Turno requerido","warning") }} Para cobrar necesitas un <b>turno de caja ABIERTA</b>. <a class="underline ml-1" href="/ventas/caja">Abrir turno →</a></div>{% endif %}
-{% if not turno %}<div class="bg-[#1F1112] text-white rounded-xl p-3 mb-4 text-sm flex justify-between items-center"><span>Sin turno abierto: puedes registrar la venta, pero el cobro exige turno.</span><a href="/ventas/caja" class="bg-[#C5A880] text-[#370003] rounded-full px-3 py-1 text-xs font-bold">Abrir turno →</a></div>{% endif %}
+{% if not turno %}<div class="bg-[#1F1112] text-white rounded-xl px-3 py-1.5 mb-3 text-xs flex justify-between items-center gap-2"><span>Sin turno abierto: puedes registrar la venta, pero el cobro exige turno.</span><a href="/ventas/caja" class="bg-[#C5A880] text-[#370003] rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap">Abrir turno →</a></div>{% endif %}
 
 <div class="grid md:grid-cols-5 gap-4" x-data="{ paso: 1, modo: 'servicio' }">
   <div class="md:col-span-3 bg-white rounded-xl shadow p-4 border" style="border-color:#C5A880/20">

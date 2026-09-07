@@ -15,32 +15,37 @@
 
 <div x-data="{ sub: '{{ sub }}' }">
 {# ——— Sub-pestañas por cuenta contable ——— #}
-<div class="flex gap-2 mb-4 text-xs" role="tablist" aria-label="Existencias por cuenta">
+<div class="hidden sm:flex gap-2 mb-4 text-xs" role="tablist" aria-label="Existencias por cuenta">
   <button role="tab" data-scope="mp" :aria-selected="sub === 'mp'" @click="sub = 'mp'" :class="sub === 'mp' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">Materia Prima / Avíos (Cta 24)</button>
   <button role="tab" data-scope="wip" :aria-selected="sub === 'wip'" @click="sub = 'wip'" :class="sub === 'wip' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">Productos en Proceso / Taller (Cta 23)</button>
   <button role="tab" data-scope="pt" :aria-selected="sub === 'pt'" @click="sub = 'pt'" :class="sub === 'pt' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">Productos Terminados / RTW (Cta 21)</button>
 </div>
+<select onchange="if(this.value) location.href='/inventario/almacen?sub='+this.value" class="block sm:hidden w-full text-xs border rounded-lg px-3 py-2 mb-3 bg-white" aria-label="Existencias por cuenta">
+  <option value="mp" {% if sub=='mp' %}selected{% endif %}>Materia Prima / Avíos (Cta 24)</option>
+  <option value="wip" {% if sub=='wip' %}selected{% endif %}>Productos en Proceso / Taller (Cta 23)</option>
+  <option value="pt" {% if sub=='pt' %}selected{% endif %}>Productos Terminados / RTW (Cta 21)</option>
+</select>
 
 {# ——— A. Materia Prima / Avíos (Cta 24) ——— #}
 <div x-show="sub === 'mp'" class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880]">
   <h2 class="font-bold mb-2">Existencias e Insumos <span class="font-normal text-slate-400 text-xs">(Cta 24)</span></h2>
-  <div class="overflow-x-auto">
+  <div class="w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
     <table class="w-full text-xs">
       <thead class="text-slate-500"><tr>
-        <th class="text-left py-1">Código / SKU</th><th class="text-left py-1">Nombre</th>
-        <th class="text-center py-1">Stock Físico</th><th class="text-center py-1">Reservado</th>
-        <th class="text-center py-1">Disponible</th><th class="text-center py-1">Estado</th><th class="text-right py-1">Editar</th>
+        <th class="text-left px-3 py-1 whitespace-nowrap min-w-[100px]">Código / SKU</th><th class="text-left px-3 py-1 whitespace-nowrap min-w-[140px]">Nombre</th>
+        <th class="text-center px-3 py-1 whitespace-nowrap min-w-[100px]">Stock Físico</th><th class="text-center px-3 py-1 whitespace-nowrap min-w-[100px]">Reservado</th>
+        <th class="text-center px-3 py-1 whitespace-nowrap min-w-[100px]">Disponible</th><th class="text-center px-3 py-1 whitespace-nowrap min-w-[100px]">Estado</th><th class="text-right px-3 py-1 whitespace-nowrap min-w-[100px]">Editar</th>
       </tr></thead>
-      <tbody>
+      <tbody class="font-mono tabular-nums">
       {% for ins in insumos %}
       <tr class="border-b hover:bg-marfil {% if ins.stock_bajo %}bg-red-50{% endif %}">
-        <td class="font-mono py-1.5">{{ ins.sku }}</td>
-        <td>{{ ins.nombre }} <span class="text-slate-400">({{ ins.categoria }})</span></td>
-        <td class="text-center font-bold">{{ "%.1f"|format(ins.stock_fisico) }}</td>
-        <td class="text-center">{{ "%.1f"|format(ins.stock_reservado or 0) }}</td>
-        <td class="text-center font-bold {% if ins.stock_disponible <= ins.stock_minimo %}text-red-600{% endif %}">{{ "%.1f"|format(ins.stock_disponible) }}</td>
-        <td class="text-center">{% if ins.stock_bajo %}<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">⚠️ bajo</span>{% else %}<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">✔ ok</span>{% endif %}</td>
-        <td class="text-right"><a href="/inventario/catalogo/insumo/{{ ins.id }}/editar" class="font-semibold underline" style="color:#370003">Editar</a></td>
+        <td class="whitespace-nowrap px-3 py-1.5">{{ ins.sku }}</td>
+        <td class="whitespace-nowrap px-3 py-1.5 font-sans">{{ ins.nombre }} <span class="text-slate-400">({{ ins.categoria }})</span></td>
+        <td class="text-center font-bold whitespace-nowrap px-3 py-1.5">{{ "%.1f"|format(ins.stock_fisico) }}</td>
+        <td class="text-center whitespace-nowrap px-3 py-1.5">{{ "%.1f"|format(ins.stock_reservado or 0) }}</td>
+        <td class="text-center font-bold whitespace-nowrap px-3 py-1.5 {% if ins.stock_disponible <= ins.stock_minimo %}text-red-600{% endif %}">{{ "%.1f"|format(ins.stock_disponible) }}</td>
+        <td class="text-center whitespace-nowrap px-3 py-1.5 font-sans">{% if ins.stock_bajo %}<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">⚠️ bajo</span>{% else %}<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">✔ ok</span>{% endif %}</td>
+        <td class="text-right whitespace-nowrap px-3 py-1.5 font-sans"><a href="/inventario/catalogo/insumo/{{ ins.id }}/editar" class="font-semibold underline" style="color:#370003">Editar</a></td>
       </tr>
       {% else %}<tr><td colspan="7" class="text-center text-slate-400 py-2">Sin insumos. El alta de maestros se hace en <a href="/inventario/catalogo" class="underline font-semibold" style="color:#370003">Catálogo</a>.</td></tr>{% endfor %}
       </tbody>
@@ -53,19 +58,19 @@
 <div x-show="sub === 'wip'" class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880]">
   <h2 class="font-bold mb-1">Productos en Proceso / Taller <span class="font-normal text-slate-400 text-xs">(Cta 23 · prendas no entregadas)</span></h2>
   <p class="text-xs text-slate-500 mb-2">Prendas en confección y órdenes de producción abiertas. Solo lectura: se mueven desde el tablero Kanban.</p>
-  <div class="overflow-x-auto">
+  <div class="w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
     <table class="w-full text-xs">
       <thead class="text-slate-500"><tr>
-        <th class="text-left py-1">Prenda</th><th class="text-left py-1">Pedido</th>
-        <th class="text-left py-1">Fase taller</th><th class="text-right py-1">Ficha</th>
+        <th class="text-left px-3 py-1 whitespace-nowrap min-w-[100px]">Prenda</th><th class="text-left px-3 py-1 whitespace-nowrap min-w-[140px]">Pedido</th>
+        <th class="text-left px-3 py-1 whitespace-nowrap min-w-[140px]">Fase taller</th><th class="text-right px-3 py-1 whitespace-nowrap min-w-[100px]">Ficha</th>
       </tr></thead>
-      <tbody>
+      <tbody class="font-mono tabular-nums">
       {% for w in wips %}
       <tr class="border-b hover:bg-marfil">
-        <td class="py-1.5 font-medium">{{ w.g.tipo|capitalize }} #{{ w.g.id }}</td>
-        <td class="font-mono">{{ w.folio }}</td>
-        <td><span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold">{{ w.g.estado_taller }}</span></td>
-        <td class="text-right"><a href="/produccion/ficha/{{ w.g.id }}" class="font-semibold underline" style="color:#370003">Ver ficha →</a></td>
+        <td class="whitespace-nowrap px-3 py-1.5">{{ w.g.tipo|capitalize }} #{{ w.g.id }}</td>
+        <td class="whitespace-nowrap px-3 py-1.5">{{ w.folio }}</td>
+        <td class="whitespace-nowrap px-3 py-1.5 font-sans"><span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold">{{ w.g.estado_taller }}</span></td>
+        <td class="text-right whitespace-nowrap px-3 py-1.5 font-sans"><a href="/produccion/ficha/{{ w.g.id }}" class="font-semibold underline" style="color:#370003">Ver ficha →</a></td>
       </tr>
       {% else %}<tr><td colspan="4" class="text-center text-slate-400 py-2">Sin lotes en taller.</td></tr>{% endfor %}
       </tbody>
@@ -83,22 +88,22 @@
 <div x-show="sub === 'pt'" class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880]">
   <h2 class="font-bold mb-1">Productos Terminados / RTW <span class="font-normal text-slate-400 text-xs">(Cta 21 · por SKU/talla)</span></h2>
   <p class="text-xs text-slate-500 mb-2">Stock listo para la venta. Los ajustes exigen motivo y quedan auditados en Kardex.</p>
-  <div class="overflow-x-auto">
+  <div class="w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
     <table class="w-full text-xs">
       <thead class="text-slate-500"><tr>
-        <th class="text-left py-1">SKU</th><th class="text-left py-1">Producto</th>
-        <th class="text-center py-1">Talla</th><th class="text-center py-1">Stock</th>
-        <th class="text-right py-1">Costo S/</th><th class="text-center py-1">Estado</th>
+        <th class="text-left px-3 py-1 whitespace-nowrap min-w-[100px]">SKU</th><th class="text-left px-3 py-1 whitespace-nowrap min-w-[140px]">Producto</th>
+        <th class="text-center px-3 py-1 whitespace-nowrap min-w-[60px]">Talla</th><th class="text-center px-3 py-1 whitespace-nowrap min-w-[60px]">Stock</th>
+        <th class="text-right px-3 py-1 whitespace-nowrap min-w-[100px]">Costo S/</th><th class="text-center px-3 py-1 whitespace-nowrap min-w-[100px]">Estado</th>
       </tr></thead>
-      <tbody>
+      <tbody class="font-mono tabular-nums">
       {% for v in pts %}
       <tr class="border-b hover:bg-marfil {% if v.stock <= v.stock_minimo %}bg-red-50{% endif %}">
-        <td class="font-mono py-1.5">{{ v.sku }}</td>
-        <td>{{ prods.get(v.product_id).nombre if prods.get(v.product_id) else '—' }}</td>
-        <td class="text-center">{{ v.talla }}</td>
-        <td class="text-center font-bold {% if v.stock <= v.stock_minimo %}text-red-600{% endif %}">{{ v.stock }}</td>
-        <td class="text-right" title="Costo unitario del activo (PCGE Cta 21)">{{ "%.2f"|format(v.costo_unitario or 0) }}</td>
-        <td class="text-center">{% if v.stock <= v.stock_minimo %}<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">⚠️ bajo</span>{% else %}<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">✔ ok</span>{% endif %}</td>
+        <td class="whitespace-nowrap px-3 py-1.5">{{ v.sku }}</td>
+        <td class="whitespace-nowrap px-3 py-1.5 font-sans">{{ prods.get(v.product_id).nombre if prods.get(v.product_id) else '—' }}</td>
+        <td class="text-center whitespace-nowrap px-3 py-1.5">{{ v.talla }}</td>
+        <td class="text-center font-bold whitespace-nowrap px-3 py-1.5 {% if v.stock <= v.stock_minimo %}text-red-600{% endif %}">{{ v.stock }}</td>
+        <td class="text-right whitespace-nowrap px-3 py-1.5" title="Costo unitario del activo (PCGE Cta 21)">{{ "%.2f"|format(v.costo_unitario or 0) }}</td>
+        <td class="text-center whitespace-nowrap px-3 py-1.5 font-sans">{% if v.stock <= v.stock_minimo %}<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">⚠️ bajo</span>{% else %}<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">✔ ok</span>{% endif %}</td>
       </tr>
       {% else %}<tr><td colspan="6" class="text-center text-slate-400 py-2">Sin productos terminados.</td></tr>{% endfor %}
       </tbody>
@@ -223,7 +228,7 @@
 <div x-show="sub === 'wip'" class="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 mb-4 text-xs">Los movimientos de lotes en taller se registran desde el tablero Kanban y las fichas de producción, no por Kardex manual.</div>
 
   <h3 class="font-bold text-sm mt-4 mb-1">Historial de movimientos</h3>
-  <div class="text-xs max-h-72 overflow-y-auto">
+  <div class="w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 text-xs max-h-72 overflow-y-auto">
   {% for k in kardex %}
   <div class="border-b py-1.5 flex flex-wrap justify-between gap-1">
     <span><span class="text-slate-400">{{ k.fecha }}</span> · <b>{{ nombres.get(k.producto_id, 'Prod#' ~ k.producto_id) }}</b> ·
