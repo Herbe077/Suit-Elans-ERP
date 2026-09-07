@@ -301,6 +301,37 @@ async def actualizar_ficha(gid: int, request: Request,
     return RedirectResponse(f"/produccion/ficha/{gid}?ok=ficha", status_code=303)
 
 
+@router.post("/ficha/{gid}/medidas")
+async def guardar_medidas_en_ficha(gid: int, request: Request,
+                                   db: Session = Depends(get_db), user=Auth):
+    """Toma de medidas sin abandonar el expediente de la prenda.
+
+    Crea una nueva versión de Measurement para el cliente del pedido y la
+    vincula a la prenda. Redirige de vuelta a la ficha.
+    """
+    from app.core.constants import ALL_MEASURE_FIELDS
+    from app.models.measurement import Measurement
+    g = db.get(Garment, gid)
+    if not g:
+        return HTMLResponse("Prenda no encontrada", status_code=404)
+    o = db.get(Order, g.order_id)
+    if not o or not o.client_id:
+        return RedirectResponse(f"/produccion/ficha/{gid}", status_code=303)
+    form = await request.form()
+    data = {k: (float(form[k]) if form.get(k) not in (None, "") else None)
+            for k in ALL_MEASURE_FIELDS}
+    m = Measurement(client_id=o.client_id, sastre_id=user.id,
+                    tipo_prenda=form.get("tipo_prenda", "saco"),
+                    postura=form.get("postura"), observaciones=form.get("observaciones"), **data)
+    m.version = db.query(Measurement).filter(
+        Measurement.client_id == o.client_id).count() + 1
+    db.add(m)
+    db.flush()
+    g.measurement_id = m.id
+    db.commit()
+    return RedirectResponse(f"/produccion/ficha/{gid}?ok=ficha", status_code=303)
+
+
 @router.post("/prenda/{gid}/diseno")
 async def guardar_diseno(gid: int, request: Request,
                          db: Session = Depends(get_db), user=Auth):

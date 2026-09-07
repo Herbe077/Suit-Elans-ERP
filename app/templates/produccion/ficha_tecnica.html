@@ -9,7 +9,7 @@
   <span class="text-xs px-2 py-0.5 rounded-full {{ ucolor }}">{{ etiqueta }}{% if dias is not none %} · {{ dias }}d{% endif %}</span>
   <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-white">{{ g.estado_taller }}</span>
 </div>
-<p class="text-sm text-slate-600 mb-4">Cliente: <b>{{ c.nombre_completo if c else '—' }}</b> {{ c.doc_label if c and c.nro_doc else '' }} · Límite: {{ g.fecha_limite_entrega or (o.fecha_entrega if o else '—') }} · Artesano: <b>{{ artesano.full_name if artesano else 'sin asignar' }}</b></p>
+<p class="text-sm text-slate-600 mb-4">Cliente: <b>{{ c.nombre_completo if c else '—' }}</b> {{ c.doc_label if c and c.nro_doc else '' }} · Límite: {{ g.fecha_limite_entrega or (o.fecha_entrega if o else '—') }} · Artesano: <b>{{ artesano.full_name if artesano else 'sin asignar' }}</b>{% if c %} · <a href="/produccion/fichas/{{ c.id }}" class="text-xs underline text-laton-dark">Ver Perfil / Medidas de {{ c.nombre }}</a>{% endif %}</p>
 {% if ok == 'prueba' %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-4 text-sm">✓ Prueba registrada. {% if not con_notas %}Sin observaciones.{% else %}Con notas: ya puedes pasar a EN_CONFECCION.{% endif %}</div>{% endif %}
 {% if ok == 'calidad' %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-4 text-sm">✓ Calidad aprobada: lista para liquidar y entregar. Se avisó a Ventas.</div>{% endif %}
 
@@ -50,11 +50,23 @@
 </div>
 
 <div class="space-y-4">
-  <div class="bg-white rounded-xl shadow p-4">
-    <h2 class="font-bold mb-2 text-sm">📏 Medidas del cliente (lectura){% if m %} · v{{ m.version }}{% endif %}</h2>
+  <div class="bg-white rounded-xl shadow p-4" x-data="{ tabMed: 'saco', formMed: false }">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="font-bold text-sm">📏 Medidas antropométricas{% if m %} · v{{ m.version }}{% endif %}</h2>
+      {% if c %}<button @click="formMed = !formMed" class="text-xs bg-borgo text-white rounded px-2 py-1 font-semibold">✏️ Registrar Medidas</button>{% endif %}
+    </div>
     {% if m %}
-    <div class="grid grid-cols-3 gap-1 text-xs">
-      {% for k, label in med_saco + med_pantalon %}
+    <div class="flex gap-2 mb-2 text-xs">
+      <button type="button" @click="tabMed='saco'" :class="tabMed==='saco' ? 'bg-borgo text-white' : 'bg-slate-200'" class="rounded px-3 py-1">Saco</button>
+      <button type="button" @click="tabMed='pantalon'" :class="tabMed==='pantalon' ? 'bg-borgo text-white' : 'bg-slate-200'" class="rounded px-3 py-1">Pantalón</button>
+    </div>
+    <div x-show="tabMed==='saco'" class="grid grid-cols-3 gap-1 text-xs">
+      {% for k, label in med_saco %}
+      {% set v = m[k] %}<div class="border-b py-0.5 flex justify-between"><span class="text-slate-500">{{ label }}</span><b>{{ v if v is not none else '—' }}</b></div>
+      {% endfor %}
+    </div>
+    <div x-show="tabMed==='pantalon'" class="grid grid-cols-3 gap-1 text-xs">
+      {% for k, label in med_pantalon %}
       {% set v = m[k] %}<div class="border-b py-0.5 flex justify-between"><span class="text-slate-500">{{ label }}</span><b>{{ v if v is not none else '—' }}</b></div>
       {% endfor %}
     </div>
@@ -62,7 +74,16 @@
       <p><b>Postura:</b> {{ m.postura or '—' }}</p>
       <p><b>Alteraciones:</b> {{ m.observaciones or '—' }}</p>
     </div>
-    {% else %}<p class="text-xs text-amber-700">⚠️ Sin medidas registradas para este cliente.</p>{% endif %}
+    {% else %}<p class="text-xs text-amber-700 mb-2">⚠️ Sin medidas registradas para este cliente.</p>{% endif %}
+    {% if c %}
+    <form x-show="formMed" method="post" action="/produccion/ficha/{{ g.id }}/medidas" class="grid grid-cols-2 gap-1 text-xs mt-2 border-t pt-2">
+      <select name="tipo_prenda" class="border rounded px-2 py-1 col-span-2"><option value="saco">Saco</option><option value="pantalon">Pantalón</option></select>
+      {% for k, label in med_saco %}<label class="block">{{ label }}<input name="{{ k }}" type="number" step="0.1" class="w-full border rounded px-2 py-1 mt-0.5"></label>{% endfor %}
+      {% for k, label in med_pantalon %}<label class="block">{{ label }}<input name="{{ k }}" type="number" step="0.1" class="w-full border rounded px-2 py-1 mt-0.5"></label>{% endfor %}
+      <input name="postura" placeholder="Postura" class="col-span-2 border rounded px-2 py-1">
+      <button class="col-span-2 bg-borgo text-white rounded-lg py-1.5 font-semibold">Guardar medidas (nueva versión)</button>
+    </form>
+    {% endif %}
   </div>
   <div class="bg-white rounded-xl shadow p-4" x-data="{ modalPrueba: false }">
     <div class="flex items-center justify-between mb-2">
