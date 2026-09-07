@@ -42,12 +42,12 @@
         {% for cc in centros %}<option value="{{ cc.id }}">{{ cc.codigo }} - {{ cc.nombre }}</option>{% endfor %}
       </select>
     </label>
-    <label class="block min-w-0">Monto Base S/
-      <input id="g-base" name="monto_base" type="number" step="0.01" min="0.01" required placeholder="2000.00" oninput="gastoCalc()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    <label class="block min-w-0">Monto Total S/ (IGV incl.)
+      <input id="g-total-in" name="monto_total" type="number" step="0.01" min="0.01" required placeholder="2360.00" oninput="gastoCalc()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
     </label>
-    <label class="block min-w-0">IGV S/ <span class="font-normal text-slate-400">(18% editable)</span>
-      <input id="g-igv" name="igv" type="number" step="0.01" min="0" value="0" oninput="gastoCalc(false)" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
-    </label>
+    <div class="block min-w-0">Desglose auto (Base + IGV)
+      <div id="g-split" class="border rounded px-2 py-1.5 mt-0.5 bg-[#FAF8F5] font-bold">S/ 0.00 + S/ 0.00</div>
+    </div>
     <div class="block min-w-0">Monto Total S/
       <div id="g-total" class="border rounded px-2 py-1.5 mt-0.5 bg-[#FAF8F5] font-bold">S/ 0.00</div>
     </div>
@@ -55,13 +55,13 @@
   </form>
 </div>
 <script>
-function gastoCalc(autoIgv) {
-  if (autoIgv === undefined) autoIgv = true;
-  var b = parseFloat(document.getElementById('g-base').value) || 0;
-  var igvEl = document.getElementById('g-igv');
-  if (autoIgv) igvEl.value = (Math.round(b * 0.18 * 100) / 100).toFixed(2);
-  var igv = parseFloat(igvEl.value) || 0;
-  document.getElementById('g-total').textContent = 'S/ ' + (b + igv).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+function gastoCalc() {
+  var t = parseFloat(document.getElementById('g-total-in').value) || 0;
+  var base = Math.round((t / 1.18) * 100) / 100;
+  var igv = Math.round((t - base) * 100) / 100;
+  var f = function (n) { return n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); };
+  document.getElementById('g-split').textContent = 'S/ ' + f(base) + ' + S/ ' + f(igv);
+  document.getElementById('g-total').textContent = 'S/ ' + f(t);
 }
 </script>
 

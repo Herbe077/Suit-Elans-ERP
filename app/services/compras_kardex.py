@@ -43,6 +43,15 @@ from app.services.finanzas import (
 )
 
 IGV_DEFAULT = Decimal("0.18")
+# Divisor IGV: todo importe ingresado es TOTAL FINAL con IGV incluido.
+DIV_IGV = Decimal("1.18")
+
+
+def desglose_igv(total: float | Decimal) -> tuple[Decimal, Decimal, Decimal]:
+    """Desglosa un total final: (base, igv, total) con base = total/1.18."""
+    t = _d(total).quantize(Decimal("0.01"))
+    base = (t / DIV_IGV).quantize(Decimal("0.01"))
+    return base, t - base, t
 
 # Cuentas PCGE usadas por este servicio (analíticas).
 CTA_2411 = "2411"    # Materia prima - Telas y avíos (activo)
@@ -212,11 +221,15 @@ def recepcionar_oc(db: Session, oc_id: int, recepciones: dict[int, float],
                 ProductoInsumo.id == d.producto_id).first()
             if not prod:
                 raise ValueError(f"Producto {d.producto_id} no encontrado")
+            # Importes ingresados = TOTAL FINAL con IGV incluido.
+            # El almacén (24/61) solo toma la base neta: / 1.18.
             precio_neto = _d(d.precio_unitario) - _d(d.descuento_unitario)
             if precio_neto < 0:
                 raise ValueError(f"Precio neto negativo (detalle {d.id})")
             landed_u = prorrateo.get(d.id, Decimal("0"))
-            costo_final = precio_neto + landed_u
+            precio_base_u = precio_neto / DIV_IGV
+            landed_net_u = landed_u / DIV_IGV
+            costo_final = precio_base_u + landed_net_u
             d.landed_unitario = float(landed_u)
             d.costo_unitario_final = float(costo_final)
 
@@ -241,7 +254,7 @@ def recepcionar_oc(db: Session, oc_id: int, recepciones: dict[int, float],
                 orden_compra_id=oc.id, detalle_oc_id=d.id,
                 doc_ref=oc.folio or f"OC-{oc.id}",
                 usuario_id=usuario_id, fecha=fecha,
-                observacion=f"Recepción OC {oc.folio or oc.id} + landed {landed_u:.2f}/u",
+                observacion=f"Recepción OC {oc.folio or oc.id} + landed neto {float(landed_net_u):.2f}/u",
             )
             db.add(k)
             kardex_rows.append(k)
@@ -315,17 +328,18 @@ def facturar_oc(db: Session, oc_id: int, numero_factura: str,
         if not detalles:
             raise ValueError("OC sin líneas")
         landed_total = _d(oc.landed_flete) + _d(oc.landed_seguro) + _d(oc.landed_otros)
-        prorrateo = prorratear_landed(detalles, landed_total)
-        base = Decimal("0")
+        # Importes ingresados = TOTALES FINALES con IGV incluido.
+        total_lineas = Decimal("0")
         for d in detalles:
             precio_neto = _d(d.precio_unitario) - _d(d.descuento_unitario)
-            landed_u = prorrateo.get(d.id, Decimal("0"))
-            base += _d(d.cantidad_recibida) * (precio_neto + landed_u)
-        if base <= 0:
+            total_lineas += _d(d.cantidad_recibida) * precio_neto
+        if total_lineas <= 0:
             raise ValueError("Sin cantidades recibidas: nada que facturar")
-        rate = _d(oc.igv_rate if oc.igv_rate is not None else 0.18)
-        igv = (base * rate).quantize(Decimal("0.01"))
-        total = base + igv
+        base_lineas, igv_lineas, _ = desglose_igv(total_lineas)
+        base_landed, igv_landed, _ = desglose_igv(landed_total)
+        base = base_lineas + base_landed
+        igv = igv_lineas + igv_landed
+        total = base + igv  # == total_lineas + landed_total, sin recargos
 
         c6011 = _cuenta(db, CTA_6011)
         c40111 = _cuenta(db, CTA_40111)

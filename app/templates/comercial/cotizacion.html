@@ -20,7 +20,7 @@
     <select name="garment_tipo" class="border rounded px-2 py-1"><option value="">— Tipo —</option>{% for t in tipos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select>
     <select name="variant_id" class="border rounded px-2 py-1"><option value="">— Variante —</option>{% for v in variantes %}<option value="{{ v.id }}">{{ v.sku }} ({{ v.stock }})</option>{% endfor %}</select>
     <input name="cantidad" type="number" step="0.5" value="1" class="border rounded px-2 py-1">
-    <input name="precio_unitario" type="number" step="0.01" placeholder="P. unitario" class="border rounded px-2 py-1">
+    <input name="precio_unitario" type="number" step="0.01" placeholder="P. unitario (IGV incl.)" class="border rounded px-2 py-1">
     <button class="col-span-2 bg-borgo text-white rounded py-1">+ Línea</button>
   </form>
 </div>

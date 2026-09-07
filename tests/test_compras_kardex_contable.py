@@ -101,29 +101,31 @@ def test_recepcion_parcial_total_con_cpp_y_asiento_241_611():
     prod = _nuevo_producto(db, "SKU-REC-001", stock=100.0, cpp=50.0)
     oc, dets = _nueva_oc(db, sup.id, "OC-REC-001", [(prod.id, 100, 70.0)],
                          landed_flete=1000.0, estado="APPROVED")
-    # landed 1000 sobre base 7000 -> +10/u -> costo final 80/u
+    # Precios con IGV incluido: base/u 70/1.18 + landed neto 10/1.18 = 80/1.18.
+    costo_u = 80.0 / 1.18
     r1 = ck.recepcionar_oc(db, oc.id, {dets[0].id: 40.0}, usuario_id=None)
     assert r1["estado"] == "PARTIALLY_RECEIVED"
-    assert r1["valorizado"] == 40.0 * 80.0
+    assert abs(r1["valorizado"] - 40.0 * costo_u) < 0.01
     db.refresh(prod)
-    # CPP = (100*50 + 40*80) / 140 = 58.5714...
-    assert abs(prod.costo_promedio - (8200 / 140)) < 1e-6
+    # CPP = (100*50 + 40*costo_u) / 140
+    assert abs(prod.costo_promedio - ((5000 + 40.0 * costo_u) / 140)) < 1e-4
     assert prod.stock_fisico == 140.0
     mapa = _lineas_de_asiento(db, r1["asiento_id"])
-    assert mapa["2411"] == (Decimal("3200"), Decimal("0"))
-    assert mapa["6111"] == (Decimal("0"), Decimal("3200"))
+    assert abs(float(mapa["2411"][0]) - 40.0 * costo_u) < 0.01
+    assert mapa["2411"][1] == Decimal("0") and mapa["6111"][0] == Decimal("0")
+    assert abs(float(mapa["6111"][1]) - 40.0 * costo_u) < 0.01
     k = db.query(MovimientoKardex).filter(
         MovimientoKardex.orden_compra_id == oc.id).all()
     assert len(k) == 1 and k[0].tipo_movimiento == "ENTRADA"
     assert k[0].asiento_id == r1["asiento_id"]
-    assert k[0].costo_unitario == 80.0 and k[0].saldo_fisico == 140.0
+    assert abs(k[0].costo_unitario - costo_u) < 1e-6 and k[0].saldo_fisico == 140.0
 
     r2 = ck.recepcionar_oc(db, oc.id, {dets[0].id: 60.0})
     assert r2["estado"] == "RECEIVED"
     db.refresh(prod)
     assert prod.stock_fisico == 200.0
-    # CPP = (140*58.5714 + 60*80)/200 = 65.0
-    assert abs(prod.costo_promedio - 65.0) < 1e-6
+    # CPP neto = (5000 + 100*80/1.18)/200 ≈ 58.90
+    assert abs(prod.costo_promedio - 58.90) < 0.01
     db.close()
 
 
@@ -137,13 +139,14 @@ def test_facturar_provision_602_4011_421_y_billed():
     ck.recepcionar_oc(db, oc.id, {dets[0].id: 10.0})
     r = ck.facturar_oc(db, oc.id, "F001-000123", date.today())
     assert r["estado"] == "BILLED"
-    assert r["base"] == 1000.0 and r["igv"] == 180.0 and r["total"] == 1180.0
+    # Precio ingresado con IGV incluido: total 1000 → base 847.46, igv 152.54.
+    assert r["base"] == 847.46 and r["igv"] == 152.54 and r["total"] == 1000.0
     mapa = _lineas_de_asiento(db, r["asiento_id"])
-    assert mapa["602"] == (Decimal("1000"), Decimal("0"))
-    assert mapa["40111"] == (Decimal("180"), Decimal("0"))
-    assert mapa["4212"] == (Decimal("0"), Decimal("1180"))
+    assert mapa["602"] == (Decimal("847.46"), Decimal("0"))
+    assert mapa["40111"] == (Decimal("152.54"), Decimal("0"))
+    assert mapa["4212"] == (Decimal("0"), Decimal("1000"))
     cxp = db.get(CuentaPorPagar, r["cxp_id"])
-    assert cxp.numero_factura == "F001-000123" and cxp.saldo_pendiente == 1180.0
+    assert cxp.numero_factura == "F001-000123" and cxp.saldo_pendiente == 1000.0
     # idempotencia: mismo comprobante no se duplica
     try:
         ck.facturar_oc(db, oc.id, "F001-000123")

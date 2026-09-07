@@ -102,10 +102,10 @@ def test_flujo_web_completo_con_plantillas():
     r = c.get(f"/inventario/compras/orden/{oid}", cookies=ck)
     assert r.status_code == 200
     assert "PARTIALLY_RECEIVED" in r.text
-    assert "120.00" in r.text  # costo final = 100 + 20 landed
+    assert "101.69" in r.text  # costo final neto = (100 + 20 landed) / 1.18
     assert "241" in r.text and "611" in r.text
 
-    # facturar lo recibido (4u*120=480 base, igv 86.40, total 566.40)
+    # facturar lo recibido (4u*100=400 final → base 338.98, igv 61.02)
     r = c.post(f"/inventario/compras/orden/{oid}/facturar",
                data={"numero_factura": "F001-WEB001"}, cookies=ck)
     assert r.status_code == 303 and "error" not in r.headers.get("location", "")

@@ -372,10 +372,13 @@ def cxp_crear(proveedor_id: int = Form(...), numero_factura: str = Form(""), mon
         fv=date.fromisoformat(fecha_vencimiento) if fecha_vencimiento else date.today()+timedelta(days=30)
     except Exception:
         fe=date.today(); fv=date.today()+timedelta(days=30)
-    # Provisión atómica: DEBE 6011 / HABER 4212 + CxP (bloquea período cerrado)
+    # Provisión atómica: el monto ingresado es TOTAL FINAL con IGV incluido.
+    # Base = total/1.18, IGV = total - base, pasivo 4212 = total.
     from app.services import contabilidad as contab
     try:
-        contab.provisionar_compra(db, proveedor_id=proveedor_id, base=monto_total, igv=0.0,
+        base = round(monto_total / 1.18, 2)
+        contab.provisionar_compra(db, proveedor_id=proveedor_id, base=base,
+                                  igv=round(monto_total - base, 2),
                                   numero_factura=numero_factura or None, fecha=fe,
                                   retencion=retencion, fecha_vencimiento=fv)
     except ValueError as e:
@@ -423,7 +426,8 @@ def gastos_crear(
     fecha: str = Form(""), proveedor_id: str = Form(""), ruc: str = Form(""),
     tipo_comprobante: str = Form("FACTURA"), numero_comprobante: str = Form(""),
     categoria: str = Form("OTRO"), cuenta_codigo: str = Form(""),
-    monto_base: float = Form(...), igv: float = Form(0),
+    monto_total: float = Form(0), monto_base: float = Form(0),
+    igv: float = Form(0),
     centro_costo_id: str = Form(""), db: Session = Depends(get_db), user=FinanzasAuth,
 ):
     try:
@@ -440,6 +444,15 @@ def gastos_crear(
         ccid = None
     cat = (categoria or "OTRO").upper()
     cta = cuenta_codigo or (svc.CATEGORIA_GASTO_MAP.get(cat, svc.CATEGORIA_GASTO_MAP["OTRO"])[0])
+    # El monto ingresado es TOTAL FINAL con IGV incluido (FACTURA: se desglosa
+    # base = total/1.18; otros comprobantes: todo va a base). Compat: si no
+    # viene monto_total se respetan monto_base + igv explícitos.
+    if monto_total and monto_total > 0:
+        if (tipo_comprobante or "FACTURA").upper() == "FACTURA":
+            monto_base = round(monto_total / 1.18, 2)
+            igv = round(monto_total - monto_base, 2)
+        else:
+            monto_base, igv = monto_total, 0.0
     # Provisión atómica con bloqueo de período cerrado
     from app.services import contabilidad as contab
     try:
