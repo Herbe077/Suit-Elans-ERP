@@ -6,7 +6,7 @@ Cubre el spec pedido:
   Kardex: ENTRADA / SALIDA / AJUSTE_MERMA / TRANSFERENCIA, valorizado a CPP.
   Diario (partida doble, una sola transacción ACID por operación):
     - Recepción compra : DEBE 2411 / HABER 6111  (destino existencias)
-    - Provisión factura: DEBE 6011 + DEBE 40111 / HABER 4212 (+ CxP)
+    - Provisión factura: DEBE 602 + DEBE 40111 / HABER 4212 (+ CxP)
     - Consumo taller   : DEBE 6111 / HABER 2411
     - Merma/desmedro   : DEBE 6591 / HABER 2411
 
@@ -47,7 +47,7 @@ IGV_DEFAULT = Decimal("0.18")
 # Cuentas PCGE usadas por este servicio (analíticas).
 CTA_2411 = "2411"    # Materia prima - Telas y avíos (activo)
 CTA_6111 = "6111"    # Variación de existencias (gasto)
-CTA_6011 = "6011"    # Compras / MPD (gasto)
+CTA_6011 = "602"     # Compras de materias primas (gasto)
 CTA_40111 = "40111"  # IGV crédito fiscal (activo/pasivo según plan)
 CTA_4212 = "4212"    # Proveedores - Emitidas (pasivo)
 CTA_6591 = "6591"    # Mermas y desmedros (gasto)
@@ -281,7 +281,7 @@ def facturar_oc(db: Session, oc_id: int, numero_factura: str,
     """RECEIVED (o PARTIALLY_RECEIVED) -> BILLED.
 
     Genera en la misma transacción:
-      - provisión DEBE 6011 (base) + DEBE 40111 (IGV) / HABER 4212 (total)
+      - provisión DEBE 602 (base) + DEBE 40111 (IGV) / HABER 4212 (total)
       - CuentaPorPagar vinculada a la OC (idempotente por numero_factura).
     La base es lo efectivamente RECIBIDO (cantidad_recibida * precio neto +
     landed prorrateado), no lo solicitado.

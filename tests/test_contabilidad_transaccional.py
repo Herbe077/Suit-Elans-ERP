@@ -1,11 +1,12 @@
 """Motor transaccional ContabilidadService (PCGE).
 
-1. Partida doble: en CADA evento, Suma Debe == Suma Haber del asiento.
-2. CxC/CxP amortizables: múltiples abonos, saldo = total - pagado, estados.
-3. Bloqueo duro: período CERRADO/BLOQUEADO deniega ventas, cobros, compras,
-   kardex, gastos y pagos.
-4. Mapa de eventos: 1212/40111/7011 (venta), 1011/1212 (cobro),
-   6011+40111/4212 (compra), 4212/1041 (pago CxP).
+  1. Partida doble: en CADA evento, Suma Debe == Suma Haber del asiento.
+  2. CxC/CxP amortizables: múltiples abonos, saldo = total - pagado, estados.
+  3. Bloqueo duro: período CERRADO/BLOQUEADO deniega ventas, cobros, compras,
+     kardex, gastos y pagos.
+  4. Mapa de eventos: 1212/40111/70 (7032 bespoke, 7011 RTW) (venta),
+     1011/1041 según medio de pago (cobro), 602+40111/4212 (compra),
+     4212/1041 (pago CxP), 6911/2111 (costo de ventas RTW).
 """
 from datetime import date
 from decimal import Decimal
@@ -73,6 +74,54 @@ def test_venta_factura_1212_40111_7011_y_cxc():
     _limpia(db); db.close()
 
 
+def test_venta_segrega_7032_bespoke_y_7011_rtw():
+    """Bespoke (pedido con prendas) → 7032; stock sin prendas → 7011."""
+    from app.services import contabilidad as C
+    db = _db(); _limpia(db)
+    from app.models.order import Garment
+    ob = _order(db, "CT-BES-001", 2000.0)
+    db.add(Garment(order_id=ob.id, tipo="saco", precio=2000.0))
+    db.commit()
+    rb = C.emitir_factura_venta(db, ob.id, "F001", 18.0, None)
+    mapb = _lineas(db, rb["asiento_id"])
+    assert _balanceado(mapb) == Decimal(str(2000.0))
+    assert "7032" in mapb and "7011" not in mapb
+    base_b = round(2000.0 / 1.18, 2)
+    assert mapb["7032"] == (Decimal("0"), Decimal(str(base_b)))
+    ortw = _order(db, "CT-RTW-001", 500.0)
+    rr = C.emitir_factura_venta(db, ortw.id, "B001", 18.0, None)
+    mapr = _lineas(db, rr["asiento_id"])
+    assert "7011" in mapr and "7032" not in mapr
+    _limpia(db); db.close()
+
+
+def test_cobro_segun_medio_de_pago_1011_1041():
+    """Efectivo → 1011; transferencia/tarjeta/yape → 1041."""
+    from app.services import contabilidad as C
+    db = _db(); _limpia(db)
+    o = _order(db, "CT-MP-001", 1000.0)
+    r1 = C.cobrar_venta(db, o.id, 400.0, "transferencia", "1011", usuario_id=None)
+    assert _lineas(db, r1["asiento_id"])["1041"] == (Decimal("400"), Decimal("0"))
+    r2 = C.cobrar_venta(db, o.id, 300.0, "efectivo", "1041", usuario_id=None)
+    assert _lineas(db, r2["asiento_id"])["1011"] == (Decimal("300"), Decimal("0"))
+    r3 = C.cobrar_venta(db, o.id, 300.0, "yape", "1011", usuario_id=None)
+    assert _lineas(db, r3["asiento_id"])["1041"] == (Decimal("300"), Decimal("0"))
+    _limpia(db); db.close()
+
+
+def test_costo_ventas_6911_2111():
+    """Costo de ventas RTW: DEBE 6911 / HABER 2111, cuadrado."""
+    from app.services import contabilidad as C
+    db = _db(); _limpia(db)
+    o = _order(db, "CT-COGS-001", 500.0)
+    r = C.registrar_costo_ventas(db, o.id, 300.0, None)
+    mapa = _lineas(db, r["asiento_id"])
+    assert _balanceado(mapa) == Decimal("300")
+    assert mapa["6911"] == (Decimal("300"), Decimal("0"))
+    assert mapa["2111"] == (Decimal("0"), Decimal("300"))
+    _limpia(db); db.close()
+
+
 def test_cobro_1011_1212_mas_flujo_y_cxc_parcial_pagado():
     from app.models.finanzas import CuentaPorCobrar, MovimientoFinanciero
     from app.services import contabilidad as C
@@ -102,7 +151,7 @@ def test_cobro_1011_1212_mas_flujo_y_cxc_parcial_pagado():
     _limpia(db); db.close()
 
 
-def test_compra_6011_40111_4212_y_pago_4212_1041():
+def test_compra_602_40111_4212_y_pago_4212_1041():
     from app.models.finanzas import CuentaPorPagar, MovimientoFinanciero
     from app.services import contabilidad as C
     db = _db(); _limpia(db)
@@ -111,7 +160,7 @@ def test_compra_6011_40111_4212_y_pago_4212_1041():
     r = C.provisionar_compra(db, sup.id, 2000.0, 360.0, numero_factura="F001-CT01")
     mapa = _lineas(db, r["asiento_id"])
     assert _balanceado(mapa) == Decimal("2360")
-    assert mapa["6011"] == (Decimal("2000"), Decimal("0"))
+    assert mapa["602"] == (Decimal("2000"), Decimal("0"))
     assert mapa["40111"] == (Decimal("360"), Decimal("0"))
     assert mapa["4212"] == (Decimal("0"), Decimal("2360"))
     # abono parcial 1000 -> PARCIAL

@@ -3,7 +3,7 @@
 Cubre el spec:
 - OC DRAFT no afecta stock/contabilidad; APPROVED habilita recepción.
 - Recepción -> Kardex ENTRADA valorizado + CPP + asiento DEBE 2411 / HABER 6111.
-- Facturación -> provisión DEBE 6011 + DEBE 40111 / HABER 4212 + CxP, estado BILLED.
+    - Facturación -> provisión DEBE 602 + DEBE 40111 / HABER 4212 + CxP, estado BILLED.
 - Consumo taller -> DEBE 6111 / HABER 2411. Merma -> DEBE 6591 / HABER 2411.
 - Atomicidad: fallo en recepción no deja kardex/asiento parcial.
 - Landed prorrateado por valor antes del CPP final.
@@ -127,7 +127,7 @@ def test_recepcion_parcial_total_con_cpp_y_asiento_241_611():
     db.close()
 
 
-def test_facturar_provision_601_4011_421_y_billed():
+def test_facturar_provision_602_4011_421_y_billed():
     from app.models.finanzas import CuentaPorPagar
     from app.services import compras_kardex as ck
     db = _db()
@@ -139,7 +139,7 @@ def test_facturar_provision_601_4011_421_y_billed():
     assert r["estado"] == "BILLED"
     assert r["base"] == 1000.0 and r["igv"] == 180.0 and r["total"] == 1180.0
     mapa = _lineas_de_asiento(db, r["asiento_id"])
-    assert mapa["6011"] == (Decimal("1000"), Decimal("0"))
+    assert mapa["602"] == (Decimal("1000"), Decimal("0"))
     assert mapa["40111"] == (Decimal("180"), Decimal("0"))
     assert mapa["4212"] == (Decimal("0"), Decimal("1180"))
     cxp = db.get(CuentaPorPagar, r["cxp_id"])

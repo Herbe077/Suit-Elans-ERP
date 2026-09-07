@@ -6,9 +6,12 @@ UN evento = UN db.commit() final; cualquier error => db.rollback() total.
 Nada de "contabilización best-effort" en transacción separada.
 
 Mapa de eventos (cuentas analíticas):
-  VENTA / FACTURA : DEBE 1212 (CxC) / HABER 40111 (IGV) + HABER 7011 (ventas)
-  COBRO          : DEBE 1011/1041 (caja/banco) / HABER 1212 + INGRESO flujo
-  COMPRA / GASTO : DEBE 6011 (o cta. gasto) + DEBE 40111 / HABER 4212 (+ CxP)
+  VENTA / FACTURA : DEBE 1212 (CxC) / HABER 40111 (IGV) + HABER 70 ventas
+    - Bespoke / servicio a medida (pedido con prendas) → 7032
+    - Ready-to-wear / stock (venta de variantes) → 7011
+  COBRO          : DEBE 1011 (efectivo) o 1041 (transferencia/tarjeta/yape) / HABER 1212 + INGRESO flujo
+  COMPRA / GASTO : DEBE 602 (materias primas) + DEBE 40111 / HABER 4212 (+ CxP)
+  COSTO VENTAS   : DEBE 6911 / HABER 2111 (solo ready-to-wear, al vender)
   PAGO CxP       : DEBE 4212 / HABER 1011/1041 + EGRESO flujo
   KARDEX         : ver app/services/compras_kardex.py (2411/6111, 6591/2411)
 
@@ -34,11 +37,28 @@ from app.services.finanzas import crear_asiento_flush, get_cuenta_by_codigo, see
 # Cuentas analíticas del motor
 CTA_CXC = "1212"     # Clientes — Emitidas en cartera
 CTA_IGV = "40111"    # IGV crédito/débito fiscal
-CTA_VENTAS = "7011"  # Ventas locales
-CTA_CAJA = "1011"    # Caja operativa
-CTA_BANCO = "1041"   # Cuentas corrientes
-CTA_COMPRAS = "6011" # Compras / MPD
+CTA_VENTAS = "7011"  # Ventas locales (fallback / ready-to-wear)
+CTA_VENTAS_BESPOKE = "7032"  # Servicios prestados (sastrería a medida)
+CTA_VENTAS_RTW = "7011"      # Productos terminados (colecciones stock)
+CTA_COSTO_VTAS = "6911"  # Costo de ventas — productos terminados
+CTA_PT = "2111"          # Productos terminados (activo)
+CTA_CAJA = "1011"    # Caja operativa (solo efectivo)
+CTA_BANCO = "1041"   # Cuentas corrientes (transferencia/tarjeta/yape)
+CTA_COMPRAS = "602"  # Compras de materias primas
 CTA_PROV = "4212"    # Proveedores
+
+
+def cuenta_cobro_por_metodo(metodo: str | None) -> str:
+    """Cuenta 10 según medio de pago: efectivo → 1011, resto → 1041."""
+    return CTA_CAJA if (metodo or "").strip().lower() == "efectivo" else CTA_BANCO
+
+
+def cuenta_ingreso_por_pedido(db: Session, order_id: int) -> str:
+    """Línea de negocio: con prendas a medida → 7032 (bespoke);
+    venta de stock sin prendas → 7011 (ready-to-wear)."""
+    from app.models.order import Garment
+    n = db.query(Garment).filter(Garment.order_id == order_id).count()
+    return CTA_VENTAS_BESPOKE if n > 0 else CTA_VENTAS_RTW
 
 # Flujo de caja por actividad (sin cambio de esquema: mapea la categoría
 # operativa del MovimientoFinanciero a actividad del estado de flujos).
@@ -96,7 +116,7 @@ def es_caja(cuenta_origen: str | None) -> bool:
     return (cuenta_origen or "Caja") in CUENTA_ORIGEN_CAJA
 
 
-# ── VENTA: factura 1212 / 40111 + 7011 ──────────────────────────────
+# ── VENTA: factura 1212 / 40111 + 70 (7032 bespoke / 7011 RTW) ──────
 def emitir_factura_venta(db: Session, order_id: int, serie: str, igv_pct: float,
                          usuario_id: int | None, fecha: date | None = None) -> dict:
     """Emite comprobante + asiento de venta + CxC en UNA transacción."""
@@ -111,11 +131,12 @@ def emitir_factura_venta(db: Session, order_id: int, serie: str, igv_pct: float,
         inv = billing_svc.emit_invoice_flush(
             db, serie, order_id, order.client_id, order.company_id, igv_pct, usuario_id)
         base, igv = _d(inv.subtotal), _d(inv.igv)
-        c1212, c40111, c7011 = _cuenta(db, CTA_CXC), _cuenta(db, CTA_IGV), _cuenta(db, CTA_VENTAS)
+        c1212, c40111 = _cuenta(db, CTA_CXC), _cuenta(db, CTA_IGV)
+        c_ing = _cuenta(db, cuenta_ingreso_por_pedido(db, order.id))
         lineas = [{"cuenta_id": c1212.id, "debe": base + igv, "haber": Decimal("0")}]
         if igv > 0:
             lineas.append({"cuenta_id": c40111.id, "debe": Decimal("0"), "haber": igv})
-        lineas.append({"cuenta_id": c7011.id, "debe": Decimal("0"), "haber": base})
+        lineas.append({"cuenta_id": c_ing.id, "debe": Decimal("0"), "haber": base})
         asiento = crear_asiento_flush(
             db, fecha or date.today(), f"Factura {inv.serie}-{inv.numero} {order.folio}",
             "VENTA", inv.id, lineas)
@@ -135,6 +156,40 @@ def emitir_factura_venta(db: Session, order_id: int, serie: str, igv_pct: float,
         db.commit()
         return {"invoice_id": inv.id, "asiento_id": asiento.id,
                 "asiento_numero": asiento.numero, "cxc_id": cxc.id}
+    except Exception:
+        db.rollback()
+        raise
+
+
+# ── COSTO DE VENTAS RTW: 6911 / 2111 ────────────────────────────────
+def registrar_costo_ventas(db: Session, order_id: int, monto: float,
+                           usuario_id: int | None = None,
+                           fecha: date | None = None) -> dict:
+    """Costo de ventas de productos en stock (ready-to-wear) valorizado a CPP.
+
+    Solo para ventas sin prendas a medida. Atómico con el mismo commit final.
+    """
+    from app.services.finanzas import crear_asiento_flush
+
+    seed_pcge_basico(db)
+    try:
+        exigir_periodo_abierto(db, fecha)
+        order = db.get(Order, order_id)
+        if not order:
+            raise ValueError("Pedido no encontrado")
+        monto_d = _d(monto)
+        if monto_d <= 0:
+            raise ValueError("Monto de costo inválido")
+        c_costo = _cuenta(db, CTA_COSTO_VTAS)
+        c_pt = _cuenta(db, CTA_PT)
+        asiento = crear_asiento_flush(
+            db, fecha or date.today(), f"Costo ventas {order.folio}", "COSTO_VENTAS",
+            order.id,
+            [{"cuenta_id": c_costo.id, "debe": monto_d, "haber": Decimal("0")},
+             {"cuenta_id": c_pt.id, "debe": Decimal("0"), "haber": monto_d}])
+        db.commit()
+        return {"asiento_id": asiento.id, "asiento_numero": asiento.numero,
+                "monto": float(monto_d)}
     except Exception:
         db.rollback()
         raise
@@ -165,6 +220,8 @@ def cobrar_venta(db: Session, order_id: int, monto: float, metodo: str,
         if monto_d <= 0:
             raise ValueError("La orden no tiene saldo pendiente")
         metodo_n = (metodo or "efectivo").lower()
+        # Cuenta 10 según medio de pago (1011 solo efectivo, resto 1041).
+        cuenta_codigo = cuenta_cobro_por_metodo(metodo_n)
         pago = Payment(order_id=order.id, monto=float(monto_d), metodo=metodo_n,
                        usuario_id=usuario_id)
         db.add(pago)
@@ -192,7 +249,7 @@ def cobrar_venta(db: Session, order_id: int, monto: float, metodo: str,
         cxc.estado = "COBRADO" if _d(cxc.saldo_pendiente) <= Decimal("0.01") else (
             "COBRADO_PARCIAL" if _d(cxc.monto_pagado) > 0 else "PENDIENTE")
         # Asiento COBRO: DEBE caja/banco / HABER CxC
-        c_caja = _cuenta(db, cuenta_codigo if cuenta_codigo in ("1011", "1041") else "1011")
+        c_caja = _cuenta(db, cuenta_codigo)
         c_cli = _cuenta(db, CTA_CXC)
         asiento = crear_asiento_flush(
             db, fecha or date.today(), f"Cobro {order.folio} {metodo_n}", "COBRO", pago.id,
@@ -207,7 +264,7 @@ def cobrar_venta(db: Session, order_id: int, monto: float, metodo: str,
         raise
 
 
-# ── COMPRA manual: 6011 + 40111 / 4212 + CxP ────────────────────────
+# ── COMPRA manual: 602 + 40111 / 4212 + CxP ────────────────────────
 def provisionar_compra(db: Session, proveedor_id: int, base: float, igv: float = 0.0,
                        numero_factura: str | None = None, fecha: date | None = None,
                        retencion: float = 0.0, fecha_vencimiento: date | None = None,

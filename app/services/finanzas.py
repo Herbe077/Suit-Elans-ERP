@@ -50,6 +50,7 @@ PCGE_ANALITICAS = [
     ("5011", "Capital Social", "PATRIMONIO", 3, "501", 5, True),
     ("5911", "Utilidades Acumuladas", "PATRIMONIO", 2, "59", 5, True),
     ("6011", "Mercaderías", "GASTO", 3, "601", 6, True),
+    ("602", "Materias Primas", "GASTO", 2, "60", 6, True),
     ("6111", "Variación de existencias - Materias primas", "GASTO", 3, "611", 6, True),
     ("6591", "Otros gastos de gestión - Mermas y desmedros", "GASTO", 3, "659", 6, True),
     ("6361", "Servicios básicos y tercerizados", "GASTO", 3, "636", 6, True),
@@ -59,6 +60,9 @@ PCGE_ANALITICAS = [
     ("3341", "Maquinaria y Equipos - Costo", "ACTIVO", 3, "334", 3, True),
     ("6511", "Gastos de Gestión (OPEX)", "GASTO", 2, "65", 6, True),
     ("7011", "Ventas Locales - Productos Terminados", "INGRESO", 3, "701", 7, True),
+    ("7032", "Servicios Prestados - Mercado Local", "INGRESO", 3, "703", 7, True),
+    ("6911", "Costo de Ventas - Productos Terminados", "GASTO", 3, "691", 6, True),
+    ("2111", "Productos Terminados", "ACTIVO", 3, "211", 2, True),
 ]
 
 # Padres extra requeridos por analíticas (no rompen tests)

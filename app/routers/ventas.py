@@ -194,6 +194,14 @@ def vender(client_id: str = Form(""), company_id: str = Form(""),
         variante.stock = round(variante.stock - cantidad, 2)
         db.add(StockMovement(item_tipo="variant", item_id=variante.id, cantidad=-cantidad,
                              tipo="salida", motivo=f"POS {order.folio}", usuario_id=user.id))
+        # Costo de ventas RTW automático (6911/2111 a CPP; no bloquea la venta)
+        try:
+            from app.services import contabilidad as contab
+            cogs = round(float(variante.costo_unitario or 0) * cantidad, 2)
+            if cogs > 0:
+                contab.registrar_costo_ventas(db, order.id, cogs, user.id)
+        except Exception:
+            pass
     else:
         # Orden de trabajo para taller + reserva inmediata de tela si se eligió
         g = Garment(order_id=order.id, tipo=garment_tipo or "prenda",
