@@ -111,7 +111,7 @@
 <div x-show="sub !== 'wip'" class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
   <h2 class="font-bold mb-1 text-sm">Registro de Movimiento de Kardex <span class="font-normal text-slate-400" x-text="sub === 'pt' ? '(Cta 23 · productos terminados)' : '(Cta 24 · materia prima / avíos)'"></span></h2>
   <p class="text-xs text-slate-500 mb-2" x-text="sub === 'pt' ? 'INGRESO_PRODUCCION suma · SALIDA_VENTA, AJUSTE_MERMA y MUESTRA restan.' : 'INGRESO_COMPRA suma · SALIDA_TALLER y AJUSTE_INVENTARIO restan.'"></p>
-  <form method="post" action="/inventario/almacen/kardex" class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs items-end">
+  <form method="post" action="/inventario/almacen/kardex" class="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs items-end">
     <input type="hidden" name="alcance" :value="sub === 'pt' ? 'pt' : 'mp'">
     <label class="block md:col-span-2" x-show="sub !== 'pt'">Producto / Insumo
       <select name="producto_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
@@ -121,6 +121,12 @@
     <label class="block md:col-span-2" x-show="sub === 'pt'">Variante / SKU terminado
       <select name="variant_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
         {% for v in pts %}<option value="{{ v.id }}">{{ v.sku }} — {{ prods.get(v.product_id).nombre if prods.get(v.product_id) else '' }} ({{ v.talla }}) · {{ v.stock }} u.</option>{% endfor %}
+      </select>
+    </label>
+    <label class="block md:col-span-2">Pedido / Ficha de Taller (opcional)
+      <select name="orden_venta_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option value="">— Sin pedido —</option>
+        {% for o in pedidos %}<option value="{{ o.id }}">{{ o.folio }}{% if o.concepto %} · {{ o.concepto }}{% endif %}</option>{% endfor %}
       </select>
     </label>
     <label class="block">Tipo de movimiento
@@ -175,7 +181,7 @@
   <div class="border-b py-1.5 flex flex-wrap justify-between gap-1">
     <span><span class="text-slate-400">{{ k.fecha }}</span> · <b>{{ nombres.get(k.producto_id, 'Prod#' ~ k.producto_id) }}</b> ·
       <span class="px-1.5 py-0.5 rounded font-semibold {% if k.tipo_movimiento in ('INGRESO_COMPRA', 'DEVOLUCION', 'INGRESO', 'ENTRADA') %}bg-emerald-100 text-emerald-800{% elif k.tipo_movimiento in ('AJUSTE_MERMA', 'MERMA') %}bg-red-100 text-red-700{% else %}bg-amber-100 text-amber-800{% endif %}">{{ k.tipo_movimiento }}</span>
-      {{ k.cantidad }}{% if k.orden_venta_id %} · OV#{{ k.orden_venta_id }}{% endif %}</span>
+      {{ k.cantidad }}{% if k.orden_venta_id %} · Pedido {{ folios_ov.get(k.orden_venta_id, 'OV#' ~ k.orden_venta_id) }}{% endif %}</span>
     <span class="text-slate-500">{{ k.observacion or '' }}</span>
   </div>
   {% else %}<p class="text-slate-400 py-1">Sin movimientos kardex.</p>{% endfor %}

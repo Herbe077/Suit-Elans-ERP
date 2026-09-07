@@ -375,11 +375,15 @@ def almacen(request: Request, error: str = "", sub: str = "mp", db: Session = De
     # PT: variantes con ficha de producto (Cta 23)
     pts = db.query(ProductVariant).order_by(ProductVariant.sku).limit(200).all()
     prods = {p.id: p for p in db.query(Product).all()}
+    # Pedidos / fichas de taller recientes (referencia de egresos a taller)
+    pedidos = db.query(Order).order_by(Order.id.desc()).limit(100).all()
     return templates.TemplateResponse(request, "inventario/almacen.html", {
         "user": user, "telas": telas, "avios": avios, "movs": movs,
         "insumos": insumos, "kardex": kardex, "faltantes": falt, "error": error,
         "sub": sub if sub in ("mp", "wip", "pt") else "mp",
-        "wips": wips, "ops": ops, "pts": pts, "prods": prods})
+        "wips": wips, "ops": ops, "pts": pts, "prods": prods,
+        "pedidos": pedidos,
+        "folios_ov": {o.id: o.folio for o in pedidos}})
 
 @router.get("/almacen/kardex", response_class=HTMLResponse)
 def almacen_kardex(request: Request, db: Session = Depends(get_db), user=Almacen):
@@ -529,10 +533,18 @@ def kardex_mov(producto_id: int = Form(0), tipo_movimiento: str = Form(...),
         if not var:
             return _err("/inventario/almacen?sub=pt", "variante no encontrada")
         signo = TIPOS_KARDEX_PT[tipo]
+        # Referencia opcional al pedido / ficha de taller en la salida a venta
+        obs_pt = (observacion or "").strip()
+        ov_id = int(orden_venta_id) if orden_venta_id and str(orden_venta_id).isdigit() else None
+        if ov_id and tipo == "SALIDA_VENTA":
+            from app.models.order import Order as _Order
+            _o = db.get(_Order, ov_id)
+            if _o:
+                obs_pt = f"{obs_pt} · Pedido {_o.folio}".strip(" ·")
         try:
             from app.services.inventory import apply_movement
             apply_movement(db, "variant", var.id, signo * cantidad, tipo.lower(),
-                           f"[{tipo}] {(observacion or '').strip()}".strip(), user.id)
+                           f"[{tipo}] {obs_pt}".strip(), user.id)
         except ValueError as e:
             return _err("/inventario/almacen?sub=pt", str(e))
         return RedirectResponse("/inventario/almacen?sub=pt", status_code=303)
@@ -553,7 +565,7 @@ def kardex_mov(producto_id: int = Form(0), tipo_movimiento: str = Form(...),
                 raise ValueError("Stock insuficiente")
             prod.stock_fisico = round(prod.stock_fisico - cantidad, 2)
             db.add(MovimientoKardex(producto_id=producto_id, tipo_movimiento=tipo,
-                                    cantidad=cantidad, orden_venta_id=int(orden_venta_id) if orden_venta_id else None,
+                                    cantidad=cantidad, orden_venta_id=int(orden_venta_id) if orden_venta_id and str(orden_venta_id).isdigit() else None,
                                     usuario_id=user.id, observacion=observacion))
             # mirror legacy
             leg = db.query(Fabric).filter(Fabric.codigo == prod.sku).first()
@@ -566,7 +578,9 @@ def kardex_mov(producto_id: int = Form(0), tipo_movimiento: str = Form(...),
                 raise ValueError("Stock insuficiente")
             prod.stock_fisico = round(prod.stock_fisico + (cantidad if tipo != "SALIDA" else -cantidad), 2)
             db.add(MovimientoKardex(producto_id=producto_id, tipo_movimiento=tipo,
-                                    cantidad=cantidad, usuario_id=user.id, observacion=observacion))
+                                    cantidad=cantidad,
+                                    orden_venta_id=int(orden_venta_id) if orden_venta_id and str(orden_venta_id).isdigit() else None,
+                                    usuario_id=user.id, observacion=observacion))
             db.commit()
     except ValueError as e:
         return _err("/inventario/almacen?sub=mp", str(e))

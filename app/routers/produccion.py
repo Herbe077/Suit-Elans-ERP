@@ -463,6 +463,15 @@ def crear_pedido(cid: int, tipo: str = Form(...), tela_id: str = Form(""),
         if tela and tela.stock_metros >= consumo:
             tela.stock_metros = round(tela.stock_metros - consumo, 2)
             g.tela_reservada = True
+            # Consumo automático: reserva + SALIDA_TALLER en Kardex
+            # vinculada al pedido (igual que el POS).
+            try:
+                from app.services.inventory import reservar_insumo
+                reservar_insumo(db, tela.codigo, consumo,
+                                orden_venta_id=order.id, usuario_id=user.id,
+                                fabric_id=tela.id)
+            except ValueError:
+                pass
     # Mirror al spec OrdenProduccion
     try:
         from app.models.produccion import OrdenProduccion as _OP
