@@ -81,6 +81,19 @@ def test_kardex_manual_con_pedido_y_folio(client, auth_cookies):
     assert 'name="orden_venta_id"' in t  # selector Pedido/Ficha en el form
 
 
+def test_form_defaults_neutros_y_sin_producto_da_error(client, auth_cookies):
+    """Los selects inician en '-- Opcional / Ninguno --' y el backend exige
+    producto en MP en vez de autoseleccionar el primero."""
+    t = client.get("/inventario/almacen", cookies=auth_cookies).text
+    assert t.count("-- Opcional / Ninguno --") >= 3  # producto, variante, pedido
+    assert "kxActualizarCampos" in t  # visibilidad dinámica por tipo
+    r = client.post("/inventario/almacen/kardex",
+                    data={"producto_id": "", "tipo_movimiento": "INGRESO_COMPRA",
+                          "cantidad": "5", "alcance": "mp"},
+                    cookies=auth_cookies, follow_redirects=False)
+    assert r.status_code == 303 and "error=" in r.headers.get("location", "")
+
+
 def test_pos_genera_salida_taller_vinculada(client, auth_cookies):
     """POS + tela → SALIDA_TALLER en Kardex vinculada al pedido."""
     fid, cid = _setup(client, auth_cookies)

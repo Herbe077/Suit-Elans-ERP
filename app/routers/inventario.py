@@ -552,6 +552,9 @@ def kardex_mov(producto_id: int = Form(0), tipo_movimiento: str = Form(...),
         # normaliza legacy
         m = {"ENTRADA": "INGRESO_COMPRA", "SALIDA": "SALIDA_TALLER", "MERMA": "AJUSTE_MERMA"}
         tipo = m.get(tipo, "AJUSTE_MERMA")
+    if not producto_id:
+        # El selector inicia en "-- Opcional / Ninguno --": exige producto.
+        return _err("/inventario/almacen", "selecciona un producto/insumo")
     try:
         from app.services.inventory import registrar_merma, registrar_ingreso_compra
         if tipo in ("AJUSTE_MERMA", "AJUSTE_INVENTARIO"):

@@ -113,19 +113,21 @@
   <p class="text-xs text-slate-500 mb-2" x-text="sub === 'pt' ? 'INGRESO_PRODUCCION suma · SALIDA_VENTA, AJUSTE_MERMA y MUESTRA restan.' : 'INGRESO_COMPRA suma · SALIDA_TALLER y AJUSTE_INVENTARIO restan.'"></p>
   <form method="post" action="/inventario/almacen/kardex" class="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs items-end">
     <input type="hidden" name="alcance" :value="sub === 'pt' ? 'pt' : 'mp'">
-    <label class="block md:col-span-2" x-show="sub !== 'pt'">Producto / Insumo
+    <label class="block md:col-span-2" id="kx-field-producto" x-show="sub !== 'pt'">Producto / Insumo
       <select name="producto_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option value="">-- Opcional / Ninguno --</option>
         {% for i in insumos %}<option value="{{ i.id }}">{{ i.sku }} — {{ i.nombre }} (disp. {{ "%.1f"|format(i.stock_disponible) }})</option>{% endfor %}
       </select>
     </label>
-    <label class="block md:col-span-2" x-show="sub === 'pt'">Variante / SKU terminado
+    <label class="block md:col-span-2" id="kx-field-variante" x-show="sub === 'pt'">Variante / SKU terminado
       <select name="variant_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option value="">-- Opcional / Ninguno --</option>
         {% for v in pts %}<option value="{{ v.id }}">{{ v.sku }} — {{ prods.get(v.product_id).nombre if prods.get(v.product_id) else '' }} ({{ v.talla }}) · {{ v.stock }} u.</option>{% endfor %}
       </select>
     </label>
-    <label class="block md:col-span-2">Pedido / Ficha de Taller (opcional)
-      <select name="orden_venta_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
-        <option value="">— Sin pedido —</option>
+    <label class="block md:col-span-2" id="kx-field-pedido">Pedido / Ficha de Taller (opcional)
+      <select name="orden_venta_id" id="kx-pedido" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option value="">-- Opcional / Ninguno --</option>
         {% for o in pedidos %}<option value="{{ o.id }}">{{ o.folio }}{% if o.concepto %} · {{ o.concepto }}{% endif %}</option>{% endfor %}
       </select>
     </label>
@@ -148,6 +150,22 @@
       mp: ['INGRESO_COMPRA', 'SALIDA_TALLER', 'AJUSTE_INVENTARIO'],
       pt: ['INGRESO_PRODUCCION', 'SALIDA_VENTA', 'AJUSTE_MERMA', 'MUESTRA']
     };
+    // Solo los egresos/consumos aceptan referencia de pedido/ficha.
+    var TIPOS_SALIDA = ['SALIDA_TALLER', 'SALIDA', 'SALIDA_VENTA'];
+    window.kxActualizarCampos = function () {
+      var s = document.getElementById('kx-tipo');
+      var tipo = s ? s.value : '';
+      var fPed = document.getElementById('kx-field-pedido');
+      var selPed = document.getElementById('kx-pedido');
+      if (!fPed) return;
+      // Pedido/Ficha solo aplica a movimientos de consumo (salidas a taller/venta).
+      // En INGRESO/ENTRADA/MERMA/AJUSTE se oculta y se limpia para no enviar refs.
+      // Nota: en MP (Cta 24) nunca se muestra Variante/SKU (x-show por pestaña);
+      // en PT la variante identifica el producto terminado y es requerida.
+      var mostrar = TIPOS_SALIDA.indexOf(tipo) !== -1;
+      fPed.style.display = mostrar ? '' : 'none';
+      if (!mostrar && selPed) selPed.value = '';
+    };
     window.kxSetTipos = function (scope) {
       var s = document.getElementById('kx-tipo');
       if (!s) return;
@@ -158,6 +176,7 @@
         o.value = t; o.textContent = t;
         s.appendChild(o);
       });
+      window.kxActualizarCampos();
     };
     function kxCurrent() {
       var init = document.querySelector('[data-kx-init]');
@@ -169,6 +188,8 @@
         window.kxSetTipos(t === 'wip' ? 'mp' : t);
       });
     });
+    var kxTipo = document.getElementById('kx-tipo');
+    if (kxTipo) kxTipo.addEventListener('change', window.kxActualizarCampos);
     window.kxSetTipos(kxCurrent());
   })();
   </script>
