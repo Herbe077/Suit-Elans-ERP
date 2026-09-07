@@ -627,6 +627,13 @@ def _ocs_unificadas(db: Session) -> list[dict]:
     """
     proveedores = {s.id: s.nombre for s in db.query(Supplier).all()}
     folios_spec = {o.folio for o in db.query(OrdenCompra.folio).all() if o.folio}
+    from sqlalchemy import func as _func
+    from app.models.inventario import DetalleOrdenCompra as _Det
+    from app.models.purchasing import PurchaseLine as _PL
+    n_det = dict(db.query(_Det.orden_compra_id, _func.count(_Det.id)).group_by(
+        _Det.orden_compra_id).all())
+    n_lin = dict(db.query(_PL.purchase_id, _func.count(_PL.id)).group_by(
+        _PL.purchase_id).all())
     filas: list[dict] = []
     for o in db.query(OrdenCompra).order_by(OrdenCompra.id.desc()).limit(60).all():
         filas.append({
@@ -637,6 +644,7 @@ def _ocs_unificadas(db: Session) -> list[dict]:
             "monto": o.monto_total or 0,
             "estado": normalizar_estado_oc(o.estado),
             "factura": o.numero_factura or "",
+            "lineas": n_det.get(o.id, 0),
         })
     for po in db.query(PurchaseOrder).order_by(PurchaseOrder.id.desc()).limit(60).all():
         if po.folio in folios_spec:
@@ -649,33 +657,50 @@ def _ocs_unificadas(db: Session) -> list[dict]:
             "monto": po.total or 0,
             "estado": normalizar_estado_oc(po.estado),
             "factura": "",
+            "lineas": n_lin.get(po.id, 0),
         })
     filas.sort(key=lambda f: (f["fecha"], f["codigo"]), reverse=True)
     return filas
 
 
+def _sin_lineas(fila: dict) -> bool:
+    return fila["estado"] == "DRAFT" and (fila["lineas"] or 0) == 0 and not (fila["monto"] or 0)
+
+
 @router.get("/compras", response_class=HTMLResponse)
-def compras(request: Request, error: str = "", db: Session = Depends(get_db), user=Almacen):
+def compras(request: Request, error: str = "", ok: str = "", ver_vacias: str = "",
+            db: Session = Depends(get_db), user=Almacen):
     # spec listado unify both tables
     ocs_legacy = db.query(PurchaseOrder).order_by(PurchaseOrder.id.desc()).limit(60).all()
     ocs_spec = db.query(OrdenCompra).order_by(OrdenCompra.id.desc()).limit(60).all()
+    filas = _ocs_unificadas(db)
+    vacias = sum(1 for f in filas if _sin_lineas(f))
+    if not ver_vacias:
+        filas = [f for f in filas if not _sin_lineas(f)]
     # combine for display? prefer spec but show legacy
     return templates.TemplateResponse(request, "inventario/compras.html", {
-        "user": user, "error": error,
+        "user": user, "error": error, "ok": ok, "ver_vacias": ver_vacias,
+        "vacias": vacias,
         "proveedores": db.query(Supplier).order_by(Supplier.nombre).all(),
         "ocs": ocs_legacy, "ocs_spec": ocs_spec,
-        "ocs_unificadas": _ocs_unificadas(db),
+        "ocs_unificadas": filas,
         "normalizar": normalizar_estado_oc})
 
 @router.get("/compras/listado", response_class=HTMLResponse)
-def compras_listado(request: Request, error: str = "", db: Session = Depends(get_db), user=Almacen):
+def compras_listado(request: Request, error: str = "", ok: str = "", ver_vacias: str = "",
+                    db: Session = Depends(get_db), user=Almacen):
     ocs_legacy = db.query(PurchaseOrder).order_by(PurchaseOrder.id.desc()).limit(60).all()
     ocs_spec = db.query(OrdenCompra).order_by(OrdenCompra.id.desc()).limit(60).all()
+    filas = _ocs_unificadas(db)
+    vacias = sum(1 for f in filas if _sin_lineas(f))
+    if not ver_vacias:
+        filas = [f for f in filas if not _sin_lineas(f)]
     return templates.TemplateResponse(request, "inventario/compras_listado.html", {
-        "user": user, "error": error,
+        "user": user, "error": error, "ok": ok, "ver_vacias": ver_vacias,
+        "vacias": vacias,
         "proveedores": db.query(Supplier).order_by(Supplier.nombre).all(),
         "ocs": ocs_legacy, "ocs_spec": ocs_spec,
-        "ocs_unificadas": _ocs_unificadas(db),
+        "ocs_unificadas": filas,
         "normalizar": normalizar_estado_oc})
 
 
@@ -710,11 +735,92 @@ def crear_oc(supplier_id: int = Form(...), fecha_entrega: str = Form(""), db: Se
     return RedirectResponse(f"/inventario/compras/oc/{po.id}", status_code=303)
 
 
+# Draft Builder: la OC solo se crea con al menos una línea válida.
+@router.get("/compras/nueva", response_class=HTMLResponse)
+def nueva_oc(request: Request, error: str = "", db: Session = Depends(get_db),
+             user=Almacen):
+    from app.models.inventario import ProductoInsumo
+    return templates.TemplateResponse(request, "inventario/oc_nueva.html", {
+        "user": user, "error": error,
+        "proveedores": db.query(Supplier).order_by(Supplier.nombre).all(),
+        "insumos": db.query(ProductoInsumo).order_by(ProductoInsumo.sku).limit(300).all()})
+
+
+@router.post("/compras/nueva")
+async def crear_oc_builder(request: Request, db: Session = Depends(get_db),
+                           user=Almacen):
+    from app.models.inventario import DetalleOrdenCompra, ProductoInsumo
+    form = await request.form()
+    try:
+        supplier_id = int(form.get("supplier_id") or 0)
+    except (ValueError, TypeError):
+        supplier_id = 0
+    if not db.get(Supplier, supplier_id):
+        return _err("/inventario/compras/nueva", "selecciona un proveedor válido")
+    pids = form.getlist("producto_id")
+    cants = form.getlist("cantidad")
+    precios = form.getlist("precio_unitario")
+    lineas: list[tuple] = []
+    for pid, cant, precio in zip(pids, cants, precios):
+        try:
+            prod = db.get(ProductoInsumo, int(pid or 0))
+            qty = float(cant or 0)
+            pu = float(precio or 0)
+        except (ValueError, TypeError):
+            continue
+        if prod and qty > 0 and pu >= 0:
+            lineas.append((prod, qty, pu))
+    if not lineas:
+        # Sin líneas válidas NO se crea la OC (prevención de vacías S/ 0.00).
+        return _err("/inventario/compras/nueva",
+                    "agrega al menos una línea válida (insumo + cantidad)")
+    folio = po_svc.next_po_folio(db)
+    oc = OrdenCompra(proveedor_id=supplier_id, estado="DRAFT", monto_total=0,
+                     folio=folio)
+    db.add(oc)
+    db.flush()
+    total = 0.0
+    for prod, qty, pu in lineas:
+        db.add(DetalleOrdenCompra(orden_compra_id=oc.id, producto_id=prod.id,
+                                 cantidad_solicitada=qty, precio_unitario=pu))
+        total = round(total + qty * pu, 2)
+    oc.monto_total = total
+    db.commit()
+    try:
+        po = PurchaseOrder(folio=folio, supplier_id=supplier_id, usuario_id=user.id)
+        db.add(po)
+        db.commit()
+    except Exception:
+        pass
+    return RedirectResponse(f"/inventario/compras/orden/{oc.id}", status_code=303)
+
+
+@router.post("/compras/borradores/limpiar")
+def limpiar_borradores(db: Session = Depends(get_db), user=Almacen):
+    """Elimina borradores DRAFT vacíos (sin líneas y S/ 0.00) + gemelo legacy."""
+    from app.models.inventario import DetalleOrdenCompra
+    from app.models.purchasing import PurchaseLine
+    n = 0
+    for oc in db.query(OrdenCompra).filter(OrdenCompra.estado == "DRAFT").all():
+        tiene = db.query(DetalleOrdenCompra).filter(
+            DetalleOrdenCompra.orden_compra_id == oc.id).count()
+        if tiene == 0 and not (oc.monto_total or 0):
+            if oc.folio:
+                po = db.query(PurchaseOrder).filter(
+                    PurchaseOrder.folio == oc.folio).first()
+                if po and db.query(PurchaseLine).filter(
+                        PurchaseLine.purchase_id == po.id).count() == 0:
+                    db.delete(po)
+            db.delete(oc)
+            n += 1
+    db.commit()
+    return RedirectResponse(f"/inventario/compras?ok=limpios_{n}", status_code=303)
+
+
 # Spec endpoint OrdenCompra
 @router.post("/compras/orden")
 def crear_orden_compra(proveedor_id: int = Form(...), fecha_entrega_esperada: str = Form(""),
-                       db: Session = Depends(get_db), user=Almacen):
-    # genera folio OC-xxxxx si no existe (canónico DRAFT)
+                       db: Session = Depends(get_db), user=Almacen):    # genera folio OC-xxxxx si no existe (canónico DRAFT)
     folio = po_svc.next_po_folio(db)
     oc = OrdenCompra(proveedor_id=proveedor_id, estado="DRAFT", monto_total=0, folio=folio)
     if fecha_entrega_esperada:

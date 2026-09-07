@@ -1,6 +1,6 @@
-{% extends "base.html" %}
+{% extends "inventario/base_inventario.html" %}
 {% block title %}OC {{ po.folio }}{% endblock %}
-{% block content %}
+{% block inventario %}
 <a href="/inventario/compras" class="text-sm text-slate-500">← Compras</a>
 {% if error %}<div class="bg-red-50 border border-red-300 text-red-700 text-xs rounded px-3 py-2 mt-2">{{ error }}</div>{% endif %}
 <h1 class="text-2xl font-bold mt-1">{{ po.folio }} <span class="text-sm font-normal text-slate-500">{{ prov.nombre }} · {{ po.estado }}</span></h1>
@@ -25,8 +25,8 @@
   {% endfor %}
   <p class="text-sm mt-2"><b>Total S/ {{ "%.2f"|format(po.total) }}</b></p>
   <h3 class="font-bold text-sm mt-3 mb-1">Agregar línea</h3>
-  <form method="post" action="/inventario/compras/oc/{{ po.id }}/lineas" class="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs items-end" onsubmit="return ocSyncTipo(this)">
-    <label class="block md:col-span-2">Insumo
+  <form method="post" action="/inventario/compras/oc/{{ po.id }}/lineas" class="flex flex-col sm:flex-row gap-2 text-xs sm:items-end" onsubmit="return ocSyncTipo(this)">
+    <label class="block flex-1">Insumo
       <select name="item_id" id="oc-item" required class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white" onchange="ocSyncTipo(this.form)">
         <optgroup label="Telas">
           {% for t in telas %}<option value="{{ t.id }}" data-tipo="fabric" data-nombre="{{ t.nombre }}">{{ t.codigo }} — {{ t.nombre }} ({{ t.stock_metros }} m)</option>{% endfor %}
@@ -37,7 +37,7 @@
       </select>
     </label>
     <input type="hidden" name="item_tipo" id="oc-tipo" value="fabric">
-    <label class="block md:col-span-2">Descripción
+    <label class="block flex-1">Descripción
       <input name="descripcion" id="oc-desc" placeholder="Se completa solo" class="border rounded px-2 py-1.5 w-full mt-0.5">
     </label>
     <label class="block">Cantidad

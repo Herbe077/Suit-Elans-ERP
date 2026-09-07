@@ -109,8 +109,8 @@
 
   {% if estado_canon in ('DRAFT', 'APPROVED') %}
   <h3 class="font-bold text-sm mt-4 mb-2">Agregar detalle</h3>
-  <form method="post" action="/inventario/compras/orden/{{ oc.id }}/detalle" class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs items-end">
-    <label class="block md:col-span-2">Producto / Insumo
+  <form method="post" action="/inventario/compras/orden/{{ oc.id }}/detalle" class="flex flex-col sm:flex-row gap-2 text-xs sm:items-end">
+    <label class="block flex-1">Producto / Insumo
       <select name="producto_id" required class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
         {% for i in insumos %}<option value="{{ i.id }}">{{ i.nombre }}{% if i.sku %} — {{ i.sku }}{% endif %} ({{ i.unidad_medida or 'u.' }} · Stock {{ i.stock_fisico }})</option>{% endfor %}
       </select>

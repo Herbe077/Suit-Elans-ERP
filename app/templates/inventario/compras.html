@@ -4,6 +4,7 @@
 <h1 class="text-2xl font-bold mb-1 font-serif">🧾 Compras a proveedores</h1>
 <p class="text-sm text-slate-500 mb-3">Órdenes de compra: del borrador a la facturación, con recepción en almacén.</p>
 {% if error %}<div class="bg-red-50 border border-red-300 text-red-700 text-xs rounded px-3 py-2 mb-3">{{ error }}</div>{% endif %}
+{% if ok and ok.startswith('limpios_') %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded px-3 py-2 mb-3">✓ Se eliminaron {{ ok[8:] }} borradores vacíos.</div>{% endif %}
 <div class="grid md:grid-cols-3 gap-4">
 <div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
   <h2 class="font-bold mb-2 text-sm">Proveedores</h2>
@@ -14,14 +15,17 @@
   </form>
   {% for s in proveedores %}<div class="text-xs border-b py-1">{{ s.nombre }} <span class="text-slate-400">{{ s.ruc or '' }}</span></div>{% endfor %}
   <h2 class="font-bold mb-2 mt-4 text-sm">Nueva orden de compra</h2>
-  <p class="text-xs text-slate-500 mb-1">Nace en DRAFT: no mueve stock ni contabilidad.</p>
-  <form method="post" action="/inventario/compras/oc" class="flex gap-1 text-xs">
-    <select name="supplier_id" class="border rounded px-2 py-1.5 flex-1 bg-white" aria-label="Proveedor">{% for s in proveedores %}<option value="{{ s.id }}">{{ s.nombre }}</option>{% endfor %}</select>
-    <button class="bg-borgo text-white rounded px-3 font-semibold">Crear OC</button>
-  </form>
+  <p class="text-xs text-slate-500 mb-1">Se crea solo con líneas válidas (Draft Builder).</p>
+  <a href="/inventario/compras/nueva" class="block text-center text-xs bg-borgo text-white rounded-lg px-3 py-2 font-bold">+ Nueva OC (con líneas)</a>
 </div>
 <div class="bg-white rounded-xl shadow p-4 md:col-span-2 border-t-2 border-[#C5A880]">
-  <h2 class="font-bold mb-2 text-sm">Órdenes de compra</h2>
+  <div class="flex items-center justify-between flex-wrap gap-2">
+    <h2 class="font-bold mb-2 text-sm">Órdenes de compra</h2>
+    <div class="flex gap-2 text-xs mb-2">
+      {% if vacias %}<form method="post" action="/inventario/compras/borradores/limpiar" onsubmit="return confirm('¿Eliminar {{ vacias }} borradores vacíos?')"><button class="border border-red-300 text-red-700 rounded px-2 py-1">🧹 Limpiar borradores vacíos ({{ vacias }})</button></form>{% endif %}
+      {% if ver_vacias %}<a href="/inventario/compras" class="underline text-slate-500 px-2 py-1">Ocultar vacías</a>{% elif vacias %}<a href="/inventario/compras?ver_vacias=1" class="underline text-slate-500 px-2 py-1">Ver vacías</a>{% endif %}
+    </div>
+  </div>
   <div class="overflow-x-auto">
   <table class="w-full text-xs">
     <thead><tr class="text-left text-slate-500 border-b">

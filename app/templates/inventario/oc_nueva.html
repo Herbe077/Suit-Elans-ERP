@@ -1,0 +1,35 @@
+{% extends "inventario/base_inventario.html" %}
+{% block title %}Nueva orden de compra{% endblock %}
+{% block inventario %}
+<a href="/inventario/compras" class="text-sm text-slate-500">← Compras</a>
+<h1 class="text-2xl font-bold mt-1 font-serif" style="color:#370003">🧾 Nueva orden de compra</h1>
+<p class="text-sm text-slate-500 mb-3">La OC solo se crea con al menos una línea válida (nada de borradores vacíos S/ 0.00).</p>
+{% if error %}<div class="bg-red-50 border border-red-300 text-red-700 text-xs rounded px-3 py-2 mb-3">{{ error }}</div>{% endif %}
+<form method="post" action="/inventario/compras/nueva" class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
+  <label class="block text-xs mb-2">Proveedor *
+    <select name="supplier_id" required class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for s in proveedores %}<option value="{{ s.id }}">{{ s.nombre }}</option>{% endfor %}</select>
+  </label>
+  <div id="lineas" class="space-y-2"></div>
+  <div class="flex flex-col sm:flex-row gap-2 mt-2">
+    <button type="button" onclick="addLinea()" class="text-xs bg-[#FAF8F5] border rounded-lg px-3 py-2 font-semibold" style="border-color:#C5A880">+ Agregar insumo</button>
+    <button class="text-xs bg-borgo text-white rounded-lg px-4 py-2 font-bold">Crear OC con estas líneas</button>
+  </div>
+</form>
+<script>
+const INSUMOS = [
+  {% for i in insumos %}{id: "{{ i.id }}", texto: "{{ i.sku }} — {{ i.nombre }} ({{ i.unidad_medida or 'u.' }})"},{% endfor %}
+];
+function addLinea() {
+  var cont = document.getElementById('lineas');
+  var div = document.createElement('div');
+  div.className = 'flex flex-col sm:flex-row gap-1 text-xs sm:items-end border rounded-lg p-2';
+  var opts = INSUMOS.map(function (o) { return '<option value="' + o.id + '">' + o.texto + '</option>'; }).join('');
+  div.innerHTML = '<label class="block flex-1">Insumo <select name="producto_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">' + opts + '</select></label>'
+    + '<label class="block">Cantidad <input name="cantidad" type="number" step="0.1" min="0.1" value="1" class="border rounded px-2 py-1.5 w-full mt-0.5"></label>'
+    + '<label class="block">Precio Unit. S/ (IGV incl.) <input name="precio_unitario" type="number" step="0.01" min="0" value="0" class="border rounded px-2 py-1.5 w-full mt-0.5"></label>'
+    + '<button type="button" onclick="this.parentElement.remove()" class="text-red-700 underline self-end py-1.5">Quitar</button>';
+  cont.appendChild(div);
+}
+addLinea();
+</script>
+{% endblock %}
