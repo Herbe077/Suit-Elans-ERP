@@ -71,12 +71,26 @@
           <button type="button" @click="modo = 'variante'; document.getElementById('pv-concepto').value = ''; document.getElementById('pv-precio').value = ''; document.getElementById('pv-tela').value = ''" :class="modo==='variante' ? 'bg-[#370003] text-white' : 'bg-[#FAF8F5] border'" class="rounded-full px-3 py-1 font-bold" style="border-color:#C5A880">Línea comercial</button>
         </div>
         <div x-show="modo === 'servicio'" class="grid gap-2">
-          <input id="pv-concepto" name="concepto" placeholder="Concepto (ej. Terno 2 piezas)" class="border rounded-lg px-3 py-2 focus:border-[#C5A880]">
-          <div class="grid grid-cols-2 gap-2">
-            <select name="garment_tipo" class="border rounded-lg px-3 py-2"><option value="">— Tipo —</option>{% for t in tipos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select>
-            <input id="pv-precio" name="precio" type="number" step="0.01" placeholder="Precio S/ final (IGV incluido)" class="border rounded-lg px-3 py-2">
+          <input id="pv-concepto" name="concepto" placeholder="Concepto / Descripción rápida (ej. Terno 2 piezas)" class="border rounded-lg px-3 py-2 focus:border-[#C5A880]">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <select name="garment_tipo" id="pv-tipo" class="border rounded-lg px-3 py-2">
+              <option value="">— Tipo de Prenda —</option>
+              <optgroup label="Conjuntos">
+                {% for slug, data in conjuntos.items() %}<option value="{{ slug }}">{{ data[0] }}</option>{% endfor %}
+              </optgroup>
+              <optgroup label="Caballero">
+                {% for t in ['saco','pantalon','chaleco','camisa','abrigo'] %}<option value="{{ t }}">{{ tipos_labels.get(t, t) }}</option>{% endfor %}
+              </optgroup>
+              <optgroup label="Dama">
+                {% for t in ['saco_dama','pantalon_dama','falda','blusa','vestido'] %}<option value="{{ t }}">{{ tipos_labels.get(t, t) }}</option>{% endfor %}
+              </optgroup>
+              <optgroup label="Otros">
+                <option value="smoking">Smoking</option>
+              </optgroup>
+            </select>
+            <select id="pv-tela" name="tela_id" class="border rounded-lg px-3 py-2"><option value="">— Tela / Código —</option>{% for t in telas %}<option value="{{ t.id }}">{{ t.codigo }} · {{ t.nombre }} ({{ t.stock_metros }} m) {% if t.stock_metros <= t.stock_minimo %}⚠️{% endif %}</option>{% endfor %}</select>
+            <input id="pv-precio" name="precio" type="number" step="0.01" placeholder="Precio Final S/ (IGV incluido)" class="border rounded-lg px-3 py-2">
           </div>
-          <select id="pv-tela" name="tela_id" class="border rounded-lg px-3 py-2"><option value="">— Tela (reserva inmediata) —</option>{% for t in telas %}<option value="{{ t.id }}">{{ t.codigo }} · {{ t.nombre }} ({{ t.stock_metros }} m) {% if t.stock_metros <= t.stock_minimo %}⚠️{% endif %}</option>{% endfor %}</select>
         </div>
         <div x-show="modo === 'variante'" class="grid grid-cols-2 gap-2">
           <select id="pv-var" name="variant_id" class="border rounded-lg px-3 py-2"><option value="">— Variante —</option>{% for v in variantes %}<option value="{{ v.id }}">{{ nombres_prod.get(v.product_id, v.sku) }} - {{ v.talla }} (Stock: {{ v.stock|int }}) - S/ {{ "%.2f"|format(v.precio) }} {% if v.stock <= v.stock_minimo %}{{ badge("stock bajo","danger") }}{% endif %}</option>{% endfor %}</select>

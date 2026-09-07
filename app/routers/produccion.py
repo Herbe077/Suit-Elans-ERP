@@ -417,7 +417,8 @@ def ficha_detalle(cid: int, request: Request, error: str = "", concepto: str = "
         "bloqueos": bloqueos, "concepto_sugerido": concepto,
         "ultima": medidas[0] if medidas else None,
         "pedidos": pedidos, "telas": telas,
-        "tipos": ("saco", "pantalon", "chaleco", "camisa", "abrigo", "smoking")})
+        "tipos": ("saco", "pantalon", "chaleco", "camisa", "abrigo", "smoking",
+                  "saco_dama", "pantalon_dama", "falda", "blusa", "vestido")})
 
 
 def _bloqueos(db: Session, cid: int) -> list[str]:

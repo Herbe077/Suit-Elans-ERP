@@ -96,3 +96,40 @@ def test_publico_general_vende_sin_cliente(client, auth_cookies):
     assert db.query(Order).filter(Order.concepto == "Sin cliente").first() is None
     assert db.query(Order).count() == n
     db.close()
+
+
+def test_catalogo_agrupado_y_layout_paso2(client, auth_cookies):
+    t = client.get("/ventas/pos", cookies=auth_cookies).text
+    for opt in ("Traje / Terno 2 Piezas", "Traje 3 Piezas", "Smoking Completo",
+                "Saco Caballero", "Saco / Blazer Dama", "Falda", "Vestido"):
+        assert opt in t
+    assert 'optgroup label="Conjuntos"' in t and 'optgroup label="Dama"' in t
+    assert "grid-cols-1 sm:grid-cols-3" in t
+    assert t.count('id="pv-tela"') == 1  # sin desplegable huérfano
+
+
+def test_conjunto_genera_fichas_por_pieza(client, auth_cookies):
+    from app.core.database import SessionLocal
+    from app.models.order import Garment, Order
+    r = client.post("/ventas/pos/vender",
+                    data={"publico_general": "1", "concepto": "Terno ejecutivo",
+                          "precio": "3000", "garment_tipo": "traje_2_piezas",
+                          "monto_cobro": "0"}, cookies=auth_cookies)
+    assert r.status_code in (200, 303)
+    db = SessionLocal()
+    o = db.query(Order).filter(Order.concepto == "Terno ejecutivo").first()
+    gs = db.query(Garment).filter(Garment.order_id == o.id).order_by(
+        Garment.id).all()
+    assert [g.tipo for g in gs] == ["saco", "pantalon"]  # fichas individuales
+    assert round(sum(g.precio for g in gs), 2) == 3000.0
+    assert o.total == 3000.0
+    db.close()
+    r = client.post("/ventas/pos/vender",
+                    data={"publico_general": "1", "concepto": "Falda medida",
+                          "precio": "600", "garment_tipo": "falda",
+                          "monto_cobro": "0"}, cookies=auth_cookies)
+    assert r.status_code in (200, 303)
+    db = SessionLocal()
+    o = db.query(Order).filter(Order.concepto == "Falda medida").first()
+    assert db.query(Garment).filter(Garment.order_id == o.id).count() == 1
+    db.close()

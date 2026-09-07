@@ -8,7 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.core.config import BASE_DIR
-from app.core.constants import GARMENT_TYPES
+from app.core.constants import GARMENT_LABELS, GARMENT_SETS, GARMENT_TYPES
 from app.core.database import get_db
 from app.core.deps import require_roles
 from app.models.billing import CajaTurno, CashMovement, Invoice
@@ -137,7 +137,8 @@ def pos(request: Request, ok: str = "", error: str = "",
         "variantes": variantes, "nombres_prod": prods,
         "telas": db.query(Fabric).filter(Fabric.stock_metros > 0).order_by(
             Fabric.codigo).limit(200).all(),
-        "tipos": GARMENT_TYPES,
+        "tipos": GARMENT_TYPES, "tipos_labels": GARMENT_LABELS,
+        "conjuntos": GARMENT_SETS,
         "recientes": db.query(Order).order_by(Order.id.desc()).limit(10).all()})
 
 
@@ -247,20 +248,31 @@ def vender(client_id: str = Form(""), company_id: str = Form(""),
         except Exception:
             pass
     else:
-        # Orden de trabajo para taller + reserva inmediata de tela si se eligió
-        g = Garment(order_id=order.id, tipo=garment_tipo or "prenda",
-                    tela_id=int(tela_id) if tela_id else None, precio=total)
-        db.add(g)
-        db.flush()
+        # Orden de trabajo para taller + reserva inmediata de tela si se eligió.
+        # Conjuntos multipieza generan una ficha técnica por pieza.
+        piezas = list(GARMENT_SETS.get(garment_tipo, (None, [garment_tipo or "prenda"]))[1])
+        n = len(piezas)
+        parte = [round(total / n, 2)] * n
+        parte[-1] = round(total - sum(parte[:-1]), 2)
+        prendas = []
+        for tp, pp in zip(piezas, parte):
+            g = Garment(order_id=order.id, tipo=tp,
+                        tela_id=int(tela_id) if tela_id else None, precio=pp)
+            db.add(g)
+            db.flush()
+            prendas.append(g)
         from app.services.taller import codigo_qr as _qr
-        g.codigo_qr = _qr(order.folio, g.id)
+        for g in prendas:
+            g.codigo_qr = _qr(order.folio, g.id)
+        g = prendas[0]
         if g.tela_id:
             from app.core.constants import CONSUMO_TELA_M
             tela = db.get(Fabric, g.tela_id)
-            consumo = CONSUMO_TELA_M.get(g.tipo, 1.5)
+            consumo = round(sum(CONSUMO_TELA_M.get(tp, 1.5) for tp in piezas), 2)
             if tela and tela.stock_metros >= consumo:
                 tela.stock_metros = round(tela.stock_metros - consumo, 2)
-                g.tela_reservada = True
+                for gg in prendas:
+                    gg.tela_reservada = True
                 # Spec inventario: reserva ProductoInsumo
                 try:
                     from app.services.inventory import ensure_producto_for_fabric, reservar_insumo

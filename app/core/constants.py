@@ -17,7 +17,24 @@ ORDER_STATUS = (
     "cancelado",
 )
 
-GARMENT_TYPES = ("saco", "pantalon", "chaleco", "camisa", "abrigo", "smoking")
+GARMENT_TYPES = ("saco", "pantalon", "chaleco", "camisa", "abrigo", "smoking",
+                 "saco_dama", "pantalon_dama", "falda", "blusa", "vestido")
+
+# Etiquetas por línea para el POS (Caballero / Dama).
+GARMENT_LABELS = {
+    "saco": "Saco Caballero", "pantalon": "Pantalón Caballero",
+    "chaleco": "Chaleco", "camisa": "Camisa", "abrigo": "Abrigo",
+    "smoking": "Smoking",
+    "saco_dama": "Saco / Blazer Dama", "pantalon_dama": "Pantalón Dama",
+    "falda": "Falda", "blusa": "Blusa", "vestido": "Vestido",
+}
+
+# Conjuntos multipieza: slug -> (etiqueta, piezas que generan ficha individual).
+GARMENT_SETS = {
+    "traje_2_piezas": ("Traje / Terno 2 Piezas", ["saco", "pantalon"]),
+    "traje_3_piezas": ("Traje 3 Piezas", ["saco", "pantalon", "chaleco"]),
+    "smoking_completo": ("Smoking Completo", ["smoking", "pantalon"]),
+}
 
 # Flujo real de sastrería a medida (12 pasos). Valores legacy
 # ("pendiente", "en_proceso", "pausado", "terminado") se conservan por compatibilidad.
@@ -230,4 +247,4 @@ DEFAULT_OPERATIONS: list[dict] = [
 ]
 
 # Consumo estimado de tela (m) por prenda — para reserva automática
-CONSUMO_TELA_M = {"saco": 2.0, "pantalon": 1.4, "chaleco": 1.0, "camisa": 1.8, "abrigo": 2.8, "smoking": 2.2}
+CONSUMO_TELA_M = {"saco": 2.0, "pantalon": 1.4, "chaleco": 1.0, "camisa": 1.8, "abrigo": 2.8, "smoking": 2.2, "saco_dama": 1.8, "pantalon_dama": 1.3, "falda": 1.2, "blusa": 1.5, "vestido": 2.0}
