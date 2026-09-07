@@ -123,6 +123,47 @@ def seed_centros_costo_sastreria(db: Session) -> int:
     return creados
 
 
+# ── Costeo absorbente: tarifa por minuto de taller ───────────────────
+def planilla_taller_mes(db: Session, anio: int, mes: int) -> Decimal:
+    """Planilla mensual (gastos 6211) de centros tipo TALLER (921/922/923)."""
+    from datetime import date as _date
+    import calendar as _cal
+    desde = _date(anio, mes, 1)
+    hasta = _date(anio, mes, _cal.monthrange(anio, mes)[1])
+    ids = [c.id for c in db.query(CentroCosto).filter(
+        CentroCosto.tipo == "TALLER").all()]
+    if not ids:
+        return Decimal("0")
+    total = db.query(func.coalesce(func.sum(GastoRegistrado.monto_total), 0)).filter(
+        GastoRegistrado.categoria == "PLANILLA",
+        GastoRegistrado.fecha_emision >= desde,
+        GastoRegistrado.fecha_emision <= hasta,
+        GastoRegistrado.centro_costo_id.in_(ids)).scalar() or 0
+    return Decimal(str(total))
+
+
+def tarifa_minuto_taller(db: Session, fecha: date | None = None) -> float:
+    """Tarifa_Minuto = Planilla_Taller_Mensual / Capacidad_Minutos_Mes.
+
+    Sin planilla en el mes usa la tarifa configurable por defecto (0.35).
+    """
+    from app.services import config as config_svc
+    from datetime import date as _date
+    fecha = fecha or _date.today()
+    planilla = planilla_taller_mes(db, fecha.year, fecha.month)
+    if planilla > 0:
+        try:
+            capacidad = float(config_svc.get(db, "capacidad_minutos_mes", "12000"))
+        except ValueError:
+            capacidad = 12000.0
+        if capacidad > 0:
+            return round(float(planilla) / capacidad, 4)
+    try:
+        return float(config_svc.get(db, "tarifa_minuto_default", "0.35"))
+    except ValueError:
+        return 0.35
+
+
 # Mapeo categoría operativa -> (cuenta PCGE por defecto, clasificación de costos)
 CATEGORIA_GASTO_MAP: dict[str, tuple[str, str]] = {
     "ALQUILER": ("6311", "CIF"),

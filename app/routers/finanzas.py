@@ -500,15 +500,8 @@ def rentabilidad(request: Request, umbral: float = Query(40.0), db: Session = De
     from app.core.constants import CONSUMO_TELA_M
     from app.models.inventory import Fabric
     from app.models.inventario import ProductoInsumo
-    COSTO_MINUTO_DESTAJO_DEFAULT = 0.5  # fallback si no hay MOD devengada registrada
-    # Tarifa implícita: MOD devengada total / minutos totales (desacoplado, solo lectura)
-    try:
-        mod_total = float(svc.calcular_mod_devengada(db))
-    except Exception:
-        mod_total = 0.0
-    from app.models.order import WorkLog as _WL
-    minutos_totales = db.query(func.coalesce(func.sum(_WL.minutos_reales), 0)).scalar() or 0
-    tarifa_media = round(mod_total / minutos_totales, 4) if minutos_totales and mod_total else COSTO_MINUTO_DESTAJO_DEFAULT
+    # Costeo absorbente: tarifa de planilla del taller (o default configurable).
+    tarifa_media = svc.tarifa_minuto_taller(db)
     orders=db.query(Order).order_by(Order.id.desc()).limit(100).all()
     rows=[]
     for o in orders:
@@ -550,8 +543,11 @@ def rentabilidad(request: Request, umbral: float = Query(40.0), db: Session = De
             WorkLog.estado=="terminado").scalar() or 0
         costo_destajo=round(minutos*tarifa_media,2)
         mo_ok=minutos>0
-        if material_ok and mo_ok:
-            # Costeo cerrado: margen real.
+        # Liquidación: entregada o con registros (Kardex/SAM/insumo) → margen
+        # real y sin etiqueta; cotizada o sin inicio → pendiente informativa.
+        tiene_registros=bool(salidas) or mo_ok or material_ok
+        liquidada=(o.estado == "entregado") or tiene_registros
+        if liquidada:
             costo_total=round(costo_telas+costo_destajo,2)
             margen=round(precio-costo_total,2) if precio else 0
             margen_pct=round((margen/precio*100) if precio else 0,1)
