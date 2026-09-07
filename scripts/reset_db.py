@@ -2,7 +2,8 @@
 """Reset de base de datos (mantenimiento).
 
 Limpia todas las tablas operativas (pedidos, ventas, inventario, kardex,
-contabilidad, clientes, etc.) y PRESERVA `users` y `alembic_version`.
+contabilidad, clientes, etc.) y PRESERVA `users`, `configuracion` (sede) y
+`alembic_version`. El RBAC vive en código (rol en `users`), sin tablas propias.
 
 - PostgreSQL: un solo `TRUNCATE ... RESTART IDENTITY CASCADE`.
 - SQLite: `DELETE` + reinicio de `sqlite_sequence` + `VACUUM`.
@@ -24,7 +25,7 @@ import os
 import sys
 from pathlib import Path
 
-PRESERVED = {"users", "alembic_version"}
+PRESERVED = {"users", "alembic_version", "configuracion"}
 SYSTEM_PREFIXES = ("sqlite_", "pg_", "sql_")
 
 
@@ -112,7 +113,7 @@ def main(argv: list[str] | None = None) -> int:
                   for t in tables}
     total = sum(counts.values())
     print(f"Destino: {label}  (tablas operativas: {len(tables)}, filas: {total})")
-    print("Preservadas: users, alembic_version")
+    print("Preservadas: users (RBAC por rol), configuracion (sede), alembic_version")
     if args.dry_run:
         for t in tables:
             print(f"  - {t} ({counts[t]} filas)")

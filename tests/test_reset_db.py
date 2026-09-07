@@ -16,10 +16,12 @@ def _seed(path):
     con.execute("CREATE TABLE clients (id INTEGER PRIMARY KEY, nombre TEXT)")
     con.execute("CREATE TABLE orders (id INTEGER PRIMARY KEY, folio TEXT)")
     con.execute("CREATE TABLE alembic_version (version_num TEXT)")
+    con.execute("CREATE TABLE configuracion (id INTEGER PRIMARY KEY, sede TEXT)")
     con.execute("INSERT INTO users (email) VALUES ('a@x.com'), ('b@x.com')")
     con.execute("INSERT INTO clients (nombre) VALUES ('C1'), ('C2'), ('C3')")
     con.execute("INSERT INTO orders (folio) VALUES ('SE-1'), ('SE-2')")
     con.execute("INSERT INTO alembic_version VALUES ('h1')")
+    con.execute("INSERT INTO configuracion (sede) VALUES ('Principal')")
     con.commit()
     con.close()
 
@@ -37,6 +39,7 @@ def test_reset_preserva_users_y_reinicia_ids(tmp_path):
     assert con.execute("SELECT COUNT(*) FROM clients").fetchone()[0] == 0
     assert con.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == 0
     assert con.execute("SELECT COUNT(*) FROM alembic_version").fetchone()[0] == 1
+    assert con.execute("SELECT COUNT(*) FROM configuracion").fetchone()[0] == 1
     con.execute("INSERT INTO clients (nombre) VALUES ('N')")
     assert con.execute("SELECT id FROM clients").fetchone()[0] == 1  # identity reiniciado
     con.close()
