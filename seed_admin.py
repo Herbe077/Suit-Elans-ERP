@@ -5,8 +5,8 @@ Uso manual:  .venv/bin/python seed_admin.py
 Automático:   lifespan de FastAPI lo invoca en producción con BD vacía.
 
 Configuración por entorno (con valores por defecto solo para desarrollo):
-  ADMIN_EMAIL     (default: admin@suitelans.mx)
-  ADMIN_PASSWORD  (default: admin123 — cámbiala en producción)
+  ADMIN_EMAIL     (default: suit@elans)
+  ADMIN_PASSWORD  (default: elans123 — cámbiala en producción)
   ADMIN_ROLE      (default: admin)
   ADMIN_NAME      (default: Administrador)
 """
@@ -36,8 +36,8 @@ def ensure_admin(session=None, email=None, password=None, role=None, name=None) 
             return "no_table"
         if total > 0:
             return "exists"
-        email = (email or os.environ.get("ADMIN_EMAIL", "admin@suitelans.mx")).lower().strip()
-        password = password or os.environ.get("ADMIN_PASSWORD", "admin123")
+        email = (email or os.environ.get("ADMIN_EMAIL", "suit@elans")).lower().strip()
+        password = password or os.environ.get("ADMIN_PASSWORD", "elans123")
         role = role or os.environ.get("ADMIN_ROLE", "admin")
         name = name or os.environ.get("ADMIN_NAME", "Administrador")
         if not email or not password:
@@ -47,7 +47,7 @@ def ensure_admin(session=None, email=None, password=None, role=None, name=None) 
                          hashed_password=security.hash_password(password),
                          role=role, is_active=True))
         session.commit()
-        if password == "admin123":
+        if password == "elans123":
             log.warning("admin inicial creado con password por defecto: cámbiala ya")
         else:
             log.info("admin inicial creado: %s", email)

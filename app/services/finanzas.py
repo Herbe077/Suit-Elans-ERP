@@ -145,22 +145,27 @@ def planilla_taller_mes(db: Session, anio: int, mes: int) -> Decimal:
 def tarifa_minuto_taller(db: Session, fecha: date | None = None) -> float:
     """Tarifa_Minuto = Planilla_Taller_Mensual / Capacidad_Minutos_Mes.
 
-    Sin planilla en el mes usa la tarifa configurable por defecto (0.35).
+    Blindado: capacidad <= 0/None → 11520; sin planilla o cualquier error →
+    tarifa configurable por defecto (0.35). Nunca lanza ni divide por cero.
     """
     from app.services import config as config_svc
     from datetime import date as _date
-    fecha = fecha or _date.today()
-    planilla = planilla_taller_mes(db, fecha.year, fecha.month)
-    if planilla > 0:
-        try:
-            capacidad = float(config_svc.get(db, "capacidad_minutos_mes", "12000"))
-        except ValueError:
-            capacidad = 12000.0
-        if capacidad > 0:
-            return round(float(planilla) / capacidad, 4)
     try:
-        return float(config_svc.get(db, "tarifa_minuto_default", "0.35"))
-    except ValueError:
+        fecha = fecha or _date.today()
+        planilla = planilla_taller_mes(db, fecha.year, fecha.month) or Decimal("0")
+        if planilla > 0:
+            try:
+                capacidad = float(config_svc.get(db, "capacidad_minutos_mes", "11520"))
+            except (ValueError, TypeError):
+                capacidad = 11520.0
+            if not capacidad or capacidad <= 0:
+                capacidad = 11520.0
+            return round(float(planilla) / capacidad, 4)
+        try:
+            return float(config_svc.get(db, "tarifa_minuto_default", "0.35"))
+        except (ValueError, TypeError):
+            return 0.35
+    except Exception:
         return 0.35
 
 

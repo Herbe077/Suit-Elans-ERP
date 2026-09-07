@@ -20,5 +20,5 @@ DEFAULTS = {
     "igv_default": "18",
     "anticipo_min_pct": "50",
     "tarifa_minuto_default": "0.35",
-    "capacidad_minutos_mes": "12000",
+    "capacidad_minutos_mes": "11520",
 }

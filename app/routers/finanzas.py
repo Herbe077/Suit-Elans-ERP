@@ -22,6 +22,9 @@ from app.models.purchasing import PurchaseOrder, Supplier
 from app.models.client import Client
 from app.models.company import Company
 import app.services.finanzas as svc
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/finanzas", tags=["finanzas"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -500,11 +503,25 @@ def rentabilidad(request: Request, umbral: float = Query(40.0), db: Session = De
     from app.core.constants import CONSUMO_TELA_M
     from app.models.inventory import Fabric
     from app.models.inventario import ProductoInsumo
-    # Costeo absorbente: tarifa de planilla del taller (o default configurable).
-    tarifa_media = svc.tarifa_minuto_taller(db)
+    # Costeo absorbente: tarifa de planilla del taller (blindada, nunca None).
+    try:
+        tarifa_media = svc.tarifa_minuto_taller(db) or 0.35
+    except Exception as e:
+        logger.error("rentabilidad: tarifa taller falló (%s), uso 0.35", e)
+        tarifa_media = 0.35
     orders=db.query(Order).order_by(Order.id.desc()).limit(100).all()
     rows=[]
     for o in orders:
+        try:
+            rows.append(_fila_rentabilidad(db, o, umbral, tarifa_media))
+        except Exception as e:
+            # Un pedido problemático no tumba la página: valores por defecto.
+            logger.error("rentabilidad: pedido %s falló (%s)", getattr(o, "id", "?"), e)
+            rows.append({"order": o, "precio": 0.0, "costo_telas": 0.0,
+                         "costo_destajo": 0.0, "costo_total": 0.0, "margen": None,
+                         "margen_pct": None, "alerta": True, "garments": [],
+                         "fuente_costo": "pendiente", "pendiente_costeo": True,
+                         "pendiente_liquidacion": True})
         garments=db.query(Garment).filter(Garment.order_id==o.id).all()
         if not garments: continue
         # Valor de venta NETO (sin IGV): el total comercial incluye IGV.
