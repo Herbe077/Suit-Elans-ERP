@@ -16,7 +16,7 @@
         <option value="">— Selecciona la prenda —</option>
         {% for g in prendas %}
           {% set o = orders.get(g.order_id) %}
-          <option value="{{ g.id }}">{{ o.folio if o else '?' }} · {{ propietarios.get(g.order_id, '—') }} · {{ etapas.get(g.estado_taller, g.estado_taller) }}{% if g.artesano_id==user.id %} ★{% endif %}</option>
+          <option value="{{ g.id }}">{{ o.folio if o else '?' }} · {{ propietarios.get(g.order_id, '—') }}{% if empresas.get(g.order_id) %} ({{ empresas.get(g.order_id) }}){% endif %} · {{ o.concepto if o and o.concepto else g.tipo|capitalize }} · {{ etapas.get(g.estado_taller, g.estado_taller) }}{% if g.artesano_id==user.id %} ★{% endif %}</option>
         {% endfor %}
       </select>
       <p id="memoria-aviso" class="text-xs text-slate-500 mb-3">Elige prenda para ver qué actividades ya fueron marcadas.</p>

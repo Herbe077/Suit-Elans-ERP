@@ -113,12 +113,16 @@ def registro_get(request: Request, todas: str = Query(""), db: Session = Depends
     from app.models.client import Client
     from app.models.company import Company
     propietarios: dict[int, str] = {}
+    empresas: dict[int, str] = {}
     if orders:
         cls = {c.id: c for c in db.query(Client).filter(Client.id.in_([o.client_id for o in orders.values() if o.client_id])).all()}
         comps = {c.id: c for c in db.query(Company).filter(Company.id.in_([o.company_id for o in orders.values() if o.company_id])).all()}
         for o in orders.values():
             if o.client_id and o.client_id in cls:
                 propietarios[o.id] = f"{cls[o.client_id].nombre} {cls[o.client_id].apellidos or ''}".strip()
+                # B2B: colaborador con empresa facturadora → paréntesis
+                if o.company_id and o.company_id in comps:
+                    empresas[o.id] = comps[o.company_id].nombre_comercial
             elif o.company_id and o.company_id in comps:
                 propietarios[o.id] = comps[o.company_id].nombre_comercial
             else:
@@ -129,7 +133,7 @@ def registro_get(request: Request, todas: str = Query(""), db: Session = Depends
     hoy = date.today()
     mias = db.query(RegistroJornada).filter(RegistroJornada.operario_id==user.id, RegistroJornada.fecha==hoy).order_by(RegistroJornada.id.desc()).limit(10).all()
     return templates.TemplateResponse(request, "rendimiento/registro_diario.html", {
-        "user": user, "tab": "registro", "catalogo": catalogo, "prendas": prendas, "orders": orders, "propietarios": propietarios, "etapas": etapas, "mias": mias, "hoy": hoy, "todas": todas})
+        "user": user, "tab": "registro", "catalogo": catalogo, "prendas": prendas, "orders": orders, "propietarios": propietarios, "empresas": empresas, "etapas": etapas, "mias": mias, "hoy": hoy, "todas": todas})
 
 @router.post("/registro", response_class=HTMLResponse)
 async def registro_post(request: Request, db: Session = Depends(get_db), user=Auth):
