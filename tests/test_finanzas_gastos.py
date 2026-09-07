@@ -94,3 +94,130 @@ def test_endpoints_gastos_web():
         db.query(GastoRegistrado).filter(GastoRegistrado.id == g.id).delete()
         db.commit()
     db.close()
+
+
+def _cc(db, codigo, tipo):
+    from app.models.finanzas import CentroCosto
+    cc = db.query(CentroCosto).filter(CentroCosto.codigo == codigo).first()
+    if not cc:
+        cc = CentroCosto(codigo=codigo, nombre=codigo.title(), tipo=tipo, activo=True)
+        db.add(cc)
+        db.commit()
+        db.refresh(cc)
+    return cc
+
+
+def _mapa(db, asiento_id):
+    from app.models.finanzas import AsientoContable, CuentaContable, LineaAsientoContable
+    out = {}
+    for l in db.query(LineaAsientoContable).filter(
+            LineaAsientoContable.asiento_id == asiento_id).all():
+        c = db.get(CuentaContable, l.cuenta_id)
+        out[c.codigo] = (Decimal(str(l.debe)), Decimal(str(l.haber)))
+    return out
+
+
+def _asientos_gasto(db, gid):
+    from app.models.finanzas import AsientoContable
+    return db.query(AsientoContable).filter(AsientoContable.origen_id == gid).all()
+
+
+def test_planilla_sin_igv_y_4111():
+    from app.core.database import Base, SessionLocal, engine
+    from app.services import finanzas as f
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    f.seed_pcge_basico(db)
+    _limpia(db)
+    g, a = f.registrar_gasto_operativo(
+        db, fecha=date.today(), categoria="PLANILLA", monto_base=3000,
+        monto_igv=999, numero_comprobante="PL-001")  # IGV forzado a 0
+    assert Decimal(str(g.monto_igv)) == Decimal("0")
+    assert Decimal(str(g.monto_total)) == Decimal("3000")
+    mapa = _mapa(db, a.id)
+    assert mapa["6211"] == (Decimal("3000"), Decimal("0"))
+    assert "40111" not in mapa
+    assert mapa["4111"] == (Decimal("0"), Decimal("3000"))
+    assert a.origen_tipo == "PLANILLA"
+    _limpia(db)
+    db.close()
+
+
+def test_planilla_destino_por_centro():
+    from app.core.database import Base, SessionLocal, engine
+    from app.services import finanzas as f
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    f.seed_pcge_basico(db)
+    _limpia(db)
+    for codigo, tipo, esperado in (("T-PL", "TALLER", "921"),
+                                   ("A-PL", "ADMINISTRACION", "941"),
+                                   ("C-PL", "COMERCIAL", "951")):
+        cc = _cc(db, codigo, tipo)
+        g, _a = f.registrar_gasto_operativo(
+            db, fecha=date.today(), categoria="PLANILLA", monto_base=1000,
+            centro_costo_id=cc.id, numero_comprobante=f"PL-{codigo}")
+        dest = [a for a in _asientos_gasto(db, g.id) if "Destino" in (a.glosa or "")]
+        assert len(dest) == 1
+        mapa = _mapa(db, dest[0].id)
+        assert mapa[esperado] == (Decimal("1000"), Decimal("0"))
+        assert mapa["791"] == (Decimal("0"), Decimal("1000"))
+    _limpia(db)
+    db.close()
+
+
+def test_rxh_alquiler_natural_y_activo_fijo():
+    from app.core.database import Base, SessionLocal, engine
+    from app.services import finanzas as f
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    f.seed_pcge_basico(db)
+    _limpia(db)
+    g, a = f.registrar_gasto_operativo(
+        db, fecha=date.today(), categoria="HONORARIOS_RXH", monto_base=800,
+        monto_igv=50, numero_comprobante="RX-001")
+    mapa = _mapa(db, a.id)
+    assert mapa["6322"] == (Decimal("800"), Decimal("0"))
+    assert "40111" not in mapa and mapa["424"] == (Decimal("0"), Decimal("800"))
+    assert a.origen_tipo == "HONORARIOS"
+    g2, a2 = f.registrar_gasto_operativo(
+        db, fecha=date.today(), categoria="ALQUILER_NATURAL", monto_base=1200,
+        numero_comprobante="ALQ-NAT-001")
+    mapa2 = _mapa(db, a2.id)
+    assert mapa2["6311"] == (Decimal("1200"), Decimal("0"))
+    assert mapa2["4699"] == (Decimal("0"), Decimal("1200"))
+    assert a2.origen_tipo == "GASTO_DIVERSO"
+    g3, a3 = f.registrar_gasto_operativo(
+        db, fecha=date.today(), categoria="ACTIVO_FIJO", monto_base=1000,
+        tipo_comprobante="FACTURA", numero_comprobante="F-AF-001")
+    mapa3 = _mapa(db, a3.id)
+    assert mapa3["3341"] == (Decimal("1000"), Decimal("0"))
+    assert mapa3["40111"] == (Decimal("180"), Decimal("0"))  # auto 18%
+    assert mapa3["4654"] == (Decimal("0"), Decimal("1180"))
+    assert a3.origen_tipo == "ACTIVO_FIJO"
+    dest = [a for a in _asientos_gasto(db, g3.id) if "Destino" in (a.glosa or "")]
+    assert dest == []  # 33x sin destino 94/79
+    _limpia(db)
+    db.close()
+
+
+def test_pago_planilla_usa_4111():
+    from app.core.database import Base, SessionLocal, engine
+    from app.services import finanzas as f
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    f.seed_pcge_basico(db)
+    _limpia(db)
+    g, _a = f.registrar_gasto_operativo(
+        db, fecha=date.today(), categoria="PLANILLA", monto_base=2000,
+        numero_comprobante="PL-PAGO-001")
+    f.pagar_gasto(db, g.id)
+    db.refresh(g)
+    assert g.estado == "PAGADO"
+    from app.models.finanzas import AsientoContable
+    pago = db.query(AsientoContable).filter(
+        AsientoContable.origen_tipo == "PAGO",
+        AsientoContable.origen_id == g.id).first()
+    assert _mapa(db, pago.id)["4111"] == (Decimal("2000"), Decimal("0"))
+    _limpia(db)
+    db.close()

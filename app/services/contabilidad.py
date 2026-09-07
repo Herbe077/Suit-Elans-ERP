@@ -504,7 +504,7 @@ def registrar_gasto_atomico(db: Session, fecha: date, categoria: str,
 def pagar_gasto_atomico(db: Session, gasto_id: int, cuenta_origen_codigo: str = "104",
                         usuario_id: int | None = None,
                         fecha: date | None = None) -> dict:
-    """Pago de gasto: 4212 / caja-banco + MovFin EGRESO + Cash, atómico."""
+    """Pago de gasto: pasivo (4212/4111/424/4699/4654 según categoría) / caja-banco + MovFin EGRESO + Cash, atómico."""
     from app.services import finanzas as fin
 
     seed_pcge_basico(db)
@@ -519,7 +519,7 @@ def pagar_gasto_atomico(db: Session, gasto_id: int, cuenta_origen_codigo: str = 
         total = _d(gasto.monto_total)
         if total <= 0:
             raise ValueError("Total inválido")
-        c_prov = _cuenta(db, CTA_PROV)
+        c_prov = _cuenta(db, fin.pasivo_por_categoria(gasto.categoria))
         c_caja = _cuenta(db, cuenta_origen_codigo if cuenta_origen_codigo in ("101", "104") else "104")
         asientos_antes = {a.id for a in db.query(fin.AsientoContable).filter(
             fin.AsientoContable.origen_tipo == "PAGO",

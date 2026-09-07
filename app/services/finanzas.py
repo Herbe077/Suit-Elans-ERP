@@ -44,6 +44,10 @@ PCGE_ANALITICAS = [
     ("1041", "Cuentas Corrientes Operativas", "ACTIVO", 3, "104", 1, True),
     ("1212", "Emitidas en Cartera", "ACTIVO", 3, "121", 1, True),
     ("1221", "Anticipos de Clientes", "PASIVO", 3, "122", 4, True),
+    ("4111", "Remuneraciones por pagar", "PASIVO", 3, "411", 4, True),
+    ("424", "Honorarios por pagar", "PASIVO", 3, "42", 4, True),
+    ("4699", "Otras cuentas por pagar diversas", "PASIVO", 3, "469", 4, True),
+    ("4654", "Pasivo por compra de activo fijo", "PASIVO", 3, "465", 4, True),
     ("2011", "Mercaderías Manufacturadas", "ACTIVO", 3, "201", 2, True),
     ("2411", "Materia Prima - Telas y Avíos", "ACTIVO", 3, "201", 2, True),
     ("40111", "IGV - Cuenta Propia", "PASIVO", 4, "4011", 4, True),
@@ -97,10 +101,41 @@ PCGE_PADRES_EXTRA = [
 # Mapeo categoría operativa -> (cuenta PCGE por defecto, clasificación de costos)
 CATEGORIA_GASTO_MAP: dict[str, tuple[str, str]] = {
     "ALQUILER": ("6311", "CIF"),
+    "ALQUILER_NATURAL": ("6311", "CIF"),
     "HONORARIOS": ("6322", "GASTO_ADMINISTRATIVO"),
+    "HONORARIOS_RXH": ("6322", "GASTO_ADMINISTRATIVO"),
     "PLANILLA": ("6211", "GASTO_ADMINISTRATIVO"),
     "ACTIVO_FIJO": ("3341", "ACTIVO_FIJO"),
     "OTRO": ("6511", "GASTO_ADMINISTRATIVO"),
+}
+
+# Matriz PCGE por categoría: IGV ("cero"|"auto"|"dado"), pasivo y origen.
+# - cero: sin IGV aunque se pase (planilla, RxH, alquiler persona natural).
+# - auto: 18% si es FACTURA y no se dio IGV (activo fijo).
+# - dado: respeta el IGV explícito (facturas de proveedores/servicios).
+REGLA_GASTO_MAP: dict[str, dict] = {
+    "PLANILLA": {"igv": "cero", "pasivo": "4111", "origen": "PLANILLA"},
+    "HONORARIOS_RXH": {"igv": "cero", "pasivo": "424", "origen": "HONORARIOS"},
+    "ALQUILER_NATURAL": {"igv": "cero", "pasivo": "4699", "origen": "GASTO_DIVERSO"},
+    "ACTIVO_FIJO": {"igv": "auto", "pasivo": "4654", "origen": "ACTIVO_FIJO"},
+}
+REGLA_GASTO_DEFAULT = {"igv": "dado", "pasivo": "4212", "origen": "COMPRA"}
+
+
+def regla_gasto(categoria: str | None) -> dict:
+    return REGLA_GASTO_MAP.get((categoria or "").upper(), REGLA_GASTO_DEFAULT)
+
+
+def pasivo_por_categoria(categoria: str | None) -> str:
+    return regla_gasto(categoria)["pasivo"]
+
+
+# Destino analítico (Elemento 9) por tipo de centro de costo.
+DESTINO_POR_CENTRO: dict[str, str] = {
+    "TALLER": "921",
+    "ADMINISTRACION": "941",
+    "COMERCIAL": "951",
+    "SHOWROOM": "951",
 }
 
 # Destino contable Clase 9 por clasificación (solo cuentas de Clase 6).
@@ -187,9 +222,12 @@ def registrar_gasto_operativo(
 ) -> tuple[GastoRegistrado, AsientoContable]:
     """Registra gasto/compra operativa y genera sus asientos devengados.
 
-    Naturaleza: DEBE cuenta gasto/activo (base) + DEBE 40111 IGV (si >0) / HABER 4212 total.
-    Destino (solo Clase 6 con clasificación mapeada): DEBE 94x/95x/97x/921 (base)
-      / HABER 791 (traslado a contabilidad analítica).
+    Naturaleza: DEBE cuenta gasto/activo (base) + DEBE 40111 IGV (si aplica)
+      / HABER pasivo según matriz (4212 proveedores, 4111 planilla,
+      424 honorarios RxH, 4699 alquiler natural, 4654 activo fijo).
+    Destino (solo Clase 6): por CENTRO DE COSTO (Taller→921,
+      Administración→941, Comercial/Ventas→951) / HABER 791; sin destino
+      para cuentas de Balance (33x). Fallback a clasificación si no hay centro.
     Retorna (gasto, asiento_naturaleza). Un solo commit final (atómico).
 
     Bloqueo duro: raise si `fecha` cae en período CERRADO/BLOQUEADO.
@@ -201,8 +239,13 @@ def registrar_gasto_operativo(
     cuenta_def, clasif_def = CATEGORIA_GASTO_MAP.get(cat, CATEGORIA_GASTO_MAP["OTRO"])
     codigo_gasto = cuenta_codigo or cuenta_def
     clasif = clasificacion or clasif_def
+    regla = regla_gasto(cat)
     base = Decimal(str(monto_base or 0))
     igv = Decimal(str(monto_igv or 0))
+    if regla["igv"] == "cero":
+        igv = Decimal("0")  # planilla, RxH y alquiler natural: sin IGV
+    elif regla["igv"] == "auto" and igv <= 0 and (tipo_comprobante or "").upper() == "FACTURA":
+        igv = (base * Decimal("0.18")).quantize(Decimal("0.01"))
     if base <= 0:
         raise ValueError("monto_base debe ser positivo")
     if igv < 0:
@@ -212,9 +255,9 @@ def registrar_gasto_operativo(
     if not c_gasto:
         raise ValueError(f"Cuenta PCGE {codigo_gasto} no existe")
     c_igv = get_cuenta_by_codigo(db, "40111")
-    c_prov = get_cuenta_by_codigo(db, "4212")
+    c_prov = get_cuenta_by_codigo(db, regla["pasivo"])
     if not c_igv or not c_prov:
-        raise ValueError("Faltan cuentas 40111/4212 (ejecuta seed PCGE)")
+        raise ValueError("Faltan cuentas 40111/pasivo (ejecuta seed PCGE)")
     gasto = GastoRegistrado(
         proveedor_id=proveedor_id,
         ruc_proveedor=(ruc_proveedor or None),
@@ -237,10 +280,18 @@ def registrar_gasto_operativo(
         lineas.append({"cuenta_id": c_igv.id, "debe": igv, "haber": Decimal("0")})
     lineas.append({"cuenta_id": c_prov.id, "debe": Decimal("0"), "haber": total})
     asiento = crear_asiento_flush(
-        db, fecha, f"{cat.title()} {numero_comprobante or ''}".strip(), "COMPRA", gasto.id, lineas,
+        db, fecha, f"{cat.title()} {numero_comprobante or ''}".strip(), regla["origen"], gasto.id, lineas,
     )
-    # Destino analítico Clase 9 (solo gasto Clase 6 clasificado; sin IGV: base neta)
-    destino_codigo = CLASIF_DESTINO_MAP.get(clasif) if codigo_gasto.startswith("6") else None
+    # Destino analítico: por centro de costo (Taller→921, Adm→941, Com→951);
+    # fallback a clasificación; sin destino para cuentas de Balance (33x).
+    destino_codigo = None
+    if codigo_gasto.startswith("6"):
+        if centro_costo_id:
+            cc = db.get(CentroCosto, centro_costo_id)
+            if cc and (cc.tipo or "").upper() in DESTINO_POR_CENTRO:
+                destino_codigo = DESTINO_POR_CENTRO[(cc.tipo or "").upper()]
+        if not destino_codigo:
+            destino_codigo = CLASIF_DESTINO_MAP.get(clasif)
     if destino_codigo:
         c_dest = get_cuenta_by_codigo(db, destino_codigo)
         c_79 = get_cuenta_by_codigo(db, CTA_DESTINO_CONTRAPARTIDA)
@@ -248,7 +299,7 @@ def registrar_gasto_operativo(
             raise ValueError(f"Faltan cuentas {destino_codigo}/{CTA_DESTINO_CONTRAPARTIDA} (seed PCGE)")
         crear_asiento_flush(
             db, fecha, f"Destino {destino_codigo} {cat.title()} {numero_comprobante or ''}".strip(),
-            "COMPRA", gasto.id,
+            regla["origen"], gasto.id,
             [{"cuenta_id": c_dest.id, "debe": base, "haber": Decimal("0")},
              {"cuenta_id": c_79.id, "debe": Decimal("0"), "haber": base}],
         )
@@ -260,7 +311,8 @@ def registrar_gasto_operativo(
 def pagar_gasto(
     db: Session, gasto_id: int, fecha: date | None = None, cuenta_origen_codigo: str = "104",
 ) -> AsientoContable:
-    """Cancela un gasto: DEBE 4212 / HABER Caja(101)-Banco(104). Marca PAGADO.
+    """Cancela un gasto: DEBE pasivo (4212/4111/424/4699/4654 según categoría)
+    / HABER Caja(101)-Banco(104). Marca PAGADO.
 
     Bloqueo duro: raise si `fecha` cae en período CERRADO/BLOQUEADO.
     """
@@ -274,10 +326,10 @@ def pagar_gasto(
     total = Decimal(str(gasto.monto_total or 0))
     if total <= 0:
         raise ValueError("Total inválido")
-    c_prov = get_cuenta_by_codigo(db, "4212")
+    c_prov = get_cuenta_by_codigo(db, pasivo_por_categoria(gasto.categoria))
     c_caja = get_cuenta_by_codigo(db, cuenta_origen_codigo)
     if not c_prov or not c_caja:
-        raise ValueError(f"Faltan cuentas 4212/{cuenta_origen_codigo}")
+        raise ValueError(f"Faltan cuentas pasivo/{cuenta_origen_codigo}")
     asiento = crear_asiento(
         db, fecha or date.today(), f"Pago gasto {gasto.numero_comprobante or gasto.id}",
         "PAGO", gasto.id,

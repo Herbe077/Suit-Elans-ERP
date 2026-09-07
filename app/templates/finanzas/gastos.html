@@ -28,11 +28,11 @@
     <label class="block min-w-0">N° Comprobante
       <input name="numero_comprobante" placeholder="F001-123" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
     </label>
-    <label class="block min-w-0">Categoría
-      <select name="categoria" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate" title="{% for cat in categorias %}{{ cat }} → {{ map[cat][0] }}&#10;{% endfor %}">
-        {% for cat in categorias %}<option value="{{ cat }}">{{ cat }} → {{ map[cat][0] }}</option>{% endfor %}
-      </select>
-    </label>
+  <label class="block min-w-0">Categoría
+    <select name="categoria" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate" title="{% for cat in categorias %}{{ cat }} → {{ map[cat][0] }}&#10;{% endfor %}">
+      {% for cat in categorias %}<option value="{{ cat }}">{{ cat }} → {{ map[cat][0] }}</option>{% endfor %}
+    </select>
+  </label>
     <label class="block min-w-0">Cuenta PCGE
       <input name="cuenta_codigo" placeholder="vacío = auto" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
     </label>

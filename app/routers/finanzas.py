@@ -395,7 +395,8 @@ def gastos_list(request: Request, estado: str = Query(""), categoria: str = Quer
         "centros": centros, "proveedores": proveedores,
         "cuentas_map": cuentas_map, "prov_map": prov_map,
         "estado": estado, "categoria": categoria,
-        "categorias": ["ALQUILER", "HONORARIOS", "PLANILLA", "ACTIVO_FIJO", "OTRO"],
+        "categorias": ["ALQUILER", "ALQUILER_NATURAL", "HONORARIOS", "HONORARIOS_RXH",
+                       "PLANILLA", "ACTIVO_FIJO", "OTRO"],
         "map": svc.CATEGORIA_GASTO_MAP,
     })
 
