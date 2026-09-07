@@ -14,10 +14,10 @@
     </div>
     <div class="overflow-x-auto">
     <table class="w-full text-xs" style="table-layout:auto">
-      <thead class="bg-slate-50"><tr><th class="text-left whitespace-nowrap" style="min-width:220px">Cuenta</th><th class="text-right whitespace-nowrap" style="min-width:110px">Debe</th><th class="text-right whitespace-nowrap" style="min-width:110px">Haber</th><th class="text-right whitespace-nowrap" style="min-width:130px">Saldo Deudor</th><th class="text-right whitespace-nowrap" style="min-width:130px">Saldo Acreedor</th></tr></thead>
-      <tbody class="font-mono">
+      <thead class="bg-slate-50"><tr><th class="text-left whitespace-nowrap px-2 py-1" style="min-width:220px">Cuenta</th><th class="text-right whitespace-nowrap px-3 py-1" style="min-width:120px">Debe</th><th class="text-right whitespace-nowrap px-3 py-1" style="min-width:120px">Haber</th><th class="text-right whitespace-nowrap px-3 py-1" style="min-width:140px">Saldo Deudor</th><th class="text-right whitespace-nowrap px-3 py-1" style="min-width:140px">Saldo Acreedor</th></tr></thead>
+      <tbody class="font-mono tabular-nums">
         {% for r in bal %}
-        <tr class="border-b" data-cero="{{ 1 if (r.saldo_deudor == 0 and r.saldo_acreedor == 0) else 0 }}"><td class="whitespace-nowrap">{{ r.codigo }} - {{ r.nombre }}</td><td class="text-right whitespace-nowrap">S/ {{ "%.2f"|format(r.debe) }}</td><td class="text-right whitespace-nowrap">S/ {{ "%.2f"|format(r.haber) }}</td><td class="text-right whitespace-nowrap">S/ {{ "%.2f"|format(r.saldo_deudor) }}</td><td class="text-right whitespace-nowrap">S/ {{ "%.2f"|format(r.saldo_acreedor) }}</td></tr>
+        <tr class="border-b" data-cero="{{ 1 if (r.saldo_deudor == 0 and r.saldo_acreedor == 0) else 0 }}"><td class="whitespace-nowrap px-2 py-1">{{ r.codigo }} - {{ r.nombre }}</td><td class="text-right whitespace-nowrap px-3 py-1">S/ {{ "%.2f"|format(r.debe) }}</td><td class="text-right whitespace-nowrap px-3 py-1">S/ {{ "%.2f"|format(r.haber) }}</td><td class="text-right whitespace-nowrap px-3 py-1">S/ {{ "%.2f"|format(r.saldo_deudor) }}</td><td class="text-right whitespace-nowrap px-3 py-1">S/ {{ "%.2f"|format(r.saldo_acreedor) }}</td></tr>
         {% else %}<tr><td colspan="5" class="text-center p-2 text-slate-400">Sin movimientos</td></tr>{% endfor %}
       </tbody>
     </table>
@@ -34,20 +34,34 @@ function filtrarCeros() {
   <div class="space-y-4">
     <div class="bg-white rounded-xl shadow p-4">
       <h2 class="font-bold text-sm mb-2">Estado de Resultados</h2>
-      <p class="text-xs">Ventas: <b>S/ {{ "%.2f"|format(er.ventas) }}</b></p>
-      <p class="text-xs">Costo ventas: <b>S/ {{ "%.2f"|format(er.costo_ventas) }}</b></p>
-      <p class="text-xs">Utilidad bruta: <b>S/ {{ "%.2f"|format(er.utilidad_bruta) }}</b></p>
-      <p class="text-xs">Gastos admin: S/ {{ "%.2f"|format(er.gastos_admin) }}</p>
-      <p class="text-xs">Gastos ventas: S/ {{ "%.2f"|format(er.gastos_ventas) }}</p>
-      <p class="text-xs">Resultado: <b class="{% if er.resultado>=0 %}text-emerald-700{% else %}text-red-700{% endif %}">S/ {{ "%.2f"|format(er.resultado) }}</b></p>
+      <div class="text-xs space-y-0.5 font-mono">
+        <div class="flex justify-between"><span>Ventas Netas (70)</span><b>S/ {{ "%.2f"|format(er.ventas) }}</b></div>
+        <div class="flex justify-between"><span>(−) Costo de Ventas (69)</span><span>S/ {{ "%.2f"|format(er.costo_ventas) }}</span></div>
+        <div class="flex justify-between border-t pt-0.5"><span>= Utilidad Bruta</span><b>S/ {{ "%.2f"|format(er.utilidad_bruta) }}</b></div>
+        <div class="flex justify-between"><span>(−) Gastos Administrativos</span><span>S/ {{ "%.2f"|format(er.gastos_admin) }}</span></div>
+        <div class="flex justify-between"><span>(−) Gastos de Ventas</span><span>S/ {{ "%.2f"|format(er.gastos_ventas) }}</span></div>
+        <div class="flex justify-between border-t pt-0.5"><span>= Utilidad Neta</span><b class="{% if er.resultado>=0 %}text-emerald-700{% else %}text-red-700{% endif %}">S/ {{ "%.2f"|format(er.resultado) }}</b></div>
+      </div>
     </div>
     <div class="bg-white rounded-xl shadow p-4">
       <h2 class="font-bold text-sm mb-2">Balance General</h2>
-      <p class="text-xs">Activo: <b class="font-mono">S/ {{ "%.2f"|format(bg.activo) }}</b></p>
-      <p class="text-xs">Pasivo: <b class="font-mono">S/ {{ "%.2f"|format(bg.pasivo) }}</b></p>
-      <p class="text-xs">Patrimonio: <b class="font-mono">S/ {{ "%.2f"|format(bg.patrimonio_total) }}</b></p>
-      <p class="text-xs text-slate-500 font-mono">= Capital S/ {{ "%.2f"|format(bg.capital) }} + Resultados S/ {{ "%.2f"|format(bg.resultados_59) }} + Utilidad S/ {{ "%.2f"|format(bg.resultado) }}</p>
-      <p class="text-xs {% if bg.valida %}text-emerald-700{% else %}text-red-700{% endif %}">Valida: {{ bg.valida }} (Activo = Pasivo + Patrimonio)</p>
+      <div class="text-xs space-y-0.5 font-mono">
+        <p class="font-bold text-slate-500">ACTIVO CORRIENTE</p>
+        <div class="flex justify-between"><span>Efectivo y Equivalentes (10)</span><span>S/ {{ "%.2f"|format(bg.rubros.efectivo_10) }}</span></div>
+        <div class="flex justify-between"><span>Ctas. por Cobrar Comerciales (12)</span><span>S/ {{ "%.2f"|format(bg.rubros.cxc_12) }}</span></div>
+        <div class="flex justify-between"><span>Inventarios (21 + 24)</span><span>S/ {{ "%.2f"|format(bg.rubros.inventarios) }}</span></div>
+        <div class="flex justify-between border-t pt-0.5"><span>= TOTAL ACTIVO</span><b>S/ {{ "%.2f"|format(bg.activo) }}</b></div>
+        <p class="font-bold text-slate-500 pt-1">PASIVO CORRIENTE</p>
+        <div class="flex justify-between"><span>Tributos por Pagar (40)</span><span>S/ {{ "%.2f"|format(bg.rubros.tributos_40) }}</span></div>
+        <div class="flex justify-between"><span>Ctas. por Pagar Comerciales (42)</span><span>S/ {{ "%.2f"|format(bg.rubros.cxp_42) }}</span></div>
+        <div class="flex justify-between"><span>Anticipos de Clientes (122)</span><span>S/ {{ "%.2f"|format(bg.rubros.anticipos_122) }}</span></div>
+        <div class="flex justify-between border-t pt-0.5"><span>= TOTAL PASIVO</span><b>S/ {{ "%.2f"|format(bg.pasivo) }}</b></div>
+        <p class="font-bold text-slate-500 pt-1">PATRIMONIO NETO</p>
+        <div class="flex justify-between"><span>Capital Social (50)</span><span>S/ {{ "%.2f"|format(bg.rubros.capital_50) }}</span></div>
+        <div class="flex justify-between"><span>Utilidad del Ejercicio</span><span>S/ {{ "%.2f"|format(bg.resultado) }}</span></div>
+        <div class="flex justify-between border-t pt-0.5"><span>= TOTAL PATRIMONIO</span><b>S/ {{ "%.2f"|format(bg.patrimonio_total) }}</b></div>
+      </div>
+      <p class="text-xs mt-1 {% if bg.valida %}text-emerald-700{% else %}text-red-700{% endif %}">Valida: {{ bg.valida }} (Activo = Pasivo + Patrimonio)</p>
     </div>
   </div>
 </div>

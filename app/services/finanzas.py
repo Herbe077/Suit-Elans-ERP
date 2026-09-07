@@ -519,6 +519,27 @@ def contabilizar(db: Session, asiento_id: int):
     return a
 
 # ── Mayor y balances ───────────────────────────────────────────────────
+def resolver_filtro_periodo(db: Session, periodo: str | None):
+    """(pid, desde, hasta) para filtros YYYY-MM.
+
+    Siempre retorna el rango de fechas cuando el período es válido: la fecha
+    del asiento es la fuente de verdad (cubre asientos sin periodo asignado).
+    `pid` se retorna solo como referencia para la vista.
+    """
+    import calendar as _cal
+    if not periodo:
+        return None, None, None
+    try:
+        anio, mes = map(int, periodo.split("-"))
+        desde = date(anio, mes, 1)
+        hasta = date(anio, mes, _cal.monthrange(anio, mes)[1])
+    except Exception:
+        return None, None, None
+    p = db.query(PeriodoContable).filter(
+        PeriodoContable.anio == anio, PeriodoContable.mes == mes).first()
+    return (p.id if p else None), desde, hasta
+
+
 def saldo_cuenta(db: Session, codigo: str, periodo_id: int | None = None) -> Decimal:
     """Saldo neto (debe − haber) de una cuenta analítica."""
     from decimal import Decimal as _D
@@ -537,15 +558,28 @@ def obtener_mayor(db: Session, cuenta_id: int | None = None, periodo_id: int | N
     q = db.query(LineaAsientoContable).join(AsientoContable, LineaAsientoContable.asiento_id==AsientoContable.id)
     if cuenta_id:
         q = q.filter(LineaAsientoContable.cuenta_id==cuenta_id)
-    if periodo_id:
+    if desde or hasta:
+        # El rango de fechas prevalece: cubre asientos sin periodo asignado.
+        if desde:
+            q = q.filter(AsientoContable.fecha >= desde)
+        if hasta:
+            q = q.filter(AsientoContable.fecha <= hasta)
+    elif periodo_id:
         q = q.filter(AsientoContable.periodo_id==periodo_id)
-    if desde:
-        q = q.filter(AsientoContable.fecha >= desde)
-    if hasta:
-        q = q.filter(AsientoContable.fecha <= hasta)
     if centro_costo_id:
         q = q.filter((LineaAsientoContable.centro_costo_id==centro_costo_id) | (LineaAsientoContable.centro_gestion_id==centro_costo_id))
-    return q.order_by(AsientoContable.fecha).all()
+    return q.order_by(AsientoContable.fecha, LineaAsientoContable.asiento_id,
+                      LineaAsientoContable.id).all()
+
+def _es_acreedora(cuenta) -> bool:
+    """Naturaleza por elemento PCGE: 4,5,7 → Haber − Debe; resto → Debe − Haber."""
+    try:
+        el = int(cuenta.elemento) if cuenta is not None and cuenta.elemento is not None else None
+    except Exception:
+        el = None
+    if el is not None:
+        return el in (4, 5, 7)
+    return (cuenta.tipo if cuenta is not None else "") in ("PASIVO", "PATRIMONIO", "INGRESO")
 
 def obtener_mayor_agrupado(db: Session, cuenta_id: int | None = None, periodo_id: int | None = None, desde: date | None = None, hasta: date | None = None, centro_costo_id: int | None = None):
     """Mayor agrupado por cuenta para la vista.
@@ -559,13 +593,15 @@ def obtener_mayor_agrupado(db: Session, cuenta_id: int | None = None, periodo_id
     grupos: dict[int, dict] = {}
     for l in lineas:
         g = grupos.setdefault(l.cuenta_id, {"cuenta_id": l.cuenta_id,
-            "codigo": l.cuenta.codigo if l.cuenta else "?", 
+            "codigo": l.cuenta.codigo if l.cuenta else "?",
             "nombre": l.cuenta.nombre if l.cuenta else "—",
+            "acreedor": _es_acreedora(l.cuenta),
             "lineas": [], "total_debe": _D("0"), "total_haber": _D("0")})
         debe, haber = _D(str(l.debe or 0)), _D(str(l.haber or 0))
         g["total_debe"] += debe
         g["total_haber"] += haber
-        acum = g["total_debe"] - g["total_haber"]
+        net = g["total_haber"] - g["total_debe"] if g["acreedor"] else g["total_debe"] - g["total_haber"]
+        acum = net
         f = l.asiento.fecha if l.asiento and l.asiento.fecha else None
         g["lineas"].append({"id": l.id,
             "fecha": f.isoformat() if f else "—",
@@ -574,11 +610,12 @@ def obtener_mayor_agrupado(db: Session, cuenta_id: int | None = None, periodo_id
             "descripcion": l.descripcion or ""})
     out = sorted(grupos.values(), key=lambda g: g["codigo"])
     for g in out:
-        g["saldo"] = g["total_debe"] - g["total_haber"]
+        g["saldo"] = g["total_haber"] - g["total_debe"] if g["acreedor"] else g["total_debe"] - g["total_haber"]
     return out
 
 def obtener_diario(db: Session, periodo_id: int | None = None,
                    origen_tipo: str | None = None, cuenta_id: int | None = None,
+                   desde: date | None = None, hasta: date | None = None,
                    limit: int = 200) -> dict:
     """Libro Diario con líneas anidadas para la vista.
 
@@ -589,7 +626,12 @@ def obtener_diario(db: Session, periodo_id: int | None = None,
     q = db.query(AsientoContable).order_by(AsientoContable.fecha.desc(),
                                            AsientoContable.id.desc()).limit(limit)
     asientos = q.all()
-    if periodo_id:
+    if desde or hasta:
+        if desde:
+            asientos = [a for a in asientos if a.fecha and a.fecha >= desde]
+        if hasta:
+            asientos = [a for a in asientos if a.fecha and a.fecha <= hasta]
+    elif periodo_id:
         asientos = [a for a in asientos if a.periodo_id == periodo_id]
     if origen_tipo:
         asientos = [a for a in asientos if a.origen_tipo == origen_tipo]
@@ -619,7 +661,8 @@ def obtener_diario(db: Session, periodo_id: int | None = None,
             "n": len(filas)}
 
 
-def obtener_balance_comprobacion(db: Session, periodo_id: int | None = None):
+def obtener_balance_comprobacion(db: Session, periodo_id: int | None = None,
+                                   desde: date | None = None, hasta: date | None = None):
     # agrupa por cuenta
     q = db.query(
         CuentaContable.id, CuentaContable.codigo, CuentaContable.nombre, CuentaContable.tipo,
@@ -627,7 +670,12 @@ def obtener_balance_comprobacion(db: Session, periodo_id: int | None = None):
         func.coalesce(func.sum(LineaAsientoContable.haber),0).label("haber")
     ).join(LineaAsientoContable, CuentaContable.id==LineaAsientoContable.cuenta_id)\
      .join(AsientoContable, LineaAsientoContable.asiento_id==AsientoContable.id)
-    if periodo_id:
+    if desde or hasta:
+        if desde:
+            q = q.filter(AsientoContable.fecha >= desde)
+        if hasta:
+            q = q.filter(AsientoContable.fecha <= hasta)
+    elif periodo_id:
         q = q.filter(AsientoContable.periodo_id==periodo_id)
     q = q.group_by(CuentaContable.id).order_by(CuentaContable.codigo)
     rows = []
@@ -643,8 +691,9 @@ def obtener_balance_comprobacion(db: Session, periodo_id: int | None = None):
         })
     return rows
 
-def obtener_estado_resultados(db: Session, periodo_id: int | None = None):
-    bal = obtener_balance_comprobacion(db, periodo_id)
+def obtener_estado_resultados(db: Session, periodo_id: int | None = None,
+                                desde: date | None = None, hasta: date | None = None):
+    bal = obtener_balance_comprobacion(db, periodo_id, desde, hasta)
     def saldo_tipo(tipo):
         return sum((r["saldo_deudor"] - r["saldo_acreedor"] if r["tipo"]=="INGRESO" else r["saldo_deudor"] - r["saldo_acreedor"]) for r in bal if r["tipo"]==tipo)
     # Ingresos (701) y Costo ventas (691) están en GASTO pero con naturaleza distinta, filtramos por código
@@ -667,8 +716,9 @@ def obtener_estado_resultados(db: Session, periodo_id: int | None = None):
         "resultado": resultado, "detalle": bal
     }
 
-def obtener_balance_general(db: Session, periodo_id: int | None = None):
-    bal = obtener_balance_comprobacion(db, periodo_id)
+def obtener_balance_general(db: Session, periodo_id: int | None = None,
+                               desde: date | None = None, hasta: date | None = None):
+    bal = obtener_balance_comprobacion(db, periodo_id, desde, hasta)
     activo = sum(r["saldo_deudor"] - r["saldo_acreedor"] for r in bal if r["tipo"]=="ACTIVO")
     # PASIVO saldo acreedor - deudor
     pasivo = sum(r["saldo_acreedor"] - r["saldo_deudor"] for r in bal if r["tipo"]=="PASIVO")
@@ -692,7 +742,27 @@ def obtener_balance_general(db: Session, periodo_id: int | None = None):
     else:
         patrimonio_total = patrimonio + resultado
     valida = _eq(activo, pasivo + patrimonio_total) or _eq(activo, pasivo + patrimonio)
-    return {"activo": activo, "pasivo": pasivo, "patrimonio": patrimonio, "patrimonio_total": patrimonio_total, "capital": capital, "resultados_59": resultados_59, "resultado": resultado, "valida": valida, "detalle": bal}
+    # Desglose por rubros oficiales para la tarjeta de EEFF.
+    def _rubro(prefs: tuple[str, ...], acreedor: bool, excl: tuple[str, ...] = ()):
+        tot = Decimal("0")
+        for r in bal:
+            if r["codigo"].startswith(prefs) and not r["codigo"].startswith(excl):
+                tot += (r["saldo_acreedor"] - r["saldo_deudor"]) if acreedor else (r["saldo_deudor"] - r["saldo_acreedor"])
+        return tot
+    rubros = {
+        "efectivo_10": _rubro(("10",), False),
+        "cxc_12": _rubro(("12",), False, ("122",)),
+        "inventarios": _rubro(("21", "24"), False),
+        "tributos_40": _rubro(("40",), True),
+        "cxp_42": _rubro(("42",), True),
+        "anticipos_122": _rubro(("122",), True),
+        "capital_50": _rubro(("50",), True),
+    }
+    rubros["total_activo"] = rubros["efectivo_10"] + rubros["cxc_12"] + rubros["inventarios"]
+    rubros["total_pasivo"] = rubros["tributos_40"] + rubros["cxp_42"] + rubros["anticipos_122"]
+    rubros["total_patrimonio"] = patrimonio_total
+    rubros["utilidad"] = resultado
+    return {"activo": activo, "pasivo": pasivo, "patrimonio": patrimonio, "patrimonio_total": patrimonio_total, "capital": capital, "resultados_59": resultados_59, "resultado": resultado, "valida": valida, "detalle": bal, "rubros": rubros}
 
 # ── Costos ─────────────────────────────────────────────────────────────
 def calcular_mod_devengada(db: Session, periodo_id: int | None = None, desde: date | None = None, hasta: date | None = None, orden_produccion_id: int | None = None) -> Decimal:

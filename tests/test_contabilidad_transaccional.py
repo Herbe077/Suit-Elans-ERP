@@ -512,3 +512,66 @@ def test_init_production_db_idempotente_y_health_db():
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok" and body["usuarios"] >= 1 and body["cuentas_pcge"] > 0
+
+
+def test_filtro_periodo_excluye_otros_meses():
+    """Filtrar 2026-01 no muestra asientos de 2026-09 (ni sin periodo)."""
+    from datetime import date as _d
+    from app.services import finanzas as f
+    db = _db(); _limpia(db)
+    c101 = f.get_cuenta_by_codigo(db, "1011")
+    c5011 = f.get_cuenta_by_codigo(db, "5011")
+    for dia, mes, monto in ((15, 1, 100), (20, 9, 900)):
+        f.crear_asiento(db, _d(2026, mes, dia), f"T-{mes}", "APERTURA", None, [
+            {"cuenta_id": c101.id, "debe": Decimal(str(monto)), "haber": Decimal("0")},
+            {"cuenta_id": c5011.id, "debe": Decimal("0"), "haber": Decimal(str(monto))},
+        ])
+    pid, desde, hasta = f.resolver_filtro_periodo(db, "2026-01")
+    assert desde == _d(2026, 1, 1) and hasta == _d(2026, 1, 31)
+    bg = f.obtener_balance_general(db, periodo_id=pid, desde=desde, hasta=hasta)
+    assert bg["activo"] == Decimal("100")  # sin los 900 de septiembre
+    grupos = f.obtener_mayor_agrupado(db, periodo_id=pid, desde=desde, hasta=hasta)
+    g1011 = next(g for g in grupos if g["codigo"] == "1011")
+    assert g1011["total_debe"] == Decimal("100")
+    # Cuenta inexistente → vacío, no todo
+    assert f.obtener_mayor_agrupado(db, cuenta_id=-1) == []
+    _limpia(db); db.close()
+
+
+def test_saldo_por_naturaleza_sin_negativos_anomalos():
+    """Pasivo/ingresos (4,5,7) saldan Haber − Debe: 40111 y 1221 positivos."""
+    from app.services import contabilidad as C
+    from app.services import finanzas as f
+    db = _db(); _limpia(db)
+    o = _order(db, "CT-NAT-001", 1180.0)
+    C.emitir_factura_venta(db, o.id, "F001", 18.0, None)
+    grupos = {g["codigo"]: g for g in f.obtener_mayor_agrupado(db)}
+    assert grupos["40111"]["saldo"] == Decimal("180")
+    assert grupos["7011"]["saldo"] == Decimal("1000")
+    assert grupos["1212"]["saldo"] == Decimal("1180")
+    _limpia(db); db.close()
+
+
+def test_rubros_eerr():
+    """Desglose por rubros oficiales suma a los totales."""
+    from app.services import contabilidad as C
+    from app.services import finanzas as f
+    db = _db(); _limpia(db)
+    c101 = f.get_cuenta_by_codigo(db, "1011")
+    c5011 = f.get_cuenta_by_codigo(db, "5011")
+    f.crear_asiento(db, date.today(), "Cap", "APERTURA", None, [
+        {"cuenta_id": c101.id, "debe": Decimal("40000"), "haber": Decimal("0")},
+        {"cuenta_id": c5011.id, "debe": Decimal("0"), "haber": Decimal("40000")},
+    ])
+    o = _order(db, "CT-RUB-001", 1180.0)
+    C.emitir_factura_venta(db, o.id, "F001", 18.0, None)
+    bg = f.obtener_balance_general(db)
+    r = bg["rubros"]
+    assert r["efectivo_10"] == Decimal("40000")
+    assert r["cxc_12"] == Decimal("1180")
+    assert r["total_activo"] == bg["activo"] == Decimal("41180")
+    assert r["tributos_40"] == Decimal("180")
+    assert r["total_pasivo"] == bg["pasivo"] == Decimal("180")
+    assert r["capital_50"] == Decimal("40000")
+    assert r["total_patrimonio"] == bg["patrimonio_total"] == Decimal("41000")
+    _limpia(db); db.close()

@@ -196,23 +196,17 @@ def periodo_reabrir(pid: int, db: Session = Depends(get_db), user=FinanzasAuth):
 def diario(request: Request, periodo: str=Query(""), origen: str=Query(""), cuenta: str=Query(""),
            db: Session = Depends(get_db), user=FinanzasAuth):
     svc.seed_pcge_basico(db)
-    pid=None
+    pid, desde, hasta = svc.resolver_filtro_periodo(db, periodo)
     periodo_obj = None
-    if periodo:
-        try:
-            anio,mes=map(int,periodo.split("-"))
-            p=db.query(PeriodoContable).filter(PeriodoContable.anio==anio,PeriodoContable.mes==mes).first()
-            pid=p.id if p else None
-            periodo_obj = p
-        except Exception:
-            pass
+    if pid:
+        periodo_obj = db.get(PeriodoContable, pid)
     # Filtro por cuenta PCGE (restringe a asientos que la tocan)
     cuenta_id = None
     if cuenta:
         cuenta_obj=db.query(CuentaContable).filter(CuentaContable.codigo==cuenta).first()
         cuenta_id=cuenta_obj.id if cuenta_obj else -1
-    diario=svc.obtener_diario(db, periodo_id=pid, origen_tipo=origen or None,
-                              cuenta_id=cuenta_id)
+    diario=svc.obtener_diario(db, periodo_id=pid, desde=desde, hasta=hasta,
+                               origen_tipo=origen or None, cuenta_id=cuenta_id)
     origenes=sorted({a.origen_tipo for a in db.query(AsientoContable.origen_tipo).distinct().all() if a.origen_tipo})
     cuentas=db.query(CuentaContable).filter(CuentaContable.es_analitica==True).order_by(CuentaContable.codigo).all()
     return templates.TemplateResponse(request, "finanzas/diario.html", {"user":user,"tab":"diario",
@@ -227,29 +221,20 @@ def mayor(request: Request, cuenta: str=Query(""), periodo: str=Query(""), db: S
     cuenta_id=None
     if cuenta:
         c=svc.get_cuenta_by_codigo(db, cuenta)
-        cuenta_id=c.id if c else None
-    pid=None
-    if periodo:
-        try:
-            anio,mes=map(int,periodo.split("-")); p=db.query(PeriodoContable).filter(PeriodoContable.anio==anio,PeriodoContable.mes==mes).first(); pid=p.id if p else None
-        except Exception:
-            pass
-    lineas=svc.obtener_mayor(db, cuenta_id=cuenta_id, periodo_id=pid)
-    grupos=svc.obtener_mayor_agrupado(db, cuenta_id=cuenta_id, periodo_id=pid)
+        cuenta_id=c.id if c else -1  # código inexistente → vacío, no todo
+    pid, desde, hasta = svc.resolver_filtro_periodo(db, periodo)
+    lineas=svc.obtener_mayor(db, cuenta_id=cuenta_id, periodo_id=pid, desde=desde, hasta=hasta)
+    grupos=svc.obtener_mayor_agrupado(db, cuenta_id=cuenta_id, periodo_id=pid, desde=desde, hasta=hasta)
     cuentas=db.query(CuentaContable).order_by(CuentaContable.codigo).all()
     return templates.TemplateResponse(request, "finanzas/mayor.html", {"user":user,"tab":"mayor","lineas":lineas,"grupos":grupos,"cuentas":cuentas,"cuenta":cuenta,"periodo":periodo})
 
 @router.get("/balance", response_class=HTMLResponse)
 def balance(request: Request, periodo: str=Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
     svc.seed_pcge_basico(db)
-    pid=None
-    if periodo:
-        try:
-            anio,mes=map(int,periodo.split("-")); p=db.query(PeriodoContable).filter(PeriodoContable.anio==anio,PeriodoContable.mes==mes).first(); pid=p.id if p else None
-        except: pass
-    bal=svc.obtener_balance_comprobacion(db, periodo_id=pid)
-    er=svc.obtener_estado_resultados(db, periodo_id=pid)
-    bg=svc.obtener_balance_general(db, periodo_id=pid)
+    pid, desde, hasta = svc.resolver_filtro_periodo(db, periodo)
+    bal=svc.obtener_balance_comprobacion(db, periodo_id=pid, desde=desde, hasta=hasta)
+    er=svc.obtener_estado_resultados(db, periodo_id=pid, desde=desde, hasta=hasta)
+    bg=svc.obtener_balance_general(db, periodo_id=pid, desde=desde, hasta=hasta)
     return templates.TemplateResponse(request, "finanzas/balance.html", {"user":user,"tab":"balance","bal":bal,"er":er,"bg":bg,"periodo":periodo,"pid":pid})
 
 
@@ -257,17 +242,10 @@ def balance(request: Request, periodo: str=Query(""), db: Session = Depends(get_
 def estados_financieros(request: Request, periodo: str=Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
     """Alias canónico de /balance exigido por tests e integración (periodo=YYYY-MM)."""
     svc.seed_pcge_basico(db)
-    pid=None
-    if periodo:
-        try:
-            anio, mes = map(int, periodo.split("-"))
-            p = db.query(PeriodoContable).filter(PeriodoContable.anio==anio, PeriodoContable.mes==mes).first()
-            pid = p.id if p else None
-        except Exception:
-            pass
-    bal=svc.obtener_balance_comprobacion(db, periodo_id=pid)
-    er=svc.obtener_estado_resultados(db, periodo_id=pid)
-    bg=svc.obtener_balance_general(db, periodo_id=pid)
+    pid, desde, hasta = svc.resolver_filtro_periodo(db, periodo)
+    bal=svc.obtener_balance_comprobacion(db, periodo_id=pid, desde=desde, hasta=hasta)
+    er=svc.obtener_estado_resultados(db, periodo_id=pid, desde=desde, hasta=hasta)
+    bg=svc.obtener_balance_general(db, periodo_id=pid, desde=desde, hasta=hasta)
     return templates.TemplateResponse(request, "finanzas/balance.html", {"user":user,"tab":"balance","bal":bal,"er":er,"bg":bg,"periodo":periodo,"pid":pid})
 
 # --- Existentes mejorados: CxC/CxP/Flujo/Rentabilidad/Reportes ---
