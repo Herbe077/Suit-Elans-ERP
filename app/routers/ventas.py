@@ -3,7 +3,7 @@ con automatizaciones (confirmación + reserva + turno), caja por turnos y
 facturación. Mapeo: OrdenVenta=Order, PagoOrden=Payment+CashMovement,
 ComprobanteVenta=Invoice, OrdenTrabajo=Garment."""
 from fastapi import APIRouter, Depends, Form, Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,7 @@ from app.core.constants import GARMENT_TYPES
 from app.core.database import get_db
 from app.core.deps import require_roles
 from app.models.billing import CajaTurno, CashMovement, Invoice
-from app.models.catalog import ProductVariant
+from app.models.catalog import Product, ProductVariant
 from app.models.client import Client
 from app.models.company import Company
 from app.models.inventory import Fabric
@@ -125,18 +125,60 @@ def pos(request: Request, ok: str = "", error: str = "",
     colabs: dict[int, list] = {}
     for c in db.query(Client).filter(Client.company_id.is_not(None)).all():
         colabs.setdefault(c.company_id, []).append(c)
+    variantes = db.query(ProductVariant).filter(ProductVariant.stock > 0).order_by(
+        ProductVariant.sku).limit(200).all()
+    prods = {p.id: p.nombre for p in db.query(Product).all()}
     return templates.TemplateResponse(request, "ventas/pos.html", {
         "user": user, "ok": ok, "error": error,
         "turno": ventas_svc.turno_abierto(db, user.id),
         "min_anticipo": ventas_svc.anticipo_min_pct(db),
         "clientes": db.query(Client).order_by(Client.apellidos).limit(200).all(),
         "empresas": empresas, "colabs": colabs,
-        "variantes": db.query(ProductVariant).filter(ProductVariant.stock > 0).order_by(
-            ProductVariant.sku).limit(200).all(),
+        "variantes": variantes, "nombres_prod": prods,
         "telas": db.query(Fabric).filter(Fabric.stock_metros > 0).order_by(
             Fabric.codigo).limit(200).all(),
         "tipos": GARMENT_TYPES,
         "recientes": db.query(Order).order_by(Order.id.desc()).limit(10).all()})
+
+
+@router.post("/pos/cliente-rapido")
+async def cliente_rapido(request: Request, db: Session = Depends(get_db),
+                         user=Auth):
+    """Alta exprés desde el POS (JSON, sin salir de la venta).
+
+    Solo datos mínimos de comprobante/contacto; SIN medidas antropométricas
+    (esas viven en Comercial/CRM y el modo Servicio/Bespoke).
+    RUC → empresa; otro doc → persona. Nunca bloquea por formato.
+    """
+    from app.services import peru as peru_svc
+    data = await request.json()
+    tipo_doc = ((data.get("tipo_doc") or "DNI").strip() or "DNI").upper()
+    nro = (data.get("nro_doc") or "").strip() or None
+    nombre = (data.get("nombre") or "").strip()
+    apellidos = (data.get("apellidos") or "").strip()
+    telefono = (data.get("telefono") or "").strip() or None
+    email = (data.get("email") or "").strip() or None
+    if not nombre:
+        return JSONResponse({"error": "Nombre requerido"}, status_code=400)
+    if tipo_doc == "RUC":
+        razon = f"{nombre} {apellidos}".strip()
+        e = Company(nombre_comercial=razon, ruc=peru_svc.normalizar_ruc(nro),
+                    telefono=telefono, email=email, clasificacion="Nuevo")
+        db.add(e)
+        db.commit()
+        db.refresh(e)
+        return {"tipo": "empresa", "id": e.id,
+                "display": f"{e.nombre_comercial} · {e.ruc or ''}".strip(" ·")}
+    c = Client(nombre=nombre, apellidos=apellidos, telefono=telefono,
+               email=email, tipo_doc=tipo_doc,
+               nro_doc=(peru_svc.normalizar_ruc(nro) if tipo_doc == "RUC"
+                        else nro),
+               clasificacion="Nuevo")
+    db.add(c)
+    db.commit()
+    db.refresh(c)
+    return {"tipo": "persona", "id": c.id,
+            "display": f"{c.nombre} {c.apellidos} · {c.doc_label}".strip(" ·")}
 
 
 @router.post("/pos/vender")
