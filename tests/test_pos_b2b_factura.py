@@ -55,6 +55,11 @@ def test_pos_b2b_factura_y_cxc_a_empresa(client, auth_cookies):
     inv = db.query(Invoice).filter(Invoice.order_id == oid).first()
     assert inv is not None and inv.serie == "F001"
     assert inv.company_id == eid  # titular de la factura: la empresa
+    # IGV incluido: total = suma de ítems, base = total/1.18, igv = resto.
+    assert inv.total == 2000.0
+    assert inv.subtotal == round(2000.0 / 1.18, 2)
+    assert inv.igv == round(2000.0 - inv.subtotal, 2)
+    assert round(inv.subtotal + inv.igv, 2) == inv.total
     cxc = db.query(CuentaPorCobrar).filter(
         CuentaPorCobrar.order_id == oid).first()
     assert cxc is not None and cxc.company_id == eid

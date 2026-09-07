@@ -27,15 +27,21 @@ def lines_for_order(db: Session, order_id: int) -> list[dict]:
 def emit_invoice_flush(db: Session, serie: str, order_id: int | None, client_id: int | None,
                        company_id: int | None, igv_pct: float, usuario_id: int | None,
                        lineas: list[dict] | None = None) -> Invoice:
-    """Variante componible: flush SIN commit (para transacciones atómicas)."""
+    """Variante componible: flush SIN commit (para transacciones atómicas).
+
+    Precios con IGV INCLUIDO (precio final): el total es la suma de los
+    ítems, sin recargos. Base = Total / (1 + IGV), IGV = Total - Base.
+    """
     lineas = lineas if lineas is not None else (
         lines_for_order(db, order_id) if order_id else [])
-    subtotal = round(sum(l["importe"] for l in lineas), 2)
-    igv = round(subtotal * igv_pct / 100, 2)
+    total = round(sum(l["importe"] for l in lineas), 2)
+    divisor = 1 + (igv_pct or 0) / 100
+    subtotal = round(total / divisor, 2)
+    igv = round(total - subtotal, 2)
     inv = Invoice(serie=serie, numero=next_numero(db, serie), order_id=order_id,
                   client_id=client_id, company_id=company_id,
                   subtotal=subtotal, igv_pct=igv_pct, igv=igv,
-                  total=round(subtotal + igv, 2), usuario_id=usuario_id)
+                  total=total, usuario_id=usuario_id)
     db.add(inv)
     db.flush()
     db.refresh(inv)

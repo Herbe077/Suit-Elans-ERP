@@ -61,7 +61,11 @@ def test_cobro_y_factura(client, auth_cookies):
     assert r.status_code in (200, 303)
     from app.models.billing import Invoice
     inv = db.query(Invoice).order_by(Invoice.id.desc()).first()
-    assert inv.numero == "000001" and inv.total == round(2250 * 1.18, 2)
+    # Precios con IGV incluido: el total es el precio final, sin recargo +18%.
+    assert inv.numero == "000001" and inv.total == 2250.0
+    assert inv.subtotal == round(2250.0 / 1.18, 2)
+    assert inv.igv == round(2250.0 - inv.subtotal, 2)
+    assert round(inv.subtotal + inv.igv, 2) == inv.total  # 70 + 4011 = 12
     r = client.get(f"/ventas/facturacion/{inv.id}.pdf", cookies=auth_cookies)
     assert r.status_code == 200 and r.headers["content-type"] == "application/pdf"
     db.close()

@@ -13,6 +13,7 @@
   <div class="text-xs border-b py-1 flex justify-between"><span>{{ l.cantidad }} x {{ l.concepto }} <span class="text-slate-400">({{ l.categoria }})</span></span><b>S/ {{ "%.2f"|format(l.importe) }}</b></div>
   {% endfor %}
   <p class="text-sm mt-2">Subtotal S/ {{ "%.2f"|format(q.subtotal) }} · Desc. {{ q.descuento_pct }}% · <b>Total S/ {{ "%.2f"|format(q.total) }}</b></p>
+  <p class="text-xs text-slate-400">Precios con IGV incluido (precio final).</p>
   <form method="post" action="/comercial/crm/cotizaciones/{{ q.id }}/lineas" class="grid grid-cols-2 gap-1 text-xs mt-3">
     <input name="concepto" required placeholder="Concepto *" class="border rounded px-2 py-1 col-span-2">
     <select name="categoria" class="border rounded px-2 py-1"><option value="prenda_medida">Prenda medida</option><option value="prenda_comercial">Prenda comercial</option><option value="servicio">Servicio</option></select>
