@@ -27,6 +27,8 @@ h1 { font-family: Georgia, 'Times New Roman', serif; }
 .bg-ink { background-color: #1F1112; }
 .bg-marfil { background-color: #FAF8F5; }
 [x-cloak] { display: none !important; }
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
 </style>
 </head>
 <body class="bg-marfil text-slate-900 min-h-screen">
@@ -48,20 +50,30 @@ h1 { font-family: Georgia, 'Times New Roman', serif; }
 </main>
 </div>
 {% if user %}
-{# Mobile bottom nav — consolidado, sin duplicados, incluye Finanzas/Rendimiento #}
-<nav class="lg:hidden fixed bottom-0 inset-x-0 bg-ink text-white flex py-2 text-[11px] z-40 overflow-x-auto" style="padding-bottom: env(safe-area-inset-bottom)">
+{# Mobile bottom nav — 5 accesos máximos; el resto vive en el drawer (sidebar) #}
+<div x-data="{ drawer: false }">
+<nav class="lg:hidden fixed bottom-0 inset-x-0 bg-ink text-white flex justify-around py-2 text-[11px] z-40" style="padding-bottom: env(safe-area-inset-bottom)">
   {% macro mlink(href, icon, label, roles) -%}
   {% if user and (user.role|lower == 'admin' or user.role in roles or user.role|lower in roles|map('lower') ) %}<a href="{{ href }}" class="p-2 whitespace-nowrap text-center min-w-[56px]">{{ icon }}<br>{{ label }}</a>{% endif %}
   {%- endmacro %}
   {{ mlink('/dashboard', '📊', 'Panel', ['VENTA','SASTRE-MAESTRO','SASTRE-ASISTENTE','ALMACEN','FINANZAS','ventas','sastre','taller','almacen','gerente','contador']) }}
   {{ mlink('/ventas/pos', '🛒', 'POS', ['VENTA','SASTRE-MAESTRO','ventas']) }}
-  {{ mlink('/ventas/caja', '💰', 'Caja', ['VENTA','SASTRE-MAESTRO','ventas']) }}
   {{ mlink('/produccion/kanban', '🧵', 'Taller', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre']) }}
-  {{ mlink('/rendimiento/registro', '⚡', 'Tareo', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre']) }}
-  {{ mlink('/inventario/almacen', '📦', 'Almacén', ['ALMACEN','almacen']) }}
-  {{ mlink('/finanzas/cuentas-por-cobrar', '💰', 'Finanzas', ['FINANZAS','gerente','contador']) }}
-  {{ mlink('/admin/usuarios', '⚙️', 'Admin', []) }}
+  {{ mlink('/ventas/caja', '💰', 'Caja', ['VENTA','SASTRE-MAESTRO','ventas']) }}
+  <button @click="drawer = true" class="p-2 whitespace-nowrap text-center min-w-[56px]" aria-label="Abrir menú">☰<br>Menú</button>
 </nav>
+<div x-show="drawer" x-cloak class="lg:hidden fixed inset-0 z-50">
+  <div class="absolute inset-0 bg-black/60" @click="drawer = false"></div>
+  <aside class="absolute left-0 inset-y-0 w-72 max-w-[85vw] bg-ink text-white overflow-y-auto">
+    <div class="flex items-center justify-between px-4 pt-4 pb-2 border-b border-white/10">
+      <span class="font-serif text-lg">SUIT <span class="text-laton">ELANS</span></span>
+      <button @click="drawer = false" class="text-slate-300 border border-white/20 rounded-full w-8 h-8" aria-label="Cerrar menú">✕</button>
+    </div>
+    {% include "components/sidebar.html" %}
+    <div class="p-3"><a href="/auth/logout" class="block text-center text-sm text-red-300 border border-white/20 rounded-lg py-1.5">Salir</a></div>
+  </aside>
+</div>
+</div>
 {% endif %}
 <script>
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/static/service-worker.js'); }

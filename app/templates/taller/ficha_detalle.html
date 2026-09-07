@@ -12,11 +12,6 @@
 {% if error == 'con_pagos' %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mt-3 mb-3 text-sm">⚠️ No se puede anular: el pedido tiene pagos registrados.</div>{% endif %}
 <div class="flex items-center justify-between mt-1 flex-wrap gap-2">
 <h1 class="text-2xl font-bold">{{ c.nombre }} {{ c.apellidos }}</h1>
-{% if user.role|lower == 'admin' and c %}
-<form method="post" action="/produccion/fichas/{{ c.id }}/eliminar" onsubmit="return confirm('¿Eliminar la ficha de {{ c.nombre }} {{ c.apellidos }}? Se borrarán sus medidas y citas. No se puede si tiene pedidos, cotizaciones o comprobantes.')">
-  <button class="text-xs bg-red-700 text-white rounded-lg px-3 py-1.5">🗑 Eliminar ficha</button>
-</form>
-{% endif %}
 </div>
 <p class="text-sm text-slate-500 mb-4">{{ c.doc_label }} · {{ c.telefono or '' }} · {{ c.email or '' }} · {{ c.distrito or '' }}</p>
 
@@ -35,18 +30,18 @@
     <button @click="tab='saco'" :class="tab==='saco' ? 'bg-borgo text-white' : 'bg-slate-200'" class="rounded px-3 py-1">Saco</button>
     <button @click="tab='pantalon'" :class="tab==='pantalon' ? 'bg-borgo text-white' : 'bg-slate-200'" class="rounded px-3 py-1">Pantalón</button>
   </div>
-  <form method="post" action="/produccion/fichas/{{ c.id }}/medidas" class="grid grid-cols-2 gap-2 text-sm">
+  <form method="post" action="/produccion/fichas/{{ c.id }}/medidas" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
     <input type="hidden" name="tipo_prenda" :value="tab">
     <div x-show="tab==='saco'" class="contents">
       {% for f in ['cuello','hombro','sisa','pecho','cintura_saco','cadera','largo_manga','ancho_manga','largo_espalda','largo_saco','caida_hombro'] %}
       {% set v = ultima[f] if ultima else none %}
-      <label>{{ f }} (cm)<input name="{{ f }}" type="number" step="0.1" value="{{ v if v is not none else '' }}" class="w-full border rounded px-2 py-1"></label>
+      <label>{{ f.replace('_', ' ')|capitalize }} (cm)<input name="{{ f }}" type="number" step="0.1" inputmode="decimal" value="{{ v if v is not none else '' }}" class="w-full border rounded px-2 py-1.5"></label>
       {% endfor %}
     </div>
     <div x-show="tab==='pantalon'" class="contents">
       {% for f in ['cintura_pantalon','cadera_pantalon','tiro','muslo','rodilla','tobillo','largo_pantalon'] %}
       {% set v = ultima[f] if ultima else none %}
-      <label>{{ f }} (cm)<input name="{{ f }}" type="number" step="0.1" value="{{ v if v is not none else '' }}" class="w-full border rounded px-2 py-1"></label>
+      <label>{{ f.replace('_', ' ')|capitalize }} (cm)<input name="{{ f }}" type="number" step="0.1" inputmode="decimal" value="{{ v if v is not none else '' }}" class="w-full border rounded px-2 py-1.5"></label>
       {% endfor %}
     </div>
     <input name="postura" placeholder="Postura" value="{{ ultima.postura if ultima and ultima.postura else '' }}" class="col-span-2 border rounded px-2 py-1">
@@ -109,4 +104,16 @@
 </div>
 </div>
 </div>
+{% if user.role|lower == 'admin' and c %}
+<div class="mt-4 bg-red-50 border-2 border-red-300 rounded-xl p-4" x-data="{ confirma: false }">
+  <h2 class="font-bold text-sm text-red-800 mb-1">⚠️ Zona de Peligro</h2>
+  <p class="text-xs text-red-700 mb-2">Eliminar la ficha borra sus medidas y citas. No se puede si tiene pedidos, cotizaciones o comprobantes.</p>
+  <button x-show="!confirma" @click="confirma = true" class="text-xs bg-white border border-red-400 text-red-700 rounded-lg px-3 py-2 font-semibold">🗑 Eliminar ficha…</button>
+  <form x-show="confirma" method="post" action="/produccion/fichas/{{ c.id }}/eliminar" class="flex flex-wrap items-center gap-2 text-xs">
+    <span class="text-red-800 font-semibold">¿Eliminar la ficha de {{ c.nombre }} {{ c.apellidos }}? Esta acción no se puede deshacer.</span>
+    <button class="bg-red-700 text-white rounded-lg px-4 py-2 font-bold">Sí, eliminar definitivamente</button>
+    <button type="button" @click="confirma = false" class="bg-white border border-slate-300 rounded-lg px-4 py-2">Cancelar</button>
+  </form>
+</div>
+{% endif %}
 {% endblock %}

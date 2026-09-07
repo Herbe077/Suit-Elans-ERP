@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="flex gap-2 mb-4 text-sm border-b border-[#C5A880]/40 pb-2 overflow-x-auto">
+<div class="flex overflow-x-auto whitespace-nowrap scrollbar-none py-2 gap-2 mb-4 text-sm border-b border-[#C5A880]/40 pb-2">
   <a href="/produccion/kanban" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='kanban' else 'hover:bg-white' }} font-bold">🏭 Kanban</a>
   <a href="/produccion/fichas" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='fichas' else 'hover:bg-white' }} font-bold">✂️ Fichas</a>
   <a href="/produccion/pruebas" class="px-3 py-1.5 rounded-lg whitespace-nowrap {{ 'bg-borgo text-white' if tab=='pruebas' else 'hover:bg-white' }} font-bold">📏 Pruebas</a>
