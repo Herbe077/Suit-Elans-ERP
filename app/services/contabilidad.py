@@ -603,7 +603,8 @@ def registrar_gasto_atomico(db: Session, fecha: date, categoria: str,
 def pagar_gasto_atomico(db: Session, gasto_id: int, cuenta_origen_codigo: str = "104",
                         usuario_id: int | None = None,
                         fecha: date | None = None) -> dict:
-    """Pago de gasto: pasivo (4212/4111/424/4699/4654 según categoría) / caja-banco + MovFin EGRESO + Cash, atómico."""
+    """Pago de gasto: pasivo / caja-banco por el NETO (total − retención IR)
+    + MovFin EGRESO + Cash, atómico. La retención queda por pagar en 40172."""
     from app.services import finanzas as fin
 
     seed_pcge_basico(db)
@@ -618,6 +619,9 @@ def pagar_gasto_atomico(db: Session, gasto_id: int, cuenta_origen_codigo: str = 
         total = _d(gasto.monto_total)
         if total <= 0:
             raise ValueError("Total inválido")
+        neto = total - _d(getattr(gasto, "retencion", 0) or 0)
+        if neto <= 0:
+            raise ValueError("Neto a pagar inválido (revisa la retención)")
         c_prov = _cuenta(db, fin.pasivo_por_categoria(gasto.categoria))
         c_caja = _cuenta(db, cuenta_origen_codigo if cuenta_origen_codigo in ("101", "104") else "104")
         asientos_antes = {a.id for a in db.query(fin.AsientoContable).filter(
@@ -626,18 +630,18 @@ def pagar_gasto_atomico(db: Session, gasto_id: int, cuenta_origen_codigo: str = 
         asiento = crear_asiento_flush(
             db, fecha or date.today(), f"Pago gasto {gasto.numero_comprobante or gasto.id}",
             "PAGO", gasto.id,
-            [{"cuenta_id": c_prov.id, "debe": total, "haber": Decimal("0")},
-             {"cuenta_id": c_caja.id, "debe": Decimal("0"), "haber": total}])
+            [{"cuenta_id": c_prov.id, "debe": neto, "haber": Decimal("0")},
+             {"cuenta_id": c_caja.id, "debe": Decimal("0"), "haber": neto}])
         gasto.estado = "PAGADO"
         db.add(MovimientoFinanciero(tipo="EGRESO", categoria="Costos Operativos",
-                                    monto=float(total),
+                                    monto=float(neto),
                                     cuenta_origen="Banco" if c_caja.codigo == "104" else "Caja",
                                     comprobante_ref=gasto.numero_comprobante,
                                     usuario_id=usuario_id,
                                     descripcion=f"Pago gasto {gasto.categoria}"))
         db.add(CashMovement(tipo="egreso",
                             concepto=f"Pago gasto {gasto.numero_comprobante or gasto.id}",
-                            monto=float(total), metodo="transferencia",
+                            monto=float(neto), metodo="transferencia",
                             usuario_id=usuario_id))
         db.commit()
         return {"gasto_id": gasto.id, "asiento_id": asiento.id,

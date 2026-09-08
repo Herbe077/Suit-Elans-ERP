@@ -5,7 +5,8 @@ lo suma en tiempo real por operario. El botón único `Generar Provisión RxH /
 CxP` crea por el acumulado:
 
   1. Gasto HONORARIOS_RXH (RECIBO_HONORARIOS, sin IGV, retención 8% opcional)
-     con asiento DEBE 6322 / HABER 4241 (honorarios por pagar).
+     con asiento DEBE 6322 / HABER 40172 (retención) + HABER 4241 (neto)
+     y destino 921/791 (costo de taller, nunca 941).
   2. CxP POR_PAGAR con tipo_comprobante RECIBO_HONORARIOS a nombre del
      sastre (proveedor por DNI/RUC), saldo = total − retención.
   3. Los registros pasan de PENDIENTE a PROVISIONADO (no se recontabilizan).
@@ -108,8 +109,8 @@ def generar_provision_rxh(db: Session, operario_id: int,
                           usuario_id: int | None = None) -> dict:
     """Genera Gasto RxH (6322/4241) + CxP POR_PAGAR y marca PROVISIONADO."""
     from app.services.contabilidad import exigir_periodo_abierto
-    from app.services.finanzas import (CLASIF_DESTINO_MAP,
-                                       crear_asiento_flush,
+    from app.services.finanzas import (crear_asiento_flush,
+                                       ensure_cuenta_40172,
                                        ensure_cxp_tipo_comprobante_column,
                                        get_cuenta_by_codigo, seed_pcge_basico)
 
@@ -142,6 +143,16 @@ def generar_provision_rxh(db: Session, operario_id: int,
         c_pasivo = ensure_cuenta_4241(db)
         if not c_gasto or not c_pasivo:
             raise ValueError("Faltan cuentas 6322/4241 (seed PCGE)")
+        neto = total - ret
+        # Naturaleza con retención: DEBE 6322 (bruto) / HABER 40172 (ret 8%)
+        # / HABER 4241 (neto en CxP). Sin retención: 6322 / 4241 por el total.
+        lineas = [{"cuenta_id": c_gasto.id, "debe": total, "haber": Decimal("0")}]
+        if ret > 0:
+            c_ret = ensure_cuenta_40172(db)
+            if not c_ret:
+                raise ValueError("Falta cuenta 40172 (seed PCGE)")
+            lineas.append({"cuenta_id": c_ret.id, "debe": Decimal("0"), "haber": ret})
+        lineas.append({"cuenta_id": c_pasivo.id, "debe": Decimal("0"), "haber": neto})
         gasto = GastoRegistrado(
             proveedor_id=sup.id, ruc_proveedor=sup.ruc,
             tipo_comprobante="RECIBO_HONORARIOS",
@@ -154,15 +165,15 @@ def generar_provision_rxh(db: Session, operario_id: int,
         db.add(gasto)
         db.flush()
         asiento = crear_asiento_flush(
-            db, fecha, f"RxH destajo {numero}", "HONORARIOS", gasto.id,
-            [{"cuenta_id": c_gasto.id, "debe": total, "haber": Decimal("0")},
-             {"cuenta_id": c_pasivo.id, "debe": Decimal("0"), "haber": total}])
-        # Destino analítico 941/791 (gasto administrativo, sin centro).
-        c_dest = get_cuenta_by_codigo(db, CLASIF_DESTINO_MAP["GASTO_ADMINISTRATIVO"])
+            db, fecha, f"RxH destajo {numero}", "HONORARIOS", gasto.id, lineas)
+        # Destajo de taller → destino 921 (costo de producción), nunca 941:
+        # la naturaleza es honorarios de confección, no gasto administrativo
+        # ni planilla, sin importar la ficha contractual del sastre.
+        c_dest = get_cuenta_by_codigo(db, "921")
         c_79 = get_cuenta_by_codigo(db, "791")
         if c_dest and c_79:
             crear_asiento_flush(
-                db, fecha, f"Destino 941 RxH {numero}", "HONORARIOS", gasto.id,
+                db, fecha, f"Destino 921 RxH {numero}", "HONORARIOS", gasto.id,
                 [{"cuenta_id": c_dest.id, "debe": total, "haber": Decimal("0")},
                  {"cuenta_id": c_79.id, "debe": Decimal("0"), "haber": total}])
         cxp = CuentaPorPagar(

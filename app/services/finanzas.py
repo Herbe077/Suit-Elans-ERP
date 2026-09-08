@@ -13,6 +13,14 @@ from app.models.finanzas import (
 )
 from app.core.database import engine
 
+def ensure_cuenta_40172(db: Session):
+    """Asegura la analítica 40172 (retención IR 4ta 8% por pagar)."""
+    seed_pcge_basico(db)
+    return get_or_create_cuenta(
+        db, "40172", "Retención IR 4ta categoría - RxH", "PASIVO",
+        nivel=3, padre_codigo="401", elemento=4, es_analitica=True)
+
+
 # ── PCGE helpers ────────────────────────────────────────────────────────
 def get_cuenta_by_codigo(db: Session, codigo: str) -> CuentaContable | None:
     return db.query(CuentaContable).filter(CuentaContable.codigo == codigo).first()
@@ -344,9 +352,13 @@ def registrar_gasto_operativo(
     Naturaleza: DEBE cuenta gasto/activo (base) + DEBE 40111 IGV (si aplica)
       / HABER pasivo según matriz (4212 proveedores, 4111 planilla,
       424 honorarios RxH, 4699 alquiler natural, 4654 activo fijo).
-    Destino (solo Clase 6): por CENTRO DE COSTO (Taller→921,
-      Administración→941, Comercial/Ventas→951) / HABER 791; sin destino
-      para cuentas de Balance (33x). Fallback a clasificación si no hay centro.
+      Con retención (RxH 4ta): HABER 40172 por la retención y HABER pasivo
+      por el neto (base + igv − retención).
+    Destino (solo Clase 6): RxH/destajo de taller → 921 obligatorio
+      (naturaleza de confección, no ficha contractual); si no, por CENTRO
+      DE COSTO (Taller→921, Administración→941, Comercial/Ventas→951)
+      / HABER 791; sin destino para cuentas de Balance (33x). El 941 queda
+      reservado a oficina y planilla administrativa.
     Retorna (gasto, asiento_naturaleza). Un solo commit final (atómico).
 
     Bloqueo duro: raise si `fecha` cae en período CERRADO/BLOQUEADO.
@@ -400,23 +412,35 @@ def registrar_gasto_operativo(
         estado="PENDIENTE",
     )
     db.add(gasto); db.flush()
+    es_rxh = cat == "HONORARIOS_RXH" or (tipo_comprobante or "").upper() == "RECIBO_HONORARIOS"
     lineas = [{"cuenta_id": c_gasto.id, "debe": base, "haber": Decimal("0")}]
     if igv > 0:
         lineas.append({"cuenta_id": c_igv.id, "debe": igv, "haber": Decimal("0")})
-    lineas.append({"cuenta_id": c_prov.id, "debe": Decimal("0"), "haber": total})
+    neto = total - ret
+    if ret > 0:
+        c_ret = ensure_cuenta_40172(db)
+        if not c_ret:
+            raise ValueError("Falta cuenta 40172 (seed PCGE)")
+        lineas.append({"cuenta_id": c_ret.id, "debe": Decimal("0"), "haber": ret})
+    lineas.append({"cuenta_id": c_prov.id, "debe": Decimal("0"), "haber": neto})
     asiento = crear_asiento_flush(
         db, fecha, (glosa or f"{cat.title()} {numero_comprobante or ''}").strip() or cat.title(), regla["origen"], gasto.id, lineas,
     )
-    # Destino analítico: por centro de costo (Taller→921, Adm→941, Com→951);
-    # fallback a clasificación; sin destino para cuentas de Balance (33x).
+    # Destino analítico: el RxH/destajo de taller va a 921 por naturaleza
+    # (confección), sin importar centro ni ficha contractual; el resto por
+    # centro de costo (Taller→921, Adm→941, Com→951); fallback a
+    # clasificación; sin destino para cuentas de Balance (33x).
     destino_codigo = None
     if codigo_gasto.startswith("6"):
-        if centro_costo_id:
-            cc = db.get(CentroCosto, centro_costo_id)
-            if cc and (cc.tipo or "").upper() in DESTINO_POR_CENTRO:
-                destino_codigo = DESTINO_POR_CENTRO[(cc.tipo or "").upper()]
-        if not destino_codigo:
-            destino_codigo = CLASIF_DESTINO_MAP.get(clasif)
+        if es_rxh:
+            destino_codigo = "921"
+        else:
+            if centro_costo_id:
+                cc = db.get(CentroCosto, centro_costo_id)
+                if cc and (cc.tipo or "").upper() in DESTINO_POR_CENTRO:
+                    destino_codigo = DESTINO_POR_CENTRO[(cc.tipo or "").upper()]
+            if not destino_codigo:
+                destino_codigo = CLASIF_DESTINO_MAP.get(clasif)
     if destino_codigo:
         c_dest = get_cuenta_by_codigo(db, destino_codigo)
         c_79 = get_cuenta_by_codigo(db, CTA_DESTINO_CONTRAPARTIDA)
