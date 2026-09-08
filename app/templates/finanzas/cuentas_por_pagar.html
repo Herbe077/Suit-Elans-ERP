@@ -5,7 +5,7 @@
 {% block finanzas %}
 <div class="w-full max-w-full overflow-x-hidden">
 <h1 class="text-2xl font-bold mb-1 font-serif" style="color:#370003">🏦 Cuentas por Pagar</h1>
-<p class="text-sm text-slate-500 mb-3">Pagos a proveedores con amortizaciones parciales o totales.</p>
+<p class="text-sm text-slate-500 mb-3">Bandeja Única de Tesorería: deudas de compras/gastos y provisiones RxH de destajo. Solo el botón <b>Pagar</b> mueve caja (EGRESO) y diario (1011/1041).</p>
 <form method="get" class="flex flex-col gap-2 sm:flex-row sm:items-end text-xs mb-3">
   <label class="block">Estado
     <select name="estado" class="border rounded px-2 py-1.5 block mt-0.5 bg-white"><option value="">Todos</option><option value="POR_PAGAR" {% if estado=='POR_PAGAR' %}selected{% endif %}>POR_PAGAR</option><option value="PARCIAL" {% if estado=='PARCIAL' %}selected{% endif %}>PARCIAL</option><option value="PAGADO" {% if estado=='PAGADO' %}selected{% endif %}>PAGADO</option></select>

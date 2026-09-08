@@ -352,6 +352,13 @@ def cxc_conciliar(cuenta_id: int = Form(...), monto: float = Form(...), db: Sess
 @router.get("/cuentas-por-pagar", response_class=HTMLResponse)
 def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
     _sync_cxp(db)
+    # Bandeja Única de Tesorería: espeja gastos pendientes (incl. RxH) como CxP.
+    # Solo el PAGAR genera el EGRESO real (MovimientoFinanciero + 1011/1041).
+    try:
+        from app.services import contabilidad as _contab
+        _contab.sincronizar_cxp_desde_gastos(db)
+    except Exception as e:
+        _logger.warning("sync gastos→CxP omitido: %s", e)
     q=db.query(CuentaPorPagar)
     if estado: q=q.filter(CuentaPorPagar.estado==estado.upper())
     if proveedor:
@@ -405,6 +412,7 @@ def cxp_pagar(cid: int, monto: float = Form(...), cuenta_origen: str = Form("Ban
 @router.get("/gastos", response_class=HTMLResponse)
 def gastos_list(request: Request, estado: str = Query(""), categoria: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
     svc.seed_pcge_basico(db)
+    svc.ensure_gasto_retencion_column(db)
     q = db.query(GastoRegistrado).order_by(GastoRegistrado.id.desc())
     if estado:
         q = q.filter(GastoRegistrado.estado == estado.upper())
@@ -433,7 +441,7 @@ def gastos_crear(
     tipo_comprobante: str = Form("FACTURA"), numero_comprobante: str = Form(""),
     categoria: str = Form("OTRO"), cuenta_codigo: str = Form(""),
     monto_total: float = Form(0), monto_base: float = Form(0),
-    igv: float = Form(0), glosa: str = Form(""),
+    igv: float = Form(0), retencion: float = Form(0), glosa: str = Form(""),
     centro_costo_id: str = Form(""), db: Session = Depends(get_db), user=FinanzasAuth,
 ):
     try:
@@ -449,16 +457,23 @@ def gastos_crear(
     except Exception:
         ccid = None
     cat = (categoria or "OTRO").upper()
+    tipo = (tipo_comprobante or "FACTURA").upper()
     cta = cuenta_codigo or (svc.CATEGORIA_GASTO_MAP.get(cat, svc.CATEGORIA_GASTO_MAP["OTRO"])[0])
     # El monto ingresado es TOTAL FINAL con IGV incluido (FACTURA: se desglosa
-    # base = total/1.18; otros comprobantes: todo va a base). Compat: si no
-    # viene monto_total se respetan monto_base + igv explícitos.
+    # base = total/1.18; otros comprobantes: todo va a base, sin IGV).
+    # RECIBO_HONORARIOS: sin IGV y con retención 8% IR (neto = total − ret).
+    # Compat: si no viene monto_total se respetan monto_base + igv explícitos.
     if monto_total and monto_total > 0:
-        if (tipo_comprobante or "FACTURA").upper() == "FACTURA":
+        if tipo == "FACTURA":
             monto_base = round(monto_total / 1.18, 2)
             igv = round(monto_total - monto_base, 2)
         else:
             monto_base, igv = monto_total, 0.0
+    es_rxh = cat == "HONORARIOS_RXH" or tipo == "RECIBO_HONORARIOS"
+    if es_rxh:
+        igv = 0.0
+        if not (retencion or 0) and (monto_base or 0) > 0:
+            retencion = round(float(monto_base) * 0.08, 2)
     # Provisión atómica con bloqueo de período cerrado
     from app.services import contabilidad as contab
     try:
@@ -466,7 +481,7 @@ def gastos_crear(
             db, fecha=fe, categoria=cat, monto_base=monto_base, monto_igv=igv,
             cuenta_codigo=cta, proveedor_id=pid, ruc_proveedor=ruc or None,
             tipo_comprobante=tipo_comprobante or None, numero_comprobante=numero_comprobante or None,
-            centro_costo_id=ccid, glosa=glosa,
+            centro_costo_id=ccid, glosa=glosa, retencion=retencion or 0,
         )
     except Exception as e:
         return HTMLResponse(str(e), status_code=400)

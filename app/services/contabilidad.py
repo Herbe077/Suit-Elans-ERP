@@ -574,7 +574,8 @@ def registrar_gasto_atomico(db: Session, fecha: date, categoria: str,
                             centro_costo_id: int | None = None,
                             variabilidad: str = "FIJO",
                             clasificacion: str | None = None,
-                            glosa: str | None = None) -> tuple[GastoRegistrado, object]:
+                            glosa: str | None = None,
+                            retencion: float | Decimal = 0) -> tuple[GastoRegistrado, object]:
     """Provisión de gasto con bloqueo de período, en UNA transacción."""
     from app.services import finanzas as fin
 
@@ -586,7 +587,8 @@ def registrar_gasto_atomico(db: Session, fecha: date, categoria: str,
             monto_igv=monto_igv, cuenta_codigo=cuenta_codigo, proveedor_id=proveedor_id,
             ruc_proveedor=ruc_proveedor, tipo_comprobante=tipo_comprobante,
             numero_comprobante=numero_comprobante, centro_costo_id=centro_costo_id,
-            variabilidad=variabilidad, clasificacion=clasificacion, glosa=glosa)
+            variabilidad=variabilidad, clasificacion=clasificacion, glosa=glosa,
+            retencion=retencion)
         return gasto, asiento
     except Exception:
         # registrar_gasto_operativo commitea internamente; si el asiento falló
@@ -643,6 +645,64 @@ def pagar_gasto_atomico(db: Session, gasto_id: int, cuenta_origen_codigo: str = 
     except Exception:
         db.rollback()
         raise
+
+
+# ── Sync gastos PENDIENTES → CxP (bandeja única de tesorería) ──────
+def sincronizar_cxp_desde_gastos(db: Session) -> int:
+    """Espeja cada gasto PENDIENTE en una CxP POR_PAGAR (idempotente).
+
+    La CxP es solo el espejo de tesorería: NO genera asiento (el gasto ya
+    provisionó su pasivo 4212/4111/424/4699/4654) y NUNCA genera
+    MovimientoFinanciero/Caja (el egreso nace solo al pagar).
+    Clave idempotente: numero_comprobante (o GASTO-{id}) + proveedor.
+    Retorna espejos creados.
+    """
+    from app.services.finanzas import ensure_gasto_retencion_column
+
+    ensure_gasto_retencion_column(db)
+    creados = 0
+    gastos = db.query(GastoRegistrado).filter(
+        GastoRegistrado.estado == "PENDIENTE").all()
+    for g in gastos:
+        try:
+            total = float(g.monto_total or 0)
+            if total <= 0:
+                continue
+            pid = g.proveedor_id
+            if not pid and (g.ruc_proveedor or "").strip():
+                # Mapea persona por DNI/RUC: reutiliza o crea el proveedor.
+                from app.models.purchasing import Supplier as _Supplier
+                ruc = g.ruc_proveedor.strip()
+                sup = db.query(_Supplier).filter(
+                    _Supplier.ruc == ruc).first()
+                if not sup:
+                    sup = _Supplier(
+                        nombre=((g.glosa or "").strip() or f"Proveedor {ruc}")[:160],
+                        ruc=ruc)
+                    db.add(sup)
+                    db.flush()
+                g.proveedor_id = sup.id
+                pid = sup.id
+            if not pid:
+                continue  # sin contraparte no hay espejo en tesorería
+            clave = (g.numero_comprobante or "").strip() or f"GASTO-{g.id}"
+            ya = db.query(CuentaPorPagar).filter(
+                CuentaPorPagar.numero_factura == clave,
+                CuentaPorPagar.proveedor_id == pid).first()
+            if ya:
+                continue
+            ret = float(getattr(g, "retencion", 0) or 0)
+            db.add(CuentaPorPagar(
+                proveedor_id=pid, numero_factura=clave,
+                monto_total=total, monto_pagado=0.0,
+                saldo_pendiente=round(max(total - ret, 0.0), 2),
+                retencion=ret, fecha_emision=g.fecha_emision,
+                estado="POR_PAGAR"))
+            creados += 1
+        except Exception:
+            continue
+    db.commit()
+    return creados
 
 
 # ── Flujo de caja real por actividad ─────────────────────────────────

@@ -358,51 +358,60 @@ def aprobar_registro(registro_id: int = Form(...), db: Session = Depends(get_db)
 
 @router.post("/calculadora/liquidar")
 def liquidar_registro(registro_id: int = Form(...), db: Session = Depends(get_db), user=FinanzasSM):
+    """Liquidación interna: solo marca el estado operativo.
+
+    No crea CuentaPorPagar, Gasto ni MovimientoFinanciero. La provisión
+    financiera se genera a demanda con [Registrar Provisión RxH].
+    """
     reg = db.get(RegistroJornada, registro_id)
     if not reg:
         return RedirectResponse("/rendimiento/calculadora", status_code=303)
-    # integra con Finanzas: crea la obligación en CxP (POR_PAGAR).
-    # El EGRESO de flujo de caja se genera SOLO al pagar efectivamente
-    # (pagar_proveedor/pagar_gasto); crear un EGRESO aquí inflaría el flujo
-    # con obligaciones aún no liquidadas (monto_pagado 0.00).
-    total = sum((d.subtotal for d in db.query(DetalleJornada).filter(DetalleJornada.registro_jornada_id==reg.id).all()), Decimal("0"))
-    try:
-        from app.models.finanzas import CuentaPorPagar
-        from app.models.purchasing import Supplier
-        # busca proveedor genérico personal o crea
-        sup = db.query(Supplier).filter(Supplier.nombre=="Personal Destajo").first()
-        if not sup:
-            sup = Supplier(nombre="Personal Destajo", ruc="00000000000")
-            db.add(sup); db.flush()
-        # CuentaPorPagar
-        from datetime import date
-        cpp = db.query(CuentaPorPagar).filter(CuentaPorPagar.numero_factura == f"LIQ-{reg.id}").first()
-        if not cpp:
-            cpp = __import__("app.models.finanzas", fromlist=["CuentaPorPagar"]).CuentaPorPagar(proveedor_id=sup.id, numero_factura=f"LIQ-{reg.id}", monto_total=float(total), monto_pagado=0, saldo_pendiente=float(total), estado="POR_PAGAR", fecha_emision=date.today())
-            db.add(cpp)
-            db.flush()
-            # Provisión contable de la obligación: DEBE 6211 (MOD) / HABER 4212.
-            try:
-                from app.services.finanzas import (
-                    crear_asiento_flush, get_cuenta_by_codigo, seed_pcge_basico)
-                from app.services.contabilidad import exigir_periodo_abierto
-                from decimal import Decimal as _D
-                seed_pcge_basico(db)
-                exigir_periodo_abierto(db, date.today())
-                c_mod = get_cuenta_by_codigo(db, "6211")
-                c_prov = get_cuenta_by_codigo(db, "4212")
-                if c_mod and c_prov and _D(str(total)) > 0:
-                    crear_asiento_flush(
-                        db, date.today(), f"Provisión destajo LIQ-{reg.id}",
-                        "COMPRA", cpp.id,
-                        [{"cuenta_id": c_mod.id, "debe": _D(str(total)), "haber": _D("0")},
-                         {"cuenta_id": c_prov.id, "debe": _D("0"), "haber": _D(str(total))}])
-            except Exception:
-                pass
-    except Exception:
-        pass
-    reg.estado = "LIQUIDADO"
+    reg.estado = "LIQUIDADO_INTERNO"
     db.commit()
+    return RedirectResponse("/rendimiento/calculadora", status_code=303)
+
+
+@router.post("/generar-rxh", response_class=HTMLResponse)
+@router.post("/generar-cxh", response_class=HTMLResponse)
+async def generar_rxh(request: Request, db: Session = Depends(get_db), user=FinanzasSM):
+    """Provisión RxH a demanda: Gasto HONORARIOS_RXH + CxP POR_PAGAR.
+
+    Nunca genera MovimientoFinanciero/Caja (el egreso nace solo al PAGAR).
+    """
+    from datetime import date as _date
+    form = await request.form()
+
+    def _int(name):
+        try:
+            return int(form.get(name))  # type: ignore
+        except Exception:
+            return None
+
+    def _fecha(name):
+        try:
+            v = (form.get(name) or "").strip()  # type: ignore
+            return _date.fromisoformat(v) if v else None
+        except Exception:
+            return None
+
+    operario_id = _int("operario_id")
+    if not operario_id:
+        return HTMLResponse("operario_id es obligatorio", status_code=400)
+    numero = str(form.get("numero_comprobante") or "").strip()
+    ruc_dni = str(form.get("ruc_dni") or "").strip() or None
+    con_ret = str(form.get("con_retencion") or "").lower() in ("1", "on", "true", "si")
+    try:
+        from app.services import rendimiento_rxh as rxh_svc
+        rxh_svc.generar_provision_rxh(
+            db, operario_id, numero,
+            desde=_fecha("desde"), hasta=_fecha("hasta"),
+            ruc_dni=ruc_dni, con_retencion=con_ret,
+            usuario_id=user.id)
+    except ValueError as e:
+        return HTMLResponse(str(e), status_code=400)
+    if "application/json" in (request.headers.get("accept") or ""):
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"ok": True, "numero": numero})
     return RedirectResponse("/rendimiento/calculadora", status_code=303)
 
 @router.get("/tarifario", response_class=HTMLResponse)

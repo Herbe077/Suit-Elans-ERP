@@ -29,8 +29,8 @@
       <input name="ruc" placeholder="RUC/DNI" maxlength="11" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
     </label>
     <label class="block min-w-0" id="f-tipo">Tipo comprobante
-      <select name="tipo_comprobante" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
-        <option>FACTURA</option><option>RECIBO_HONORARIOS</option><option>BOLETA</option><option>PLANILLA</option><option>OTRO</option>
+      <select name="tipo_comprobante" id="g-tipo" onchange="gastoModo()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option>FACTURA</option><option>BOLETA</option><option>RECIBO_HONORARIOS</option><option>OTROS</option>
       </select>
     </label>
     <label class="block min-w-0" id="f-numero"><span id="lb-numero">N° Comprobante</span>
@@ -45,6 +45,9 @@
     <label class="block min-w-0">Monto Total S/ (IGV incl.)
       <input id="g-total-in" name="monto_total" type="number" step="0.01" min="0.01" required placeholder="2360.00" oninput="gastoCalc()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
     </label>
+    <label class="block min-w-0" id="f-ret">Retención 8% IR S/
+      <input id="g-ret-in" name="retencion" type="number" step="0.01" min="0" value="0" oninput="gastoCalc()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
     <div class="block min-w-0">Desglose auto (Base + IGV)
       <div id="g-split" class="border rounded px-2 py-1.5 mt-0.5 bg-[#FAF8F5] font-bold">S/ 0.00 + S/ 0.00</div>
     </div>
@@ -58,13 +61,22 @@
 var GASTO_SIN_IGV = ['PLANILLA', 'HONORARIOS_RXH', 'ALQUILER_NATURAL'];
 function gastoModo() {
   var cat = document.getElementById('g-cat').value;
-  var sinIgv = GASTO_SIN_IGV.indexOf(cat) !== -1;
+  var tipo = document.getElementById('g-tipo').value;
+  var esRxh = cat === 'HONORARIOS_RXH' || tipo === 'RECIBO_HONORARIOS';
+  var sinIgv = GASTO_SIN_IGV.indexOf(cat) !== -1 || esRxh;
   var esPlanilla = cat === 'PLANILLA';
-  var esRxh = cat === 'HONORARIOS_RXH';
   function vis(id, mostrar) {
     var el = document.getElementById(id);
     if (el) el.style.display = mostrar ? '' : 'none';
   }
+  // RxH: muestra retención 8% y calcula neto (Total − Retención), sin IGV.
+  vis('f-ret', esRxh);
+  var retIn = document.getElementById('g-ret-in');
+  var t = parseFloat(document.getElementById('g-total-in').value) || 0;
+  if (esRxh && retIn && !(parseFloat(retIn.value) > 0)) {
+    retIn.value = (Math.round(t * 0.08 * 100) / 100).toFixed(2);
+  }
+  if (!esRxh && retIn) { retIn.value = '0'; }
   // Planilla: solo Fecha, Glosa, Centro de costo y Monto.
   vis('f-proveedor', !esPlanilla);
   vis('f-ruc', !esPlanilla);
@@ -85,16 +97,19 @@ function gastoModo() {
   gastoCalc(sinIgv);
 }
 function gastoCalc(sinIgv) {
+  var cat = document.getElementById('g-cat').value;
+  var tipo = document.getElementById('g-tipo').value;
+  var esRxh = cat === 'HONORARIOS_RXH' || tipo === 'RECIBO_HONORARIOS';
   if (sinIgv === undefined) {
-    var cat = document.getElementById('g-cat').value;
-    sinIgv = GASTO_SIN_IGV.indexOf(cat) !== -1;
+    sinIgv = GASTO_SIN_IGV.indexOf(cat) !== -1 || esRxh;
   }
   var t = parseFloat(document.getElementById('g-total-in').value) || 0;
   var base = sinIgv ? t : Math.round((t / 1.18) * 100) / 100;
   var igv = Math.round((t - base) * 100) / 100;
+  var ret = parseFloat(document.getElementById('g-ret-in').value) || 0;
   var f = function (n) { return n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); };
   document.getElementById('g-split').textContent = 'S/ ' + f(base) + ' + S/ ' + f(igv) + (sinIgv ? ' (sin IGV)' : '');
-  document.getElementById('g-total').textContent = 'S/ ' + f(t);
+  document.getElementById('g-total').textContent = 'S/ ' + f(t) + (esRxh ? ' · Neto S/ ' + f(t - ret) : '');
 }
 gastoModo();
 </script>
@@ -107,7 +122,7 @@ gastoModo();
 
 <div class="bg-white rounded-xl shadow overflow-x-auto">
   <table class="w-full text-xs">
-    <thead class="bg-slate-50 text-slate-500"><tr><th class="text-left p-2">ID</th><th>Fecha</th><th>Proveedor/RUC</th><th>Comprobante</th><th>Categoría</th><th class="hidden md:table-cell">Cuenta</th><th class="text-right">Base</th><th class="text-right">IGV</th><th class="text-right">Total</th><th>Estado</th><th></th></tr></thead>
+    <thead class="bg-slate-50 text-slate-500"><tr><th class="text-left p-2">ID</th><th>Fecha</th><th>Proveedor/RUC</th><th>Comprobante</th><th>Categoría</th><th class="hidden md:table-cell">Cuenta</th><th class="text-right">Base</th><th class="text-right">IGV</th><th class="text-right">Ret.8%</th><th class="text-right">Total</th><th>Estado</th><th></th></tr></thead>
     <tbody>
     {% for g in gastos %}
       <tr class="border-b hover:bg-amber-50">
@@ -119,6 +134,7 @@ gastoModo();
         <td class="font-mono hidden md:table-cell">{{ cuentas_map.get(g.cuenta_id, g.cuenta_id or '—') }}</td>
         <td class="text-right">{{ soles(g.monto_base or 0) }}</td>
         <td class="text-right">{{ soles(g.monto_igv or 0) }}</td>
+        <td class="text-right">{{ soles(g.retencion or 0) }}</td>
         <td class="text-right font-bold">{{ soles(g.monto_total or 0) }}</td>
         <td>{% if g.estado=='PAGADO' %}<span class="text-emerald-700 font-bold">PAGADO</span>{% else %}<span class="text-amber-700 font-bold">PENDIENTE</span>{% endif %}</td>
         <td>{% if g.estado!='PAGADO' %}<form method="post" action="/finanzas/gastos/{{ g.id }}/pagar" class="flex gap-1"><select name="cuenta_origen" class="border rounded px-1"><option value="104">Banco</option><option value="101">Caja</option></select><button class="underline">Pagar</button></form>{% endif %}</td>

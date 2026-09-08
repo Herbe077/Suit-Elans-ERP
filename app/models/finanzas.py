@@ -154,6 +154,7 @@ class GastoRegistrado(Base):
     monto_base: Mapped[float] = mapped_column(Float, default=0.0)
     monto_igv: Mapped[float] = mapped_column(Float, default=0.0)
     monto_total: Mapped[float] = mapped_column(Float, default=0.0)
+    retencion: Mapped[float] = mapped_column(Float, default=0.0)  # retención IR 4ta (RxH) u otras
     clasificacion: Mapped[str] = mapped_column(String(30), index=True)  # MPD/CIF/GASTO_ADMINISTRATIVO/GASTO_VENTAS/GASTO_FINANCIERO/ACTIVO_FIJO
     variabilidad: Mapped[str] = mapped_column(String(20), default="FIJO")  # FIJO/VARIABLE
     centro_costo_id: Mapped[int | None] = mapped_column(ForeignKey("centros_costo.id"), nullable=True)

@@ -28,7 +28,7 @@ class RegistroJornada(Base):
     fecha: Mapped[date] = mapped_column(Date, default=date.today, server_default=func.current_date(), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     observaciones: Mapped[str | None] = mapped_column(Text, nullable=True)
-    estado: Mapped[str] = mapped_column(String(20), default="REGISTRADO", index=True)  # REGISTRADO/APROBADO/LIQUIDADO
+    estado: Mapped[str] = mapped_column(String(20), default="REGISTRADO", index=True)  # REGISTRADO/APROBADO/LIQUIDADO_INTERNO/LIQUIDADO (LIQUIDADO = con provisión RxH)
     sede_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # filtro sede actual
 
 class DetalleJornada(Base):

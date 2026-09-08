@@ -123,6 +123,25 @@ def seed_centros_costo_sastreria(db: Session) -> int:
     return creados
 
 
+def ensure_gasto_retencion_column(db: Session) -> None:
+    """Migración liviana: agrega `retencion` a gastos_registrados si falta.
+
+    Los tests usan create_all (columna ya presente); las BD existentes se
+    nivelan con ALTER TABLE idempotente. No usa commit propio: acompaña la
+    transacción del llamante (DDL transaccional en SQLite/Postgres).
+    """
+    try:
+        from sqlalchemy import text as _text
+        cols = [r[1] for r in db.execute(
+            _text("PRAGMA table_info(gastos_registrados)")).all()]
+        if "retencion" not in cols:
+            db.execute(_text(
+                "ALTER TABLE gastos_registrados "
+                "ADD COLUMN retencion FLOAT DEFAULT 0.0"))
+    except Exception:
+        pass
+
+
 # ── Costeo absorbente: tarifa por minuto de taller ───────────────────
 def planilla_taller_mes(db: Session, anio: int, mes: int) -> Decimal:
     """Planilla mensual (gastos 6211) de centros tipo TALLER (921/922/923)."""
@@ -292,6 +311,7 @@ def registrar_gasto_operativo(
     variabilidad: str = "FIJO",
     clasificacion: str | None = None,
     glosa: str | None = None,
+    retencion: float | Decimal = 0,
 ) -> tuple[GastoRegistrado, AsientoContable]:
     """Registra gasto/compra operativa y genera sus asientos devengados.
 
@@ -323,7 +343,11 @@ def registrar_gasto_operativo(
         raise ValueError("monto_base debe ser positivo")
     if igv < 0:
         raise ValueError("IGV no puede ser negativo")
+    ret = Decimal(str(retencion or 0))
+    if ret < 0 or ret > base + igv:
+        raise ValueError("retención inválida (0 <= retención <= total)")
     total = base + igv
+    ensure_gasto_retencion_column(db)
     c_gasto = get_cuenta_by_codigo(db, codigo_gasto)
     if not c_gasto:
         raise ValueError(f"Cuenta PCGE {codigo_gasto} no existe")
@@ -341,6 +365,7 @@ def registrar_gasto_operativo(
         monto_base=float(base),
         monto_igv=float(igv),
         monto_total=float(total),
+        retencion=float(ret),
         clasificacion=clasif,
         variabilidad=variabilidad or "FIJO",
         centro_costo_id=centro_costo_id,
@@ -928,7 +953,7 @@ def calcular_mod_devengada(db: Session, periodo_id: int | None = None, desde: da
                 sql += " AND (d.orden_produccion_id = :op OR d.orden_id = :op)"
             params["op"] = orden_produccion_id
         # solo REGISTRADO/APROBADO (devengado, no necesariamente pagado)
-        sql += " AND r.estado IN ('REGISTRADO','APROBADO','LIQUIDADO')"
+        sql += " AND r.estado IN ('REGISTRADO','APROBADO','LIQUIDADO_INTERNO','LIQUIDADO')"
         try:
             total = conn.execute(text(sql), params).scalar() or 0
         except Exception:
