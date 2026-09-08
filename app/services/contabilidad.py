@@ -657,9 +657,11 @@ def sincronizar_cxp_desde_gastos(db: Session) -> int:
     Clave idempotente: numero_comprobante (o GASTO-{id}) + proveedor.
     Retorna espejos creados.
     """
-    from app.services.finanzas import ensure_gasto_retencion_column
+    from app.services.finanzas import (ensure_cxp_tipo_comprobante_column,
+                                         ensure_gasto_retencion_column)
 
     ensure_gasto_retencion_column(db)
+    ensure_cxp_tipo_comprobante_column(db)
     creados = 0
     gastos = db.query(GastoRegistrado).filter(
         GastoRegistrado.estado == "PENDIENTE").all()
@@ -694,6 +696,7 @@ def sincronizar_cxp_desde_gastos(db: Session) -> int:
             ret = float(getattr(g, "retencion", 0) or 0)
             db.add(CuentaPorPagar(
                 proveedor_id=pid, numero_factura=clave,
+                tipo_comprobante=(g.tipo_comprobante or "FACTURA"),
                 monto_total=total, monto_pagado=0.0,
                 saldo_pendiente=round(max(total - ret, 0.0), 2),
                 retencion=ret, fecha_emision=g.fecha_emision,

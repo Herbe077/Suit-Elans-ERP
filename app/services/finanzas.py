@@ -123,34 +123,49 @@ def seed_centros_costo_sastreria(db: Session) -> int:
     return creados
 
 
-def ensure_gasto_retencion_column(db: Session) -> None:
-    """Migración liviana agnóstica de dialecto para `retencion`.
+def ensure_column(db: Session, tabla: str, columna: str,
+                  ddl_pg: str, ddl_sqlite: str) -> None:
+    """Nivelación de esquema idempotente y agnóstica de dialecto.
 
-    Los tests usan create_all (columna ya presente); las BD existentes se
-    nivelan de forma idempotente: PostgreSQL con
-    `ADD COLUMN IF NOT EXISTS ... DOUBLE PRECISION`, SQLite con
-    verificación previa vía inspection (PRAGMA no existe en PG).
-    No usa commit propio: acompaña la transacción del llamante.
+    PostgreSQL no tiene PRAGMA: se inspecciona vía SQLAlchemy y se emite
+    `ADD COLUMN IF NOT EXISTS` en PG o `ADD COLUMN` (tras verificar) en
+    SQLite. Nunca lanza: acompaña la transacción del llamante.
     """
     try:
         from sqlalchemy import inspect as _inspect
         from sqlalchemy import text as _text
         bind = db.get_bind()
         try:
-            cols = {c["name"] for c in _inspect(bind).get_columns("gastos_registrados")}
+            cols = {c["name"] for c in _inspect(bind).get_columns(tabla)}
         except Exception:
             cols = set()
-        if "retencion" not in cols:
+        if columna not in cols:
             if bind.dialect.name == "postgresql":
-                db.execute(_text(
-                    "ALTER TABLE gastos_registrados ADD COLUMN IF NOT EXISTS "
-                    "retencion DOUBLE PRECISION DEFAULT 0.0"))
+                db.execute(_text(ddl_pg))
             else:
-                db.execute(_text(
-                    "ALTER TABLE gastos_registrados "
-                    "ADD COLUMN retencion FLOAT DEFAULT 0.0"))
+                db.execute(_text(ddl_sqlite))
     except Exception:
         pass
+
+
+def ensure_gasto_retencion_column(db: Session) -> None:
+    """Migración liviana agnóstica de dialecto para `retencion`."""
+    ensure_column(
+        db, "gastos_registrados", "retencion",
+        "ALTER TABLE gastos_registrados ADD COLUMN IF NOT EXISTS "
+        "retencion DOUBLE PRECISION DEFAULT 0.0",
+        "ALTER TABLE gastos_registrados "
+        "ADD COLUMN retencion FLOAT DEFAULT 0.0")
+
+
+def ensure_cxp_tipo_comprobante_column(db: Session) -> None:
+    """Nivelación idempotente para `tipo_comprobante` en CxP."""
+    ensure_column(
+        db, "cuentas_por_pagar", "tipo_comprobante",
+        "ALTER TABLE cuentas_por_pagar ADD COLUMN IF NOT EXISTS "
+        "tipo_comprobante VARCHAR(20) DEFAULT 'FACTURA'",
+        "ALTER TABLE cuentas_por_pagar "
+        "ADD COLUMN tipo_comprobante VARCHAR(20) DEFAULT 'FACTURA'")
 
 
 # ── Costeo absorbente: tarifa por minuto de taller ───────────────────
@@ -964,7 +979,7 @@ def calcular_mod_devengada(db: Session, periodo_id: int | None = None, desde: da
                 sql += " AND (d.orden_produccion_id = :op OR d.orden_id = :op)"
             params["op"] = orden_produccion_id
         # solo REGISTRADO/APROBADO (devengado, no necesariamente pagado)
-        sql += " AND r.estado IN ('REGISTRADO','APROBADO','LIQUIDADO_INTERNO','LIQUIDADO')"
+        sql += " AND r.estado IN ('PENDIENTE','PROVISIONADO','REGISTRADO','APROBADO','LIQUIDADO_INTERNO','LIQUIDADO')"
         try:
             total = conn.execute(text(sql), params).scalar() or 0
         except Exception:

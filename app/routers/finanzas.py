@@ -367,6 +367,7 @@ def cxc_conciliar(cuenta_id: int = Form(...), monto: float = Form(...), db: Sess
 @router.get("/cuentas-por-pagar", response_class=HTMLResponse)
 def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
     try:
+        svc.ensure_cxp_tipo_comprobante_column(db)
         _sync_cxp(db)
         # Bandeja Única de Tesorería: espeja gastos pendientes (incl. RxH) como CxP.
         # Solo el PAGAR genera el EGRESO real (MovimientoFinanciero + 1011/1041).

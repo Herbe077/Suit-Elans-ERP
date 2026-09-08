@@ -191,8 +191,8 @@ async def registro_post(request: Request, db: Session = Depends(get_db), user=Au
         ops = [(op_id, cant) for op_id, cant in ops if op_id not in ya]
         if not ops:
             return RedirectResponse("/rendimiento/registro?error=ya_marcada", status_code=303)
-    # crea registro jornada
-    reg = RegistroJornada(operario_id=user.id, fecha=date.today(), observaciones=observaciones, estado="REGISTRADO",
+    # crea registro jornada (ingresa PENDIENTE por defecto)
+    reg = RegistroJornada(operario_id=user.id, fecha=date.today(), observaciones=observaciones, estado="PENDIENTE",
                           sede_id=getattr(user, "sede_id", None))
     db.add(reg)
     db.flush()
@@ -265,19 +265,24 @@ def calculadora(request: Request, preset: str = Query("semana"), desde: str = Qu
     detalles = []
     if registros:
         detalles = db.query(DetalleJornada).filter(DetalleJornada.registro_jornada_id.in_([r.id for r in registros])).all()
+    # Suma en tiempo real: solo PENDIENTE por operario (legacy no
+    # provisionado también cuenta una vez para compatibilidad).
+    _PEND = ("PENDIENTE", "REGISTRADO", "APROBADO", "LIQUIDADO_INTERNO")
+    pendientes = [r for r in registros if (r.estado or "") in _PEND]
+    det_pend = [d for d in detalles if d.registro_jornada_id in {r.id for r in pendientes}]
     # métricas Decimal
-    total_acumulado = sum((d.subtotal for d in detalles), Decimal("0"))
+    total_acumulado = sum((d.subtotal for d in det_pend), Decimal("0"))
     # prendas intervenidas distintas
     prendas_set = set(d.orden_produccion_id for d in detalles if d.orden_produccion_id)
     n_prendas = len(prendas_set)
     # horas/puntos: si tarifa es S/, puntos = total. Horas aprox = subtotal / tarifa_promedio? Simplifica: total como puntos
     catalogo = {c.id: c for c in db.query(CatalogoOperacion).all()}
-    # desglose por operario
+    # desglose por operario (solo PENDIENTE)
     from app.models.user import User
     users = {u.id: u for u in db.query(User).filter(User.id.in_([r.operario_id for r in registros])).all()} if registros else {}
     por_operario: dict[int, dict] = {}
-    for r in registros:
-        dets = [d for d in detalles if d.registro_jornada_id==r.id]
+    for r in pendientes:
+        dets = [d for d in det_pend if d.registro_jornada_id==r.id]
         sub = sum((d.subtotal for d in dets), Decimal("0"))
         agg = por_operario.setdefault(r.operario_id, {"user": users.get(r.operario_id), "total": Decimal("0"), "prendas": set(), "detalles": 0})
         agg["total"] += sub
@@ -285,7 +290,7 @@ def calculadora(request: Request, preset: str = Query("semana"), desde: str = Qu
         agg["detalles"] += len(dets)
     por_operario_list = []
     for oid, agg in por_operario.items():
-        por_operario_list.append({"operario": agg["user"].full_name if agg["user"] else f"usuario#{oid}", "operario_id": oid, "total": agg["total"], "prendas": len(agg["prendas"]), "registros": len([r for r in registros if r.operario_id==oid])})
+        por_operario_list.append({"operario": agg["user"].full_name if agg["user"] else f"usuario#{oid}", "operario_id": oid, "total": agg["total"], "prendas": len(agg["prendas"]), "registros": len([r for r in pendientes if r.operario_id==oid])})
     por_operario_list.sort(key=lambda x: x["total"], reverse=True)
     # por orden
     por_orden: dict[int, dict] = {}
@@ -315,7 +320,7 @@ def calculadora(request: Request, preset: str = Query("semana"), desde: str = Qu
 
 @router.get("/calculadora/export")
 def export_liquidacion(preset: str = Query("semana"), desde: str = Query(""), hasta: str = Query(""), operario: str = Query(""), db: Session = Depends(get_db), user=Auth):
-    """Exporta liquidación aprobada para Finanzas/Caja (CSV)."""
+    """Exporta el pendiente para Finanzas/Caja (CSV, sin marcas)."""
     if desde and hasta and preset != "personalizado":
         try:
             date.fromisoformat(desde); date.fromisoformat(hasta)
@@ -326,14 +331,14 @@ def export_liquidacion(preset: str = Query("semana"), desde: str = Query(""), ha
         inicio, fin = _rango(preset, desde, hasta)
     except:
         inicio, fin = _rango("semana")
-    q = db.query(RegistroJornada).filter(RegistroJornada.fecha >= inicio, RegistroJornada.fecha <= fin, RegistroJornada.estado.in_(["REGISTRADO","APROBADO"]))
+    q = db.query(RegistroJornada).filter(RegistroJornada.fecha >= inicio, RegistroJornada.fecha <= fin, RegistroJornada.estado.in_(["PENDIENTE","REGISTRADO","APROBADO","LIQUIDADO_INTERNO"]))
     if operario:
         try:
             q = q.filter(RegistroJornada.operario_id == int(operario))
         except:
             pass
     registros = q.all()
-    # crea MovimientoFinanciero para cada registro no liquidado? Solo exporta, no marca
+    # Solo exporta, no marca estados ni toca finanzas.
     import csv, io
     from fastapi.responses import StreamingResponse
     buf = io.StringIO()
@@ -347,35 +352,14 @@ def export_liquidacion(preset: str = Query("semana"), desde: str = Query(""), ha
     buf.seek(0)
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=liquidacion_{inicio}_{fin}.csv"})
 
-@router.post("/calculadora/aprobar")
-def aprobar_registro(registro_id: int = Form(...), db: Session = Depends(get_db), user=FinanzasSM):
-    reg = db.get(RegistroJornada, registro_id)
-    if not reg:
-        return RedirectResponse("/rendimiento/calculadora", status_code=303)
-    reg.estado = "APROBADO"
-    db.commit()
-    return RedirectResponse("/rendimiento/calculadora", status_code=303)
-
-@router.post("/calculadora/liquidar")
-def liquidar_registro(registro_id: int = Form(...), db: Session = Depends(get_db), user=FinanzasSM):
-    """Liquidación interna: solo marca el estado operativo.
-
-    No crea CuentaPorPagar, Gasto ni MovimientoFinanciero. La provisión
-    financiera se genera a demanda con [Registrar Provisión RxH].
-    """
-    reg = db.get(RegistroJornada, registro_id)
-    if not reg:
-        return RedirectResponse("/rendimiento/calculadora", status_code=303)
-    reg.estado = "LIQUIDADO_INTERNO"
-    db.commit()
-    return RedirectResponse("/rendimiento/calculadora", status_code=303)
-
-
+@router.post("/generar-rxh-cxp", response_class=HTMLResponse)
 @router.post("/generar-rxh", response_class=HTMLResponse)
 @router.post("/generar-cxh", response_class=HTMLResponse)
 async def generar_rxh(request: Request, db: Session = Depends(get_db), user=FinanzasSM):
-    """Provisión RxH a demanda: Gasto HONORARIOS_RXH + CxP POR_PAGAR.
+    """Botón único: provisión RxH/CxP por el PENDIENTE del operario.
 
+    Crea Gasto HONORARIOS_RXH (6322/4241) + CxP POR_PAGAR con
+    RECIBO_HONORARIOS y marca los registros PROVISIONADO.
     Nunca genera MovimientoFinanciero/Caja (el egreso nace solo al PAGAR).
     """
     from datetime import date as _date

@@ -27,22 +27,22 @@
 
 <div class="grid md:grid-cols-2 gap-4 mb-4">
   <div class="bg-white rounded-xl shadow p-4">
-    <h2 class="font-bold text-sm mb-2">Desglose por operario</h2>
+    <h2 class="font-bold text-sm mb-2">Acumulado PENDIENTE por operario (tiempo real)</h2>
     {% for r in por_operario %}
       <details class="text-xs border-b py-1">
         <summary class="flex justify-between cursor-pointer list-none"><span>{{ r.operario }} ({{ r.registros }} reg, {{ r.prendas }} prendas)</span><b>S/ {{ "%.2f"|format(r.total) }}</b></summary>
-        <form method="post" action="/rendimiento/generar-rxh" class="mt-2 grid gap-1.5 bg-[#FAF8F5] rounded-lg p-2">
+        <form method="post" action="/rendimiento/generar-rxh-cxp" class="mt-2 grid gap-1.5 bg-[#FAF8F5] rounded-lg p-2">
           <input type="hidden" name="operario_id" value="{{ r.operario_id }}">
           <input type="hidden" name="desde" value="{{ desde }}">
           <input type="hidden" name="hasta" value="{{ hasta }}">
           <label>N° Recibo por Honorarios *<input name="numero_comprobante" required placeholder="E001-123" class="w-full border rounded px-2 py-1"></label>
           <label>DNI / RUC del sastre<input name="ruc_dni" placeholder="DNI 8 dígitos" maxlength="11" class="w-full border rounded px-2 py-1"></label>
           <label class="flex gap-2 items-center"><input type="checkbox" name="con_retencion" value="1" checked class="accent-[#370003]">Retención 8% IR 4ta (Neto = Total − Retención)</label>
-          <button class="bg-borgo text-white rounded-lg py-1.5 font-bold">🧾 Registrar Provisión RxH</button>
+          <button type="submit" class="bg-borgo text-white rounded-lg py-1.5 font-bold">🧾 Generar Provisión RxH / CxP</button>
           <p class="text-slate-400">Sin IGV. No mueve caja: la deuda va a CxP (POR_PAGAR).</p>
         </form>
       </details>
-    {% else %}<p class="text-xs text-slate-400">Sin datos.</p>{% endfor %}
+    {% else %}<p class="text-xs text-slate-400">Sin pendiente por provisionar.</p>{% endfor %}
   </div>
   <div class="bg-white rounded-xl shadow p-4">
     <h2 class="font-bold text-sm mb-2">Desglose por actividad</h2>
@@ -60,17 +60,14 @@
 </div>
 
 <div class="bg-white rounded-xl shadow p-4 overflow-x-auto">
-  <h2 class="font-bold text-sm mb-2">Registros ({{ registros|length }}) — Aprobar / Liquidar es solo operativo (sin CxP ni caja)</h2>
+  <h2 class="font-bold text-sm mb-2">Registros ({{ registros|length }}) — PENDIENTE se provisiona con el botón único</h2>
   <table class="w-full text-xs">
-    <thead class="text-slate-500"><tr><th class="text-left">ID</th><th>Fecha</th><th>Operario</th><th>Orden</th><th>Estado</th><th>Acción</th></tr></thead>
+    <thead class="text-slate-500"><tr><th class="text-left">ID</th><th>Fecha</th><th>Operario</th><th>Orden</th><th>Estado</th><th>Provisión</th></tr></thead>
     <tbody>
     {% for r in registros %}
       <tr class="border-b">
-        <td class="font-mono">#{{ r.id }}</td><td>{{ r.fecha }}</td><td>{{ por_operario|selectattr('operario_id','equalto', r.operario_id)|first|default({}) }}</td><td>{{ r.observaciones or '' }}</td><td><span class="px-1.5 py-0.5 rounded text-xs {{ 'bg-slate-200' if r.estado=='REGISTRADO' else 'bg-emerald-100' if r.estado=='APROBADO' else 'bg-sky-100' if r.estado=='LIQUIDADO_INTERNO' else 'bg-amber-100' }}">{{ r.estado }}</span></td>
-        <td class="flex gap-1">
-          {% if r.estado=='REGISTRADO' %}<form method="post" action="/rendimiento/calculadora/aprobar"><input type="hidden" name="registro_id" value="{{ r.id }}"><button class="bg-emerald-700 text-white rounded px-2 py-0.5">Aprobar</button></form>{% endif %}
-          {% if r.estado not in ('LIQUIDADO', 'LIQUIDADO_INTERNO') %}<form method="post" action="/rendimiento/calculadora/liquidar"><input type="hidden" name="registro_id" value="{{ r.id }}"><button class="bg-[#370003] text-white rounded px-2 py-0.5" title="Solo marca estado interno, sin CxP ni caja">Liquidar (interno)</button></form>{% elif r.estado=='LIQUIDADO_INTERNO' %}◐ LIQ. INTERNA{% else %}✔ LIQUIDADO{% endif %}
-        </td>
+        <td class="font-mono">#{{ r.id }}</td><td>{{ r.fecha }}</td><td>{{ por_operario|selectattr('operario_id','equalto', r.operario_id)|first|default({}) }}</td><td>{{ r.observaciones or '' }}</td><td><span class="px-1.5 py-0.5 rounded text-xs {{ 'bg-amber-100' if r.estado=='PENDIENTE' else 'bg-emerald-100' if r.estado=='PROVISIONADO' else 'bg-slate-200' }}">{{ r.estado }}</span></td>
+        <td>{% if r.estado=='PROVISIONADO' %}✔ PROVISIONADO{% else %}⏳ PENDIENTE{% endif %}</td>
       </tr>
     {% else %}<tr><td colspan="6" class="text-center p-2 text-slate-400">Sin registros en rango.</td></tr>{% endfor %}
     </tbody>

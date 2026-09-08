@@ -41,13 +41,13 @@
 </div>
 <div class="w-full overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
   <table class="w-full text-xs">
-    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left px-3 py-2 whitespace-nowrap min-w-[60px]">ID</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Proveedor</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Factura</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Total</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Pagado</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Saldo</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Retención</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Emisión</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Vencimiento</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Estado</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Pago</th></tr></thead>
+    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left px-3 py-2 whitespace-nowrap min-w-[60px]">ID</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Proveedor</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Comprobante</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Total</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Pagado</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Saldo</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Retención</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Emisión</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Vencimiento</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Estado</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Pago</th></tr></thead>
     <tbody class="font-mono tabular-nums">
     {% for c in cuentas %}
       <tr class="border-b hover:bg-marfil">
         <td class="px-3 py-2 whitespace-nowrap">#{{ c.id }}</td>
         <td class="whitespace-nowrap px-3 py-2 font-sans">{{ nombres_cxp.get(c.id, 'Personal Destajo / Sastre') }}</td>
-        <td class="whitespace-nowrap px-3 py-2">{{ c.numero_factura or '—' }}</td>
+        <td class="whitespace-nowrap px-3 py-2 font-mono">{{ (c.tipo_comprobante or 'FACTURA') }} {{ c.numero_factura or '—' }}</td>
         <td class="text-right whitespace-nowrap px-3 py-2">{{ soles(c.monto_total or 0) }}</td>
         <td class="text-right whitespace-nowrap px-3 py-2 text-emerald-700">{{ soles(c.monto_pagado or 0) }}</td>
         <td class="text-right whitespace-nowrap px-3 py-2 font-bold {% if (c.saldo_pendiente or 0)>0 %}text-red-600{% endif %}">{{ soles(c.saldo_pendiente or 0) }}</td>

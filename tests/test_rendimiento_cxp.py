@@ -1,5 +1,8 @@
-"""RxH a demanda: liquidar no toca finanzas; provisión crea CxP sin flujo;
-pago en CxP genera exactamente 1 EGRESO por lo amortizado."""
+"""RxH simplificado: PENDIENTE → PROVISIONADO con botón único.
+
+Sin estados intermedios: la provisión crea CxP RECIBO_HONORARIOS (4241/6322)
+sin tocar MovimientoFinanciero; el pago en CxP genera 1 EGRESO.
+"""
 from datetime import date
 from decimal import Decimal
 
@@ -11,6 +14,7 @@ def _db():
     db = SessionLocal()
     f.seed_pcge_basico(db)
     f.ensure_gasto_retencion_column(db)
+    f.ensure_cxp_tipo_comprobante_column(db)
     return db
 
 
@@ -41,7 +45,7 @@ def _operario(db, tag):
     return u
 
 
-def _registro(db, operario_id, subtotal, estado="APROBADO"):
+def _registro(db, operario_id, subtotal, estado="PENDIENTE"):
     from app.modules.rendimiento.models import (CatalogoOperacion,
                                                 DetalleJornada,
                                                 RegistroJornada)
@@ -83,31 +87,21 @@ def _egresos(db):
     return float(mf), float(cm)
 
 
-def test_liquidar_deja_deudas_y_flujo_en_cero():
-    from app.models.finanzas import CuentaPorPagar, GastoRegistrado
+def test_registro_ingresa_pendiente_por_defecto():
     from app.modules.rendimiento.models import RegistroJornada
     db = _db()
     _limpia(db)
-    op = _operario(db, "liq")
-    reg = _registro(db, op.id, 500)
-    mf0, cm0 = _egresos(db)
-    c, ck = _client_admin()
-    r = c.post("/rendimiento/calculadora/liquidar",
-               data={"registro_id": str(reg.id)}, cookies=ck)
-    assert r.status_code in (200, 303)
-    db.close()
-    db = _db()
-    assert db.get(RegistroJornada, reg.id).estado == "LIQUIDADO_INTERNO"
-    assert db.query(CuentaPorPagar).filter(
-        CuentaPorPagar.numero_factura == f"LIQ-{reg.id}").count() == 0
-    assert db.query(GastoRegistrado).count() == 0
-    mf1, cm1 = _egresos(db)
-    assert (mf1, cm1) == (mf0, cm0)
+    op = _operario(db, "def")
+    reg = RegistroJornada(operario_id=op.id, fecha=date.today())
+    db.add(reg)
+    db.commit()
+    db.refresh(reg)
+    assert reg.estado == "PENDIENTE"
     _limpia(db)
     db.close()
 
 
-def test_generar_rxh_crea_cxp_sin_flujo():
+def test_generar_rxh_pendiente_a_provisionado_sin_flujo():
     from app.models.finanzas import (CuentaPorPagar, GastoRegistrado,
                                      MovimientoFinanciero)
     from app.modules.rendimiento.models import RegistroJornada
@@ -115,9 +109,10 @@ def test_generar_rxh_crea_cxp_sin_flujo():
     _limpia(db)
     op = _operario(db, "rxh")
     reg = _registro(db, op.id, 1000)
+    assert reg.estado == "PENDIENTE"
     mf0, cm0 = _egresos(db)
     c, ck = _client_admin()
-    r = c.post("/rendimiento/generar-rxh",
+    r = c.post("/rendimiento/generar-rxh-cxp",
                data={"operario_id": str(op.id),
                      "numero_comprobante": "RXH-TEST-001",
                      "ruc_dni": "12345678", "con_retencion": "1"},
@@ -128,17 +123,54 @@ def test_generar_rxh_crea_cxp_sin_flujo():
     cxp = db.query(CuentaPorPagar).filter(
         CuentaPorPagar.numero_factura == "RXH-TEST-001").first()
     assert cxp is not None and cxp.estado == "POR_PAGAR"
+    assert cxp.tipo_comprobante == "RECIBO_HONORARIOS"
     assert cxp.monto_total == 1000.0 and cxp.retencion == 80.0
     assert cxp.saldo_pendiente == 920.0 and cxp.monto_pagado == 0.0
     g = db.query(GastoRegistrado).filter(
         GastoRegistrado.numero_comprobante == "RXH-TEST-001").first()
     assert g is not None and g.categoria == "HONORARIOS_RXH"
     assert float(g.monto_igv or 0) == 0.0
-    assert db.get(RegistroJornada, reg.id).estado == "LIQUIDADO"
+    assert db.get(RegistroJornada, reg.id).estado == "PROVISIONADO"
     mf1, cm1 = _egresos(db)
     assert (mf1, cm1) == (mf0, cm0)
     assert db.query(MovimientoFinanciero).filter(
         MovimientoFinanciero.tipo == "EGRESO").count() == 0
+    _limpia(db)
+    db.close()
+
+
+def test_provision_asienta_4241_contra_6322():
+    from app.models.finanzas import CuentaContable, LineaAsientoContable
+    db = _db()
+    _limpia(db)
+    op = _operario(db, "cta")
+    _registro(db, op.id, 500)
+    c, ck = _client_admin()
+    c.post("/rendimiento/generar-rxh-cxp",
+           data={"operario_id": str(op.id),
+                 "numero_comprobante": "RXH-TEST-4241",
+                 "ruc_dni": "11223344"},
+           cookies=ck)
+    db.close()
+    db = _db()
+    from app.models.finanzas import AsientoContable, GastoRegistrado
+    g = db.query(GastoRegistrado).filter(
+        GastoRegistrado.numero_comprobante == "RXH-TEST-4241").first()
+    assert g is not None
+    asientos = db.query(AsientoContable).filter(
+        AsientoContable.origen_id == g.id,
+        AsientoContable.origen_tipo == "HONORARIOS").all()
+    assert asientos, "sin asiento de provisión RxH"
+    por_cuenta: dict = {}
+    for a in asientos:
+        for l in db.query(LineaAsientoContable).filter(
+                LineaAsientoContable.asiento_id == a.id).all():
+            ct = db.get(CuentaContable, l.cuenta_id)
+            d, h = por_cuenta.setdefault(ct.codigo, [0.0, 0.0])
+            por_cuenta[ct.codigo] = [d + float(l.debe or 0),
+                                     h + float(l.haber or 0)]
+    assert por_cuenta.get("6322", [0, 0])[0] >= 500.0
+    assert por_cuenta.get("4241", [0, 0])[1] >= 500.0
     _limpia(db)
     db.close()
 
@@ -149,9 +181,9 @@ def test_pago_cxp_genera_un_egreso_por_lo_amortizado():
     db = _db()
     _limpia(db)
     op = _operario(db, "pag")
-    reg = _registro(db, op.id, 1000)
+    _registro(db, op.id, 1000)
     c, ck = _client_admin()
-    c.post("/rendimiento/generar-cxh",
+    c.post("/rendimiento/generar-rxh-cxp",
            data={"operario_id": str(op.id),
                  "numero_comprobante": "RXH-TEST-002",
                  "ruc_dni": "87654321", "con_retencion": "1"},
@@ -173,6 +205,16 @@ def test_pago_cxp_genera_un_egreso_por_lo_amortizado():
     assert cxp.monto_pagado == 500.0 and cxp.saldo_pendiente == 420.0
     _limpia(db)
     db.close()
+
+
+def test_sin_estados_intermedios():
+    c, ck = _client_admin()
+    r1 = c.post("/rendimiento/calculadora/aprobar",
+                data={"registro_id": "1"}, cookies=ck)
+    r2 = c.post("/rendimiento/calculadora/liquidar",
+                data={"registro_id": "1"}, cookies=ck)
+    assert r1.status_code in (404, 405)
+    assert r2.status_code in (404, 405)
 
 
 def test_cxc_sin_proveedores():
