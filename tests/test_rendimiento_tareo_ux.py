@@ -13,25 +13,56 @@ def _client_admin():
     return c, {"suitelans_token": r.cookies.get("suitelans_token")}
 
 
+ETAPAS_ESPERADAS = [
+    "Etapa 1 - Corte y Habilitación Base",
+    "Etapa 2 - Pre-costuras y Estructura",
+    "Etapa 3 - Fusionado y Adhesivos",
+    "Etapa 4 - Armado de Delantero y Refuerzos",
+    "Etapa 5 - Ensamble de Contrapechos e Internos",
+    "Etapa 6 - Planchado de Montaje e Internos",
+    "Etapa 7 - Hilvanado y Uniones Principales",
+    "Etapa 8 - Costuras de Refuerzo y Bastas",
+    "Etapa 9 - Sisa y Montaje de Mangas",
+    "Etapa 10 - Ojales, Limpieza y Acabado Final",
+]
+
+
 def test_tareo_ux_buscador_etapas_continuas():
     c, ck = _client_admin()
     t = c.get("/rendimiento/registro?todas=1", cookies=ck).text
     assert "Buscar operación (ej: OP-09, mangas)..." in t
-    for etapa in ("Etapa 1 - Corte y Habilitación Base",
-                  "Etapa 2 - Pre-costuras y Estructura",
-                  "Etapa 3 - Fusionado y Adhesivos",
-                  "Etapa 4 - Armado de Delantero y Refuerzos",
-                  "Etapa 5 - Ensamble de Contrapechos e Internos",
-                  "Etapa 6 - Planchado de Montaje e Internos",
-                  "Etapa 7 - Hilvanado y Uniones Principales",
-                  "Etapa 8 - Costuras de Refuerzo y Bastas",
-                  "Etapa 9 - Sisa y Montaje de Mangas",
-                  "Etapa 10 - Ojales, Limpieza y Acabado Final"):
-        assert etapa in t
+    # cada cabecera exactamente una vez y en orden 1..10
+    pos = [t.index(e) for e in ETAPAS_ESPERADAS]
+    assert pos == sorted(pos)
+    for e in ETAPAS_ESPERADAS:
+        assert t.count(e) == 1, e
     # lista continua: sin acordeones que oculten la secuencia
     assert "<details" not in t
     assert "tareo-card" in t and "op_" in t
     assert "Confirmar y guardado del tareo diario" in t
+
+
+def test_tareo_secuencia_01_44_y_badges():
+    import re
+    from app.core.database import SessionLocal
+    from app.modules.rendimiento.models import CatalogoOperacion
+    c, ck = _client_admin()
+    t = c.get("/rendimiento/registro?todas=1", cookies=ck).text
+    # secuencia correlativa desde 01, sin saltos ni repetidos
+    seq = [int(x) for x in re.findall(r'>(\d{2})</span>\s*<span[^>]*>(?:OP-|CAT-)', t)]
+    db = SessionLocal()
+    n_cat = db.query(CatalogoOperacion).filter(
+        CatalogoOperacion.activa.is_(True)).count()
+    db.close()
+    assert len(seq) == n_cat and seq == list(range(1, n_cat + 1)), seq
+    # las 44 base están presentes del 01 al 44
+    assert list(range(1, 45)) == [x for x in seq if x <= 44]
+    # badges E1..E10 presentes y alineados a su etapa
+    for n in range(1, 11):
+        assert f"E{n}" in t
+    # E7 solo dentro del bloque de la Etapa 7 (entre su cabecera y la Etapa 8)
+    bloque7 = t.split("Etapa 7 - Hilvanado")[1].split("Etapa 8 -")[0]
+    assert "E7" in bloque7 and "E6" not in bloque7 and "E8" not in bloque7
 
 
 def test_tareo_panel_mis_registros_hoy():

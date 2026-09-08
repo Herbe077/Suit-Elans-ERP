@@ -46,37 +46,42 @@ def _con_diagnostico(origen: str):
         return wrapper
     return deco
 
-# 10 etapas del proceso productivo: (título, icono, badge, posiciones 1-based)
-ETAPAS_TAREO: list[tuple[str, str, str, set[int]]] = [
-    ("Etapa 1 - Corte y Habilitación Base", "✂️", "bg-blue-100 text-blue-800", set(range(1, 5))),
-    ("Etapa 2 - Pre-costuras y Estructura", "🪡", "bg-indigo-100 text-indigo-800", set(range(5, 10))),
-    ("Etapa 3 - Fusionado y Adhesivos", "♨️", "bg-amber-100 text-amber-800", set(range(10, 14))),
-    ("Etapa 4 - Armado de Delantero y Refuerzos", "🧵", "bg-teal-100 text-teal-800", set(range(14, 20))),
-    ("Etapa 5 - Ensamble de Contrapechos e Internos", "🧥", "bg-green-100 text-green-800", set(range(20, 24))),
-    ("Etapa 6 - Planchado de Montaje e Internos", "🛈", "bg-orange-100 text-orange-800", {24, 25, 26, 32}),
-    ("Etapa 7 - Hilvanado y Uniones Principales", "📍", "bg-purple-100 text-purple-800", {27, 28, 31, 33, 35}),
-    ("Etapa 8 - Costuras de Refuerzo y Bastas", "📐", "bg-pink-100 text-pink-800", {29, 30, 34}),
-    ("Etapa 9 - Sisa y Montaje de Mangas", "👔", "bg-cyan-100 text-cyan-800", set(range(36, 41))),
-    ("Etapa 10 - Ojales, Limpieza y Acabado Final", "✨", "bg-gray-200 text-gray-700", set(range(41, 45))),
+# 10 etapas contiguas del proceso productivo: (n, título, icono, badge, inicio, fin).
+# Los rangos son estrictamente correlativos (1-44) para que cada cabecera
+# aparezca una sola vez y en orden, sin intercalados.
+ETAPAS_TAREO: list[tuple[int, str, str, str, int, int]] = [
+    (1, "Etapa 1 - Corte y Habilitación Base", "✂️", "bg-blue-100 text-blue-800", 1, 4),
+    (2, "Etapa 2 - Pre-costuras y Estructura", "🪡", "bg-indigo-100 text-indigo-800", 5, 9),
+    (3, "Etapa 3 - Fusionado y Adhesivos", "♨️", "bg-amber-100 text-amber-800", 10, 13),
+    (4, "Etapa 4 - Armado de Delantero y Refuerzos", "🧵", "bg-teal-100 text-teal-800", 14, 19),
+    (5, "Etapa 5 - Ensamble de Contrapechos e Internos", "🧥", "bg-green-100 text-green-800", 20, 23),
+    (6, "Etapa 6 - Planchado de Montaje e Internos", "🛈", "bg-orange-100 text-orange-800", 24, 26),
+    (7, "Etapa 7 - Hilvanado y Uniones Principales", "📍", "bg-purple-100 text-purple-800", 27, 28),
+    (8, "Etapa 8 - Costuras de Refuerzo y Bastas", "📐", "bg-pink-100 text-pink-800", 29, 35),
+    (9, "Etapa 9 - Sisa y Montaje de Mangas", "👔", "bg-cyan-100 text-cyan-800", 36, 40),
+    (10, "Etapa 10 - Ojales, Limpieza y Acabado Final", "✨", "bg-gray-200 text-gray-700", 41, 44),
 ]
 
 
 def _grupos_tareo(catalogo: list) -> list[dict]:
     """Secuencia cronológica 1-44 agrupada en las 10 etapas productivas.
 
-    Cada item lleva su número de secuencia, etapa e insignia de color: la
-    lista es continua (sin acordeones) y ninguna operación se oculta.
+    Cada operación lleva su número de secuencia y su número de etapa
+    explícito (E1-E10): la lista es continua y cada cabecera aparece una
+    sola vez, en orden, sin repetidos ni intercalados.
     """
     por_pos: dict[int, dict] = {}
-    for titulo, icono, badge, poss in ETAPAS_TAREO:
-        for p in poss:
-            por_pos[p] = {"etapa": titulo, "icono": icono, "badge": badge}
+    for netapa, titulo, icono, badge, ini, fin in ETAPAS_TAREO:
+        for p in range(ini, fin + 1):
+            por_pos[p] = {"netapa": netapa, "etapa": titulo,
+                          "icono": icono, "badge": badge}
     grupos: list[dict] = []
     for idx, op in enumerate(catalogo, start=1):
-        info = por_pos.get(idx, {"etapa": "Etapa general", "icono": "🧷",
+        info = por_pos.get(idx, {"netapa": 0, "etapa": "Etapa general",
+                                 "icono": "🧷",
                                  "badge": "bg-slate-100 text-slate-700"})
-        if not grupos or grupos[-1]["etapa"] != info["etapa"]:
-            grupos.append({"netapa": len(grupos) + 1, "etapa": info["etapa"],
+        if not grupos or grupos[-1]["netapa"] != info["netapa"]:
+            grupos.append({"netapa": info["netapa"], "etapa": info["etapa"],
                            "icono": info["icono"], "badge": info["badge"],
                            "items": []})
         grupos[-1]["items"].append({"n": idx, "op": op, **info})

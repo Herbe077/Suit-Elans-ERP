@@ -25,7 +25,7 @@
       <p id="tareo-conteo" class="text-xs text-slate-500 mb-2" aria-live="polite"></p>
       <div id="tareo-grupos" class="grid gap-3 max-h-[60vh] overflow-y-auto border rounded p-2">
         {% for grupo in grupos %}
-        <section data-etapa="{{ grupo.etapa }}">
+        <section data-etapa="{{ grupo.netapa }}">
           <h3 class="font-bold text-sm px-1 py-1 text-slate-700">{{ grupo.icono }} {{ grupo.etapa }}</h3>
           <div class="grid md:grid-cols-2 gap-2">
             {% for item in grupo["items"] %}
@@ -35,7 +35,7 @@
                 <span class="flex items-center gap-1 flex-wrap">
                   <span class="font-mono font-bold text-xs text-slate-500">{{ "%02d"|format(item.n) }}</span>
                   <span class="font-mono text-xs text-slate-400">{{ item.op.codigo }}</span>
-                  <span class="text-[11px] font-bold px-1.5 py-0.5 rounded {{ item.badge }}">{{ item.icono }} E{{ grupo.netapa }}</span>
+                  <span class="text-[11px] font-bold px-1.5 py-0.5 rounded {{ item.badge }}">{{ item.icono }} E{{ item.netapa }}</span>
                 </span>
                 <span class="block font-semibold text-sm leading-snug">{{ item.op.nombre_operacion }}</span>
                 <span class="block text-xs text-slate-400">S/ {{ item.op.tarifa_base }}</span>
