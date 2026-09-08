@@ -17,17 +17,18 @@
 </form>
 <div class="w-full overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
   <table class="w-full text-xs">
-    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left px-3 py-2 whitespace-nowrap min-w-[60px]">ID</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Proveedor</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Comprobante</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Total</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Pagado</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Saldo</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Retención</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Emisión</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Vencimiento</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Estado</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Pago</th></tr></thead>
+    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left px-3 py-2 whitespace-nowrap min-w-[60px]">ID</th><th class="text-left px-3 py-2 min-w-[200px] max-w-[280px]">Proveedor</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Comprobante</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Total</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Pagado</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Saldo</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Retención</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[110px]">Medio de Pago</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Emisión</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Vencimiento</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Estado</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Pago</th></tr></thead>
     <tbody class="font-mono tabular-nums">
     {% for c in cuentas %}
       <tr class="border-b hover:bg-marfil">
         <td class="px-3 py-2 whitespace-nowrap">#{{ c.id }}</td>
-        <td class="whitespace-nowrap px-3 py-2 font-sans">{{ nombres_cxp.get(c.id, 'Personal Destajo / Sastre') }}</td>
+        <td class="px-3 py-2 font-sans min-w-[200px] max-w-[280px] break-words whitespace-normal">{{ nombres_cxp.get(c.id, 'Personal Destajo / Sastre') }}</td>
         <td class="whitespace-nowrap px-3 py-2 font-mono">{{ (c.tipo_comprobante or 'FACTURA') }} {{ c.numero_factura or '—' }}</td>
         <td class="text-right whitespace-nowrap px-3 py-2">{{ soles(c.monto_total or 0) }}</td>
         <td class="text-right whitespace-nowrap px-3 py-2 text-emerald-700">{{ soles(c.monto_pagado or 0) }}</td>
         <td class="text-right whitespace-nowrap px-3 py-2 font-bold {% if (c.saldo_pendiente or 0)>0 %}text-red-600{% endif %}">{{ soles(c.saldo_pendiente or 0) }}</td>
         <td class="text-right whitespace-nowrap px-3 py-2">{{ soles(c.retencion or 0) }}</td>
+        <td class="whitespace-nowrap px-3 py-2 font-sans">{{ medios_cxp.get(c.numero_factura, '—') if c.numero_factura else '—' }}</td>
         <td class="whitespace-nowrap px-3 py-2">{{ c.fecha_emision or '—' }}</td>
         <td class="whitespace-nowrap px-3 py-2">{{ c.fecha_vencimiento or '—' }}</td>
         <td class="whitespace-nowrap px-3 py-2 font-sans">{{ badge(c.estado or 'POR_PAGAR', "danger" if c.estado=='POR_PAGAR' else "warning" if c.estado=='PARCIAL' else "success") }}</td>
@@ -37,7 +38,7 @@
           {% else %}<span class="text-emerald-700 font-semibold">✔ PAGADO</span>{% endif %}
         </td>
       </tr>
-    {% else %}<tr><td colspan="11" class="text-center p-3 text-slate-400">Sin cuentas por pagar.</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="12" class="text-center p-3 text-slate-400">Sin cuentas por pagar.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>

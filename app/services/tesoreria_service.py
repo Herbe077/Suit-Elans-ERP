@@ -131,6 +131,29 @@ def ejecutar_pago_proveedor(db: Session, gasto_id: int,
             GastoRegistrado.id == gasto_id).first()
         if not gasto:
             raise ValueError("Gasto no encontrado")
+        # Idempotencia por voucher (primero): el mismo comprobante + voucher
+        # no genera un segundo EGRESO ni un segundo asiento, aunque el gasto
+        # ya figure PAGADO (doble clic / reintento tras commit).
+        vouchers = (voucher or "").strip()
+        if vouchers:
+            from app.models.finanzas import AsientoContable as _A
+            dup = db.query(MovimientoFinanciero).filter(
+                MovimientoFinanciero.tipo == "EGRESO",
+                MovimientoFinanciero.comprobante_ref == gasto.numero_comprobante,
+                MovimientoFinanciero.descripcion.like(f"%V:{vouchers}%")).order_by(
+                MovimientoFinanciero.id.desc()).first()
+            if dup is not None:
+                as_dup = db.query(_A).filter(
+                    _A.origen_tipo == "PAGO",
+                    _A.origen_id == gasto.id).order_by(_A.id.desc()).first()
+                espejo = cxp_espejo_gasto(db, gasto)
+                return {"gasto_id": gasto.id,
+                        "cxp_id": espejo.id if espejo else None,
+                        "asiento_id": as_dup.id if as_dup else None,
+                        "asiento_numero": as_dup.numero if as_dup else "",
+                        "monto": float(dup.monto), "gasto_estado": gasto.estado,
+                        "cxp_estado": None, "duplicado": True,
+                        "cuenta_pasivo": "", "cuenta_caja": dup.cuenta_origen}
         if gasto.estado == "PAGADO":
             raise ValueError("El gasto ya está PAGADO")
         neto = _d(gasto.monto_total) - _d(getattr(gasto, "retencion", 0) or 0)
@@ -186,7 +209,7 @@ def ejecutar_pago_proveedor(db: Session, gasto_id: int,
         return {"gasto_id": gasto.id, "cxp_id": cxp.id if cxp else None,
                 "asiento_id": asiento.id, "asiento_numero": asiento.numero,
                 "monto": float(monto_d), "gasto_estado": gasto.estado,
-                "cxp_estado": cxp.estado if cxp else None,
+                "cxp_estado": cxp.estado if cxp else None, "duplicado": False,
                 "cuenta_pasivo": c_prov.codigo, "cuenta_caja": c_caja.codigo}
     except Exception:
         db.rollback()

@@ -178,7 +178,7 @@ def test_rxh_alquiler_natural_y_activo_fijo():
         monto_igv=50, numero_comprobante="RX-001")
     mapa = _mapa(db, a.id)
     assert mapa["6322"] == (Decimal("800"), Decimal("0"))
-    assert "40111" not in mapa and mapa["424"] == (Decimal("0"), Decimal("800"))
+    assert "40111" not in mapa and mapa["4241"] == (Decimal("0"), Decimal("800"))
     assert a.origen_tipo == "HONORARIOS"
     g2, a2 = f.registrar_gasto_operativo(
         db, fecha=date.today(), categoria="ALQUILER_NATURAL", monto_base=1200,

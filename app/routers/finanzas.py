@@ -396,7 +396,26 @@ def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), d
                 nombres_cxp[c.id] = sup.nombre if sup and sup.nombre else "Personal Destajo / Sastre"
             except Exception:
                 nombres_cxp[c.id] = "Personal Destajo / Sastre"
-        return templates.TemplateResponse(request, "finanzas/cuentas_por_pagar.html", {"user":user,"tab":"cxp","cuentas":cuentas,"proveedores":proveedores,"nombres_cxp":nombres_cxp,"estado":estado,"proveedor":proveedor,"suppliers":db.query(Supplier).order_by(Supplier.nombre).all()})
+        # Medio de pago por deuda: último EGRESO contra su comprobante (tesorería).
+        medios_cxp: dict = {}
+        try:
+            refs = [c.numero_factura for c in cuentas if c.numero_factura]
+            if refs:
+                movs = db.query(MovimientoFinanciero).filter(
+                    MovimientoFinanciero.tipo == "EGRESO",
+                    MovimientoFinanciero.comprobante_ref.in_(refs)).order_by(
+                    MovimientoFinanciero.id.desc()).all()
+                for m in movs:
+                    medios_cxp.setdefault(m.comprobante_ref, m.cuenta_origen or "—")
+        except Exception:
+            pass
+        return templates.TemplateResponse(request, "finanzas/cuentas_por_pagar.html", {"user":user,"tab":"cxp","cuentas":cuentas,"proveedores":proveedores,"nombres_cxp":nombres_cxp,"medios_cxp":medios_cxp,"estado":estado,"proveedor":proveedor,"suppliers":db.query(Supplier).order_by(Supplier.nombre).all()})
+    except Exception as e:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return _error_500("/finanzas/cuentas-por-pagar", e)
     except Exception as e:
         try:
             db.rollback()

@@ -34,12 +34,9 @@ def _d(x) -> Decimal:
 
 
 def ensure_cuenta_4241(db: Session):
-    """Asegura la analítica 4241 (honorarios RxH por pagar) bajo la 424."""
-    from app.services.finanzas import get_or_create_cuenta, seed_pcge_basico
-    seed_pcge_basico(db)
-    return get_or_create_cuenta(
-        db, "4241", "Honorarios por pagar - RxH destajo", "PASIVO",
-        nivel=3, padre_codigo="424", elemento=4, es_analitica=True)
+    """Atajo local (canónico en finanzas): analítica 4241 bajo la 424."""
+    from app.services.finanzas import ensure_cuenta_4241 as _ensure
+    return _ensure(db)
 
 
 def resolver_proveedor_sastre(db: Session, operario_id: int,
@@ -166,14 +163,15 @@ def generar_provision_rxh(db: Session, operario_id: int,
         db.flush()
         asiento = crear_asiento_flush(
             db, fecha, f"RxH destajo {numero}", "HONORARIOS", gasto.id, lineas)
-        # Destajo de taller → destino 921 (costo de producción), nunca 941:
-        # la naturaleza es honorarios de confección, no gasto administrativo
-        # ni planilla, sin importar la ficha contractual del sastre.
-        c_dest = get_cuenta_by_codigo(db, "921")
-        c_79 = get_cuenta_by_codigo(db, "791")
+        # Destajo de taller → destino 9211/7911 (MOD de confección),
+        # nunca 941: la naturaleza es honorarios de taller, no gasto
+        # administrativo ni planilla, sin importar la ficha del sastre.
+        from app.services.finanzas import ensure_cuenta_7911, ensure_cuenta_9211
+        c_dest = ensure_cuenta_9211(db)
+        c_79 = ensure_cuenta_7911(db)
         if c_dest and c_79:
             crear_asiento_flush(
-                db, fecha, f"Destino 921 RxH {numero}", "HONORARIOS", gasto.id,
+                db, fecha, f"Destino 9211 RxH {numero}", "HONORARIOS", gasto.id,
                 [{"cuenta_id": c_dest.id, "debe": total, "haber": Decimal("0")},
                  {"cuenta_id": c_79.id, "debe": Decimal("0"), "haber": total}])
         cxp = CuentaPorPagar(

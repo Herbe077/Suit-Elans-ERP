@@ -21,7 +21,7 @@
 </form>
 <div class="w-full overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
   <table class="w-full text-xs">
-    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left px-3 py-2 whitespace-nowrap min-w-[60px]">ID</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Orden</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Cliente</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Total</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Pagado</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Saldo</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Vencimiento</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Estado</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Abono</th></tr></thead>
+    <thead class="bg-[#FAF8F5] text-slate-500"><tr><th class="text-left px-3 py-2 whitespace-nowrap min-w-[60px]">ID</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Orden</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Cliente</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Canal</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Total</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Pagado</th><th class="text-right px-3 py-2 whitespace-nowrap min-w-[100px]">Saldo</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Vencimiento</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[100px]">Estado</th><th class="text-left px-3 py-2 whitespace-nowrap min-w-[140px]">Abono</th></tr></thead>
     <tbody class="font-mono tabular-nums">
     {% for c in cuentas %}
       {% set o = orders_map.get(c.order_id) %}
@@ -29,6 +29,7 @@
         <td class="px-3 py-2 whitespace-nowrap">#{{ c.id }}</td>
         <td class="whitespace-nowrap px-3 py-2">{{ o.folio if o else c.orden_venta_id }}</td>
         <td class="whitespace-nowrap px-3 py-2 font-sans">{{ clientes.get(c.id, '—') }}</td>
+        <td class="whitespace-nowrap px-3 py-2 font-sans">{{ (o.canal or '—') if o else '—' }}</td>
         <td class="text-right whitespace-nowrap px-3 py-2">{{ soles(c.monto_total) }}</td>
         <td class="text-right whitespace-nowrap px-3 py-2 text-emerald-700">{{ soles(c.monto_pagado) }}</td>
         <td class="text-right whitespace-nowrap px-3 py-2 font-bold {% if c.saldo_pendiente>0 %}text-red-600{% endif %}">{{ soles(c.saldo_pendiente) }}</td>
@@ -45,7 +46,7 @@
           {% else %}<span class="text-emerald-700 font-semibold">✔ COBRADO</span>{% endif %}
         </td>
       </tr>
-    {% else %}<tr><td colspan="9" class="text-center p-3 text-slate-400">Sin cuentas por cobrar.</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="10" class="text-center p-3 text-slate-400">Sin cuentas por cobrar.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>

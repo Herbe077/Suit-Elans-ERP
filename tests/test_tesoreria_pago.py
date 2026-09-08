@@ -52,7 +52,7 @@ def test_pago_gasto_sincroniza_cxp_y_caja():
     gid = g.id
     r = tes.ejecutar_pago_proveedor(db, gid, medio_pago="banco", usuario_id=None)
     assert r["monto"] == 920.0 and r["cuenta_caja"] == "1041"
-    assert r["cuenta_pasivo"] == "424"  # matriz del gasto manual
+    assert r["cuenta_pasivo"] == "4241"  # pasivo RxH homogéneo
     assert r["gasto_estado"] == "PAGADO" and r["cxp_estado"] == "PAGADO"
     db.close()
     db = _db()
@@ -71,7 +71,7 @@ def test_pago_gasto_sincroniza_cxp_y_caja():
         LineaAsientoContable.asiento_id == r["asiento_id"]).all()
     mapa = {db.get(CuentaContable, l.cuenta_id).codigo:
             (Decimal(str(l.debe)), Decimal(str(l.haber))) for l in lineas}
-    assert mapa["424"] == (Decimal("920"), Decimal("0"))
+    assert mapa["4241"] == (Decimal("920"), Decimal("0"))
     assert mapa["1041"] == (Decimal("0"), Decimal("920"))
     _limpia(db)
     db.close()
@@ -168,4 +168,58 @@ def test_gasto_contado_paga_al_instante(client, auth_cookies):
     assert db.query(MovimientoFinanciero).filter(
         MovimientoFinanciero.tipo == "EGRESO",
         MovimientoFinanciero.comprobante_ref == "TES-CONT-001").count() == 1
+    db.close()
+
+
+def test_voucher_duplicado_no_duplica_egreso():
+    from app.models.finanzas import AsientoContable, MovimientoFinanciero
+    from app.services import tesoreria_service as tes
+    db = _db()
+    _limpia(db)
+    g = _gasto(db, "TES-VOUCH")
+    gid = g.id
+    r1 = tes.ejecutar_pago_proveedor(db, gid, medio_pago="banco",
+                                     usuario_id=None, voucher="V-001")
+    assert r1.get("duplicado") is False
+    n_mov = db.query(MovimientoFinanciero).filter(
+        MovimientoFinanciero.tipo == "EGRESO").count()
+    n_asi = db.query(AsientoContable).filter(
+        AsientoContable.origen_tipo == "PAGO",
+        AsientoContable.origen_id == gid).count()
+    # reintento con mismo voucher: no crea nada nuevo
+    db.close()
+    db = _db()
+    r2 = tes.ejecutar_pago_proveedor(db, gid, medio_pago="banco",
+                                     usuario_id=None, voucher="V-001")
+    assert r2.get("duplicado") is True
+    assert db.query(MovimientoFinanciero).filter(
+        MovimientoFinanciero.tipo == "EGRESO").count() == n_mov
+    assert db.query(AsientoContable).filter(
+        AsientoContable.origen_tipo == "PAGO",
+        AsientoContable.origen_id == gid).count() == n_asi
+    _limpia(db)
+    db.close()
+
+
+def test_cobro_total_con_taller_listo_completa_orden():
+    from app.core.database import SessionLocal
+    from app.models.order import Garment, Order
+    from app.services import contabilidad as C
+    db = SessionLocal()
+    o = Order(folio="TES-AUTO-001", estado="confirmado", canal="sastreria",
+              total=500.0, anticipo=0.0)
+    db.add(o)
+    db.flush()
+    db.add(Garment(order_id=o.id, tipo="saco", precio=500.0,
+                   estado_taller="CALIDAD_OK"))
+    db.commit()
+    oid = o.id
+    db.close()
+    db = SessionLocal()
+    r = C.cobrar_venta(db, oid, 500.0, "transferencia", "1041",
+                       usuario_id=None)
+    assert r["saldo"] == 0.0 and r["entregada"] is True
+    db.close()
+    db = SessionLocal()
+    assert db.get(Order, oid).estado == "entregado"
     db.close()

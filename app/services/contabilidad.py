@@ -416,7 +416,8 @@ def cobrar_venta(db: Session, order_id: int, monto: float, metodo: str,
                  turno_id: int | None = None) -> dict:
     """Cobra (total o abono): Payment + Order.anticipo + Cash/MovFin + CxC +
     asiento COBRO, todo en UNA transacción. Estados CxC: PENDIENTE /
-    COBRADO_PARCIAL / COBRADO (=PAGADO)."""
+    COBRADO_PARCIAL / COBRADO (=PAGADO). Si el cobro salda la orden y el
+    taller está listo, la entrega automáticamente (no se estanca)."""
     from app.services import ventas as ventas_svc
 
     seed_pcge_basico(db)
@@ -470,9 +471,21 @@ def cobrar_venta(db: Session, order_id: int, monto: float, metodo: str,
             [{"cuenta_id": c_caja.id, "debe": monto_d, "haber": Decimal("0")},
              {"cuenta_id": c_cli.id, "debe": Decimal("0"), "haber": monto_d}])
         db.commit()
+        # Flujo de venta: si el cobro salda la orden Y el taller está listo,
+        # se completa sola (no queda estancada en VENTA_CONFIRMADA). Nunca
+        # bloquea el cobro: cualquier fallo se ignora silenciosamente.
+        entregada = False
+        try:
+            _oid, _saldo = order.id, float(_d(order.total) - _d(order.anticipo))
+            if _saldo <= 0.01:
+                _ent = ventas_svc.entregar(db, _oid)
+                entregada = _ent.estado == "entregado"
+        except Exception:
+            pass
         return {"payment_id": pago.id, "asiento_id": asiento.id,
                 "asiento_numero": asiento.numero, "cxc_id": cxc.id,
-                "monto": float(monto_d), "saldo": float(_d(order.total) - _d(order.anticipo))}
+                "monto": float(monto_d), "saldo": float(_d(order.total) - _d(order.anticipo)),
+                "entregada": entregada}
     except Exception:
         db.rollback()
         raise

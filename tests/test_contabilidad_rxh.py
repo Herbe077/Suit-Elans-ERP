@@ -1,4 +1,4 @@
-"""RxH de destajo: destino 921 (nunca 941) y split 6322/40172/4241.
+"""RxH de destajo: destino 9211 (nunca 941) y split 6322/40172/4241.
 
 Aunque el sastre figure en planilla 5ta, la naturaleza del comprobante
 (RECIBO_HONORARIOS / Honorarios RxH) manda el costo al taller.
@@ -24,7 +24,7 @@ def _asientos_gasto(db, gid, origen="HONORARIOS"):
         AsientoContable.origen_tipo == origen).all()
 
 
-def test_rxh_planilla_destino_921_y_split():
+def test_rxh_planilla_destino_9211_y_split():
     from app.core import security
     from app.core.database import SessionLocal
     from app.models.personnel import Empleado
@@ -40,7 +40,7 @@ def test_rxh_planilla_destino_921_y_split():
     db.add(u)
     db.commit()
     db.refresh(u)
-    # En Personal figura como PLANILLA 5TA: el destino igual debe ser 921.
+    # En Personal figura como PLANILLA 5TA: el destino igual debe ser 9211.
     db.add(Empleado(nombres="Sastre", apellidos="Planilla",
                     dni="RXHC11111111", puesto="SASTRE_MAESTRO",
                     tipo_contrato="PLANILLA_5TA", aplica_retencion_8=True))
@@ -67,14 +67,14 @@ def test_rxh_planilla_destino_921_y_split():
     assert nat["6322"] == (Decimal("800"), Decimal("0"))
     assert nat["40172"] == (Decimal("0"), Decimal("64"))
     assert nat["4241"] == (Decimal("0"), Decimal("736"))
-    # Destino: 921 obligatorio, jamás 941
-    dest = [m for m in mapas if "921" in m or "941" in m]
+    # Destino: 9211 obligatorio, jamás 941
+    dest = [m for m in mapas if "9211" in m or "941" in m]
     assert dest, "falta asiento de destino"
-    assert any("921" in m for m in dest)
+    assert any("9211" in m for m in dest)
     assert not any("941" in m for m in dest)
-    d921 = next(m for m in dest if "921" in m)
-    assert d921["921"] == (Decimal("800"), Decimal("0"))
-    assert d921["791"] == (Decimal("0"), Decimal("800"))
+    d921 = next(m for m in dest if "9211" in m)
+    assert d921["9211"] == (Decimal("800"), Decimal("0"))
+    assert d921["7911"] == (Decimal("0"), Decimal("800"))
     # CxP por el neto, sin tocar caja
     from app.models.finanzas import CuentaPorPagar, MovimientoFinanciero
     cxp = db.get(CuentaPorPagar, r["cxp_id"])
@@ -112,7 +112,7 @@ def test_rxh_planilla_destino_921_y_split():
     db.close()
 
 
-def test_gasto_manual_rxh_destino_921():
+def test_gasto_manual_rxh_destino_9211():
     from datetime import date as _d
     from app.core.database import SessionLocal
     from app.services import finanzas as f
@@ -125,10 +125,10 @@ def test_gasto_manual_rxh_destino_921():
     mapa = _mapa(db, a.id)
     assert mapa["6322"] == (Decimal("1000"), Decimal("0"))
     assert mapa["40172"] == (Decimal("0"), Decimal("80"))
-    assert mapa["424"] == (Decimal("0"), Decimal("920"))
+    assert mapa["4241"] == (Decimal("0"), Decimal("920"))
     dest = [m for m in (_mapa(db, x.id) for x in _asientos_gasto(db, g.id))
-            if "921" in m or "941" in m]
-    assert any("921" in m for m in dest)
+            if "9211" in m or "941" in m]
+    assert any("9211" in m for m in dest)
     assert not any("941" in m for m in dest)
     # limpieza
     from app.models.finanzas import (AsientoContable, GastoRegistrado,
