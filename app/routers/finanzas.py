@@ -366,12 +366,8 @@ def cxc_conciliar(cuenta_id: int = Form(...), monto: float = Form(...), db: Sess
     return RedirectResponse("/finanzas/cuentas-por-cobrar", status_code=303)
 
 @router.get("/cuentas-por-pagar", response_class=HTMLResponse)
-def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
+def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), origen: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
     try:
-        svc.ensure_cxp_tipo_comprobante_column(db)
-        svc.ensure_cxp_origen_tipo_column(db)
-        svc.ensure_cxp_actividad_flujo_column(db)
-        svc.ensure_cxp_observacion_column(db)
         _sync_cxp(db)
         # Red de seguridad: espejos de OCs RECEIVED/BILLED siempre presentes.
         try:
@@ -388,6 +384,12 @@ def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), d
             _logger.warning("sync gastos→CxP omitido: %s", e)
         q=db.query(CuentaPorPagar)
         if estado: q=q.filter(CuentaPorPagar.estado==estado.upper())
+        if origen:
+            # Normaliza variantes (guiones/espacios/caso/legados) al estándar.
+            norm = (origen or "").upper().replace("_", " ").strip()
+            norm = svc.ORIGEN_LEGACY_MAP.get(norm, norm)
+            if norm in svc.ORIGENES_CXP:
+                q=q.filter(CuentaPorPagar.origen_tipo==norm)
         if proveedor:
             from app.services.purchasing import DUMMY_SUPPLIER_NOMBRE as _DUMMY
             try:
@@ -423,7 +425,7 @@ def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), d
                     medios_cxp.setdefault(m.comprobante_ref, m.cuenta_origen or "—")
         except Exception:
             pass
-        return templates.TemplateResponse(request, "finanzas/cuentas_por_pagar.html", {"user":user,"tab":"cxp","cuentas":cuentas,"proveedores":proveedores,"nombres_cxp":nombres_cxp,"medios_cxp":medios_cxp,"estado":estado,"proveedor":proveedor,"suppliers":_visibles(db)})
+        return templates.TemplateResponse(request, "finanzas/cuentas_por_pagar.html", {"user":user,"tab":"cxp","cuentas":cuentas,"proveedores":proveedores,"nombres_cxp":nombres_cxp,"medios_cxp":medios_cxp,"estado":estado,"proveedor":proveedor,"origen":origen,"origenes":list(svc.ORIGENES_CXP),"suppliers":_visibles(db)})
     except Exception as e:
         try:
             db.rollback()
@@ -491,7 +493,6 @@ def tesoreria_pagar(
 def gastos_list(request: Request, estado: str = Query(""), categoria: str = Query(""), error: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
     try:
         svc.seed_pcge_basico(db)
-        svc.ensure_gasto_retencion_column(db)
         q = db.query(GastoRegistrado).order_by(GastoRegistrado.id.desc())
         if estado:
             q = q.filter(GastoRegistrado.estado == estado.upper())

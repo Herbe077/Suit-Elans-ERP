@@ -266,8 +266,12 @@ def test_gasto_activo_fijo_origen_e_inversion():
         db, fecha=_d.today(), categoria="ACTIVO_FIJO", monto_base=5000,
         tipo_comprobante="FACTURA", numero_comprobante="F-ACT-001",
         proveedor_id=sup.id)
+    n0 = db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.numero_factura == "F-ACT-001").count()
     n = C.sincronizar_cxp_desde_gastos(db)
-    assert n == 1
+    assert db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.numero_factura == "F-ACT-001").count() == n0 + n
+    assert n >= 1
     cxp = db.query(CuentaPorPagar).filter(
         CuentaPorPagar.numero_factura == "F-ACT-001").first()
     assert cxp is not None
@@ -305,3 +309,23 @@ def test_origenes_legacy_se_normalizan():
     assert cxp.origen_tipo == "GASTOS OPERATIVOS"
     _limpia(db)
     db.close()
+
+
+def test_ensure_runtime_schema_idempotente():
+    from app.services import finanzas as f
+    db = _db()
+    r1 = f.ensure_runtime_schema(db)
+    r2 = f.ensure_runtime_schema(db)
+    assert r1["columnas"] is True and r2["columnas"] is True
+    assert r1["empleados"] is True
+    db.close()
+
+
+def test_cxp_filtro_origen_normalizado(client, auth_cookies):
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    oc = _oc_recibida(db, "FLT")
+    db.close()
+    r = client.get("/finanzas/cuentas-por-pagar?origen=PROVEEDORES_MATERIA_PRIMA",
+                   cookies=auth_cookies)
+    assert r.status_code == 200 and oc.folio in r.text

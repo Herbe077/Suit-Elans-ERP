@@ -667,18 +667,7 @@ def sincronizar_cxp_desde_gastos(db: Session) -> int:
     Retorna espejos creados.
     """
     from datetime import timedelta as _td
-    from app.services.finanzas import (ensure_cxp_tipo_comprobante_column,
-                                       ensure_cxp_origen_tipo_column,
-                                       ensure_gasto_retencion_column,
-                                       origen_por_categoria_gasto)
-
-    ensure_gasto_retencion_column(db)
-    ensure_cxp_tipo_comprobante_column(db)
-    ensure_cxp_origen_tipo_column(db)
-    from app.services.finanzas import ensure_cxp_actividad_flujo_column
-    from app.services.finanzas import ensure_cxp_observacion_column
-    ensure_cxp_actividad_flujo_column(db)
-    ensure_cxp_observacion_column(db)
+    from app.services.finanzas import origen_por_categoria_gasto
     creados = 0
     gastos = db.query(GastoRegistrado).filter(
         GastoRegistrado.estado == "PENDIENTE").all()

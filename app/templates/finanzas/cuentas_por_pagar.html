@@ -13,6 +13,9 @@
   <label class="block">Proveedor
     <select name="proveedor" class="border rounded px-2 py-1.5 block mt-0.5 bg-white min-w-[200px]"><option value="">Todos</option>{% for s in suppliers %}<option value="{{ s.id }}" {% if proveedor==s.id|string %}selected{% endif %}>{{ s.nombre }}</option>{% endfor %}</select>
   </label>
+  <label class="block">Origen
+    <select name="origen" class="border rounded px-2 py-1.5 block mt-0.5 bg-white min-w-[200px]"><option value="">Todos</option>{% for og in origenes %}<option value="{{ og }}" {% if origen==og %}selected{% endif %}>{{ og|title }}</option>{% endfor %}</select>
+  </label>
   <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold self-end">Filtrar</button>
 </form>
 <div class="w-full overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">

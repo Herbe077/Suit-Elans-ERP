@@ -88,8 +88,7 @@ def acumulado_operario(db: Session, operario_id: int,
 
 def buscar_empleado(db: Session, ruc_dni: str | None):
     """Perfil de Personal y Contratos por DNI/RUC (o None si no existe)."""
-    from app.models.personnel import Empleado, ensure_empleados_table
-    ensure_empleados_table(db)
+    from app.models.personnel import Empleado
     doc = (ruc_dni or "").strip()
     if not doc:
         return None
@@ -108,16 +107,12 @@ def generar_provision_rxh(db: Session, operario_id: int,
     from app.services.contabilidad import exigir_periodo_abierto
     from app.services.finanzas import (crear_asiento_flush,
                                        ensure_cuenta_40172,
-                                       ensure_cxp_origen_tipo_column,
-                                       ensure_cxp_tipo_comprobante_column,
                                        get_cuenta_by_codigo, seed_pcge_basico)
 
     numero = (numero_comprobante or "").strip()
     if not numero:
         raise ValueError("numero_comprobante del RxH es obligatorio")
     seed_pcge_basico(db)
-    ensure_cxp_tipo_comprobante_column(db)
-    ensure_cxp_origen_tipo_column(db)
     total, regs = acumulado_operario(db, operario_id, desde, hasta)
     if total <= 0:
         raise ValueError("Sin destajo PENDIENTE para el operario en el rango")

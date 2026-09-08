@@ -200,9 +200,8 @@ async def _guardar_doc(upload, prefijo: str, emp_id: int | None) -> str | None:
 @_con_diagnostico("/admin/personal")
 def personal_list(request: Request, editar: str = "", error: str = "",
                   db: Session = Depends(get_db), user=Auth):
-    from app.models.personnel import Empleado, ensure_empleados_table
+    from app.models.personnel import Empleado
     from app.models.user import User as _User
-    ensure_empleados_table(db)
     emp = None
     if editar.isdigit():
         emp = db.get(Empleado, int(editar))

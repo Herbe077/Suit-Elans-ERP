@@ -306,14 +306,6 @@ def asegurar_cxp_recepcion(db: Session, oc_id: int):
     No genera asientos. Retorna la CxP o None (sin monto).
     """
     from datetime import timedelta as _td
-    from app.services.finanzas import (ensure_cxp_actividad_flujo_column,
-                                       ensure_cxp_observacion_column,
-                                       ensure_cxp_origen_tipo_column,
-                                       ensure_cxp_tipo_comprobante_column)
-    ensure_cxp_tipo_comprobante_column(db)
-    ensure_cxp_origen_tipo_column(db)
-    ensure_cxp_actividad_flujo_column(db)
-    ensure_cxp_observacion_column(db)
     oc = db.get(OrdenCompra, oc_id)
     if not oc:
         return None
@@ -516,16 +508,8 @@ def reparar_cxp_compras(db: Session) -> dict:
     No duplica: todo es idempotente. Retorna conteos y asiento por OC.
     """
     from datetime import timedelta as _td
-    from app.services.finanzas import (ensure_cxp_actividad_flujo_column,
-                                       ensure_cxp_observacion_column,
-                                       ensure_cxp_origen_tipo_column,
-                                       ensure_cxp_tipo_comprobante_column,
-                                       seed_pcge_basico)
+    from app.services.finanzas import seed_pcge_basico
     seed_pcge_basico(db)
-    ensure_cxp_tipo_comprobante_column(db)
-    ensure_cxp_origen_tipo_column(db)
-    ensure_cxp_actividad_flujo_column(db)
-    ensure_cxp_observacion_column(db)
     rep = {"creadas": 0, "actualizadas": 0, "omitidas": [],
            "asientos": {}}
     for oc in db.query(OrdenCompra).all():

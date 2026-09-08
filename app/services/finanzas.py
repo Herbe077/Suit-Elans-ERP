@@ -226,16 +226,6 @@ def ensure_cxp_actividad_flujo_column(db: Session) -> None:
         "ADD COLUMN actividad_flujo VARCHAR(20) DEFAULT 'OPERATIVO'")
 
 
-def ensure_cxp_observacion_column(db: Session) -> None:
-    """Nivelación idempotente para `observacion` en CxP."""
-    ensure_column(
-        db, "cuentas_por_pagar", "observacion",
-        "ALTER TABLE cuentas_por_pagar ADD COLUMN IF NOT EXISTS "
-        "observacion VARCHAR(255)",
-        "ALTER TABLE cuentas_por_pagar "
-        "ADD COLUMN observacion VARCHAR(255)")
-
-
 def ensure_cxp_origen_tipo_column(db: Session) -> None:
     """Nivelación idempotente para `origen_tipo` en CxP (VARCHAR 40)."""
     ensure_column(
@@ -264,6 +254,52 @@ def ensure_cxp_observacion_column(db: Session) -> None:
         "observacion VARCHAR(255)",
         "ALTER TABLE cuentas_por_pagar "
         "ADD COLUMN observacion VARCHAR(255)")
+
+
+def ensure_runtime_schema(db: Session) -> dict:
+    """Nivelación DDL única para arranque/scripts. PROHIBIDO en requests.
+
+    El DDL por request (con pgbouncer) apila locks ACCESS EXCLUSIVE y
+    cuelga la app. Esto corre una sola vez en el boot (ver lifespan):
+    columnas CxP/gastos, ensanchado de origen_tipo a VARCHAR(40) en PG y
+    tabla empleados. Con commit propio; nunca lanza.
+    """
+    estado: dict = {"columnas": True, "origen_40": False, "empleados": False}
+    try:
+        ensure_gasto_retencion_column(db)
+        ensure_cxp_tipo_comprobante_column(db)
+        ensure_cxp_origen_tipo_column(db)
+        ensure_cxp_actividad_flujo_column(db)
+        ensure_cxp_observacion_column(db)
+        try:
+            bind = db.get_bind()
+            if bind.dialect.name == "postgresql":
+                from sqlalchemy import inspect as _inspect
+                from sqlalchemy import text as _text
+                col = next((c for c in _inspect(bind).get_columns(
+                    "cuentas_por_pagar") if c["name"] == "origen_tipo"), None)
+                largo = getattr(col["type"], "length", 0) if col else 0
+                if col is not None and largo and largo < 40:
+                    db.execute(_text(
+                        "ALTER TABLE cuentas_por_pagar ALTER COLUMN "
+                        "origen_tipo TYPE VARCHAR(40)"))
+                    estado["origen_40"] = True
+        except Exception:
+            pass
+        try:
+            from app.models.personnel import ensure_empleados_table
+            ensure_empleados_table(db)
+            estado["empleados"] = True
+        except Exception:
+            pass
+        db.commit()
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        estado["columnas"] = False
+    return estado
 
 
 # ── Costeo absorbente: tarifa por minuto de taller ───────────────────
@@ -476,7 +512,8 @@ def registrar_gasto_operativo(
     if ret < 0 or ret > base + igv:
         raise ValueError("retención inválida (0 <= retención <= total)")
     total = base + igv
-    ensure_gasto_retencion_column(db)
+    # NOTA: sin DDL aquí (ver ensure_runtime_schema en boot); la columna
+    # existe por migración/create_all/nivelación de arranque.
     c_gasto = get_cuenta_by_codigo(db, codigo_gasto)
     if not c_gasto:
         raise ValueError(f"Cuenta PCGE {codigo_gasto} no existe")

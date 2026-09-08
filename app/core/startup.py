@@ -74,7 +74,7 @@ def init_production_db() -> dict:
     from app.services.finanzas import seed_pcge_basico
 
     status: dict = {"migrations": "skipped", "tables": [], "pcge": "skipped",
-                    "admin": "skipped"}
+                    "admin": "skipped", "schema": "skipped"}
     try:
         status["migrations"] = _upgrade_with_retries()
         missing = _missing_tables()
@@ -89,6 +89,14 @@ def init_production_db() -> dict:
             seed_pcge_basico(db)
             total = db.query(CuentaContable).count()
             status["pcge"] = f"ok ({total} cuentas, +{total - antes} nuevas)"
+            # Nivelación DDL única (columnas CxP/gastos, origen 40, empleados).
+            # Fuera del request path: evita apilar locks en el pooler.
+            try:
+                from app.services.finanzas import ensure_runtime_schema
+                status["schema"] = ensure_runtime_schema(db)
+            except Exception as e:
+                log.warning("ensure_runtime_schema omitido: %s", e)
+                status["schema"] = f"skipped: {e}"
         finally:
             db.close()
         import sys
