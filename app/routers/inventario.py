@@ -71,7 +71,7 @@ def catalogo(request: Request, categoria: str = "", q: str = "", error: str = ""
         "colecciones": db.query(Collection).order_by(Collection.nombre).all(),
         "faltantes": low_stock(db)["variants"],
         "insumos": insumos, "categoria": categoria, "q": q, "error": error,
-        "proveedores": db.query(Supplier).order_by(Supplier.nombre).all()})
+        "proveedores": po_svc.proveedores_visibles(db)})
 
 
 @router.post("/catalogo/colecciones")
@@ -227,7 +227,7 @@ def editar_insumo(iid: int, request: Request, error: str = "",
         return HTMLResponse("Insumo no encontrado", status_code=404)
     return templates.TemplateResponse(request, "inventario/insumo_editar.html", {
         "user": user, "error": error, "ins": prod, "categorias": list(CATEGORIAS_INSUMO),
-        "proveedores": db.query(Supplier).order_by(Supplier.nombre).all()})
+        "proveedores": po_svc.proveedores_visibles(db)})
 
 
 @router.post("/catalogo/insumo/{iid}/guardar")
@@ -625,7 +625,7 @@ def _ocs_unificadas(db: Session) -> list[dict]:
     Solo presentación — no altera la lógica de compras_kardex. Las legacy con
     gemela spec por folio se omiten (la ficha spec es la canónica).
     """
-    proveedores = {s.id: s.nombre for s in db.query(Supplier).all()}
+    proveedores = {s.id: s.nombre for s in po_svc.proveedores_visibles(db)}
     folios_spec = {o.folio for o in db.query(OrdenCompra.folio).all() if o.folio}
     from sqlalchemy import func as _func
     from app.models.inventario import DetalleOrdenCompra as _Det
@@ -681,7 +681,7 @@ def compras(request: Request, error: str = "", ok: str = "", ver_vacias: str = "
     return templates.TemplateResponse(request, "inventario/compras.html", {
         "user": user, "error": error, "ok": ok, "ver_vacias": ver_vacias,
         "vacias": vacias,
-        "proveedores": db.query(Supplier).order_by(Supplier.nombre).all(),
+        "proveedores": po_svc.proveedores_visibles(db),
         "ocs": ocs_legacy, "ocs_spec": ocs_spec,
         "ocs_unificadas": filas,
         "normalizar": normalizar_estado_oc})
@@ -698,7 +698,7 @@ def compras_listado(request: Request, error: str = "", ok: str = "", ver_vacias:
     return templates.TemplateResponse(request, "inventario/compras_listado.html", {
         "user": user, "error": error, "ok": ok, "ver_vacias": ver_vacias,
         "vacias": vacias,
-        "proveedores": db.query(Supplier).order_by(Supplier.nombre).all(),
+        "proveedores": po_svc.proveedores_visibles(db),
         "ocs": ocs_legacy, "ocs_spec": ocs_spec,
         "ocs_unificadas": filas,
         "normalizar": normalizar_estado_oc})
@@ -742,7 +742,7 @@ def nueva_oc(request: Request, error: str = "", db: Session = Depends(get_db),
     from app.models.inventario import ProductoInsumo
     return templates.TemplateResponse(request, "inventario/oc_nueva.html", {
         "user": user, "error": error,
-        "proveedores": db.query(Supplier).order_by(Supplier.nombre).all(),
+        "proveedores": po_svc.proveedores_visibles(db),
         "insumos": db.query(ProductoInsumo).order_by(ProductoInsumo.sku).limit(300).all()})
 
 

@@ -515,9 +515,10 @@ def provisionar_compra(db: Session, proveedor_id: int, base: float, igv: float =
             lineas.append({"cuenta_id": c40111.id, "debe": igv_d, "haber": Decimal("0")})
         lineas.append({"cuenta_id": c4212.id, "debe": Decimal("0"), "haber": total})
         fecha = fecha or date.today()
-        # CxP primero (origen del asiento)
+        # CxP primero (origen COMPRAS, amortizable; sin flujo hasta el pago)
         cxp = CuentaPorPagar(proveedor_id=proveedor_id, purchase_order_id=purchase_order_id,
                              orden_compra_id=orden_compra_id,
+                             origen_tipo="COMPRAS",
                              numero_factura=(numero_factura or None),
                              monto_total=float(total), monto_pagado=0.0,
                              saldo_pendiente=float(total - _d(retencion)),
@@ -659,10 +660,12 @@ def sincronizar_cxp_desde_gastos(db: Session) -> int:
     Retorna espejos creados.
     """
     from app.services.finanzas import (ensure_cxp_tipo_comprobante_column,
+                                         ensure_cxp_origen_tipo_column,
                                          ensure_gasto_retencion_column)
 
     ensure_gasto_retencion_column(db)
     ensure_cxp_tipo_comprobante_column(db)
+    ensure_cxp_origen_tipo_column(db)
     creados = 0
     gastos = db.query(GastoRegistrado).filter(
         GastoRegistrado.estado == "PENDIENTE").all()
@@ -697,6 +700,7 @@ def sincronizar_cxp_desde_gastos(db: Session) -> int:
             ret = float(getattr(g, "retencion", 0) or 0)
             db.add(CuentaPorPagar(
                 proveedor_id=pid, numero_factura=clave,
+                origen_tipo="GASTOS",
                 tipo_comprobante=(g.tipo_comprobante or "FACTURA"),
                 monto_total=total, monto_pagado=0.0,
                 saldo_pendiente=round(max(total - ret, 0.0), 2),

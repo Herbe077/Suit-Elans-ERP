@@ -353,15 +353,35 @@ def facturar_oc(db: Session, oc_id: int, numero_factura: str,
             db, fecha, f"Provisión {numero_factura} OC {oc.folio or oc.id}",
             "COMPRA", oc.id, lineas)
 
-        cxp = CuentaPorPagar(
-            proveedor_id=oc.proveedor_id, orden_compra_id=oc.id,
-            tipo_comprobante="FACTURA",
-            numero_factura=numero_factura, monto_total=float(total),
-            monto_pagado=0.0, saldo_pendiente=float(total),
-            fecha_emision=fecha, estado="POR_PAGAR",
-        )
-        db.add(cxp)
-        db.flush()
+        cxp = db.query(CuentaPorPagar).filter(
+            CuentaPorPagar.orden_compra_id == oc.id).first()
+        if cxp is None:
+            cxp = CuentaPorPagar(
+                proveedor_id=oc.proveedor_id, orden_compra_id=oc.id,
+                tipo_comprobante="FACTURA", origen_tipo="COMPRAS",
+                numero_factura=numero_factura, monto_total=float(total),
+                monto_pagado=0.0, saldo_pendiente=float(total),
+                fecha_emision=fecha, estado="POR_PAGAR",
+            )
+            db.add(cxp)
+            db.flush()
+        else:
+            # Actualiza el espejo creado en RECEIVED (folio) con la factura:
+            # conserva lo ya amortizado y re-calcula el saldo.
+            cxp.proveedor_id = oc.proveedor_id
+            cxp.tipo_comprobante = "FACTURA"
+            cxp.origen_tipo = "COMPRAS"
+            cxp.numero_factura = numero_factura
+            cxp.monto_total = float(total)
+            cxp.saldo_pendiente = float(max(
+                _d(total) - _d(cxp.monto_pagado) - _d(cxp.retencion),
+                Decimal("0")))
+            if _d(cxp.saldo_pendiente) <= Decimal("0.01"):
+                cxp.estado = "PAGADO"
+            elif _d(cxp.monto_pagado) > 0:
+                cxp.estado = "PARCIAL"
+            else:
+                cxp.estado = "POR_PAGAR"
 
         oc.numero_factura = numero_factura
         oc.fecha_factura = fecha
@@ -379,6 +399,69 @@ def facturar_oc(db: Session, oc_id: int, numero_factura: str,
     except Exception:
         db.rollback()
         raise
+
+
+# ── Reparación: OCs sin espejo en CxP ─────────────────────────────
+def reparar_cxp_compras(db: Session) -> dict:
+    """Recorre OCs RECEIVED/PARTIALLY_RECEIVED/BILLED y asegura su CxP.
+
+    - BILLED con factura: crea o actualiza el espejo (FACTURA/COMPRAS) con
+      el total de la OC, conservando lo ya amortizado.
+    - RECEIVED sin factura: crea el espejo con el folio como comprobante.
+    No genera asientos (la provisión vive en facturar_oc). Idempotente.
+    Retorna {"creadas": n, "actualizadas": n, "omitidas": [(folio, motivo)]}.
+    """
+    from app.services.finanzas import (ensure_cxp_origen_tipo_column,
+                                       ensure_cxp_tipo_comprobante_column)
+    ensure_cxp_tipo_comprobante_column(db)
+    ensure_cxp_origen_tipo_column(db)
+    rep = {"creadas": 0, "actualizadas": 0, "omitidas": []}
+    for oc in db.query(OrdenCompra).all():
+        try:
+            est = normalizar_estado_oc(oc.estado)
+        except Exception:
+            continue
+        if est not in ("RECEIVED", "PARTIALLY_RECEIVED", "BILLED"):
+            continue
+        try:
+            cxp = db.query(CuentaPorPagar).filter(
+                CuentaPorPagar.orden_compra_id == oc.id).first()
+            if est == "BILLED" and (oc.numero_factura or "").strip():
+                numero, tipo = oc.numero_factura.strip(), "FACTURA"
+                total = _d(oc.monto_total)
+            else:
+                numero, tipo = oc.folio or f"OC-{oc.id}", "OTROS"
+                total = _d(oc.monto_total)
+            if total <= 0:
+                rep["omitidas"].append((oc.folio or oc.id, "sin monto"))
+                continue
+            if cxp is None:
+                db.add(CuentaPorPagar(
+                    proveedor_id=oc.proveedor_id, orden_compra_id=oc.id,
+                    origen_tipo="COMPRAS", tipo_comprobante=tipo,
+                    numero_factura=numero, monto_total=float(total),
+                    monto_pagado=0.0, saldo_pendiente=float(total),
+                    fecha_emision=oc.fecha_emision, estado="POR_PAGAR"))
+                rep["creadas"] += 1
+            else:
+                cxp.origen_tipo = "COMPRAS"
+                if est == "BILLED" and (oc.numero_factura or "").strip():
+                    cxp.tipo_comprobante = "FACTURA"
+                    cxp.numero_factura = oc.numero_factura.strip()
+                    cxp.monto_total = float(total)
+                    cxp.saldo_pendiente = float(max(
+                        total - _d(cxp.monto_pagado) - _d(cxp.retencion),
+                        Decimal("0")))
+                    if _d(cxp.saldo_pendiente) <= Decimal("0.01"):
+                        cxp.estado = "PAGADO"
+                    elif _d(cxp.monto_pagado) > 0:
+                        cxp.estado = "PARCIAL"
+                    rep["actualizadas"] += 1
+        except Exception as e:
+            rep["omitidas"].append((getattr(oc, "folio", oc.id), str(e)[:80]))
+            continue
+    db.commit()
+    return rep
 
 
 # ── Consumo taller (611 / 241) y merma (659 / 241) ──────────────────

@@ -106,7 +106,7 @@ def _sync_cxp(db):
             total = float(po.total or 0)
             if total <= 0:
                 continue
-            cxp = CuentaPorPagar(proveedor_id=po.supplier_id, purchase_order_id=po.id, monto_total=total, monto_pagado=0, saldo_pendiente=total, retencion=0, estado="POR_PAGAR", fecha_emision=date.today(), fecha_vencimiento=date.today()+timedelta(days=30))
+            cxp = CuentaPorPagar(proveedor_id=po.supplier_id, purchase_order_id=po.id, origen_tipo="COMPRAS", numero_factura=po.folio or None, monto_total=total, monto_pagado=0, saldo_pendiente=total, retencion=0, estado="POR_PAGAR", fecha_emision=date.today(), fecha_vencimiento=date.today()+timedelta(days=30))
             db.add(cxp)
             db.flush()
             # Provisión contable de la obligación: DEBE 602 / HABER 4212,
@@ -368,6 +368,7 @@ def cxc_conciliar(cuenta_id: int = Form(...), monto: float = Form(...), db: Sess
 def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
     try:
         svc.ensure_cxp_tipo_comprobante_column(db)
+        svc.ensure_cxp_origen_tipo_column(db)
         _sync_cxp(db)
         # Bandeja Única de Tesorería: espeja gastos pendientes (incl. RxH) como CxP.
         # Solo el PAGAR genera el EGRESO real (MovimientoFinanciero + 1011/1041).
@@ -379,14 +380,18 @@ def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), d
         q=db.query(CuentaPorPagar)
         if estado: q=q.filter(CuentaPorPagar.estado==estado.upper())
         if proveedor:
+            from app.services.purchasing import DUMMY_SUPPLIER_NOMBRE as _DUMMY
             try:
                 q=q.filter(CuentaPorPagar.proveedor_id==int(proveedor))
             except ValueError:
                 like=f"%{proveedor}%"
-                ids=[s.id for s in db.query(Supplier).filter(Supplier.nombre.like(like)).all()]
+                ids=[s.id for s in db.query(Supplier).filter(
+                    Supplier.nombre.like(like),
+                    Supplier.nombre != _DUMMY).all()]
                 q=q.filter(CuentaPorPagar.proveedor_id.in_(ids or [0]))
         cuentas=q.order_by(CuentaPorPagar.id.desc()).limit(200).all()
-        proveedores={s.id:s for s in db.query(Supplier).all()}
+        from app.services.purchasing import proveedores_visibles as _visibles
+        proveedores={s.id:s for s in _visibles(db)}
         # Nombre tolerante a nulos/huérfanos: destajo/RxH sin proveedor directo
         # muestra 'Personal Destajo / Sastre' en vez de romper la vista.
         nombres_cxp={}
@@ -409,7 +414,7 @@ def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), d
                     medios_cxp.setdefault(m.comprobante_ref, m.cuenta_origen or "—")
         except Exception:
             pass
-        return templates.TemplateResponse(request, "finanzas/cuentas_por_pagar.html", {"user":user,"tab":"cxp","cuentas":cuentas,"proveedores":proveedores,"nombres_cxp":nombres_cxp,"medios_cxp":medios_cxp,"estado":estado,"proveedor":proveedor,"suppliers":db.query(Supplier).order_by(Supplier.nombre).all()})
+        return templates.TemplateResponse(request, "finanzas/cuentas_por_pagar.html", {"user":user,"tab":"cxp","cuentas":cuentas,"proveedores":proveedores,"nombres_cxp":nombres_cxp,"medios_cxp":medios_cxp,"estado":estado,"proveedor":proveedor,"suppliers":_visibles(db)})
     except Exception as e:
         try:
             db.rollback()
@@ -502,7 +507,8 @@ def gastos_list(request: Request, estado: str = Query(""), categoria: str = Quer
                 continue
         cuentas = db.query(CuentaContable).filter(CuentaContable.activo == True).order_by(CuentaContable.codigo).all()  # noqa: E712
         centros = db.query(CentroCosto).filter(CentroCosto.activo == True).order_by(CentroCosto.codigo).all()  # noqa: E712
-        proveedores = db.query(Supplier).order_by(Supplier.nombre).all()
+        from app.services.purchasing import proveedores_visibles as _visibles_g
+        proveedores = _visibles_g(db)
         cuentas_map = {c.id: c.codigo for c in db.query(CuentaContable).all()}
         prov_map = {s.id: s.nombre for s in proveedores}
         return templates.TemplateResponse(request, "finanzas/gastos.html", {

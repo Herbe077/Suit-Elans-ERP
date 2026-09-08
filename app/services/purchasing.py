@@ -1,8 +1,57 @@
 """Compras: recepción que alimenta kardex + totales OC."""
 from sqlalchemy.orm import Session
 
-from app.models.purchasing import PurchaseLine, PurchaseOrder
+from app.models.purchasing import PurchaseLine, PurchaseOrder, Supplier
 from app.services.inventory import apply_movement
+
+# Proveedor ficticio heredado (liquidaciones antiguas): jamás en selectores.
+DUMMY_SUPPLIER_NOMBRE = "Personal Destajo"
+DUMMY_SUPPLIER_RUCS = {"00000000000"}
+
+
+def es_proveedor_dummy(sup) -> bool:
+    return bool(sup) and (sup.nombre or "").strip() == DUMMY_SUPPLIER_NOMBRE \
+        and (sup.ruc or "").strip() in DUMMY_SUPPLIER_RUCS | {""}
+
+
+def proveedores_visibles(db: Session) -> list:
+    """Suppliers para selectores UI: excluye el dummy ficticio."""
+    return db.query(Supplier).filter(
+        Supplier.nombre != DUMMY_SUPPLIER_NOMBRE).order_by(
+        Supplier.nombre).all()
+
+
+def purgar_proveedor_dummy(db: Session) -> dict:
+    """Elimina el dummy solo si ninguna tabla lo referencia (FK-safe).
+
+    Retorna {"eliminados": n, "conservados": [...motivos]}.
+    """
+    from app.models.finanzas import CuentaPorPagar, GastoRegistrado
+    from app.models.inventario import OrdenCompra
+    eliminados, conservados = 0, []
+    for sup in db.query(Supplier).filter(
+            Supplier.nombre == DUMMY_SUPPLIER_NOMBRE).all():
+        usos = []
+        if db.query(CuentaPorPagar).filter(
+                CuentaPorPagar.proveedor_id == sup.id).count():
+            usos.append("cuentas_por_pagar")
+        if db.query(GastoRegistrado).filter(
+                GastoRegistrado.proveedor_id == sup.id).count():
+            usos.append("gastos")
+        if db.query(OrdenCompra).filter(
+                OrdenCompra.proveedor_id == sup.id).count():
+            usos.append("ordenes_compra")
+        if db.query(PurchaseOrder).filter(
+                PurchaseOrder.supplier_id == sup.id).count():
+            usos.append("purchase_orders")
+        if usos:
+            conservados.append({"id": sup.id, "usos": usos})
+            continue
+        db.delete(sup)
+        eliminados += 1
+    if eliminados:
+        db.commit()
+    return {"eliminados": eliminados, "conservados": conservados}
 
 
 def next_po_folio(db: Session) -> str:

@@ -108,6 +108,7 @@ def generar_provision_rxh(db: Session, operario_id: int,
     from app.services.contabilidad import exigir_periodo_abierto
     from app.services.finanzas import (crear_asiento_flush,
                                        ensure_cuenta_40172,
+                                       ensure_cxp_origen_tipo_column,
                                        ensure_cxp_tipo_comprobante_column,
                                        get_cuenta_by_codigo, seed_pcge_basico)
 
@@ -116,6 +117,7 @@ def generar_provision_rxh(db: Session, operario_id: int,
         raise ValueError("numero_comprobante del RxH es obligatorio")
     seed_pcge_basico(db)
     ensure_cxp_tipo_comprobante_column(db)
+    ensure_cxp_origen_tipo_column(db)
     total, regs = acumulado_operario(db, operario_id, desde, hasta)
     if total <= 0:
         raise ValueError("Sin destajo PENDIENTE para el operario en el rango")
@@ -176,6 +178,7 @@ def generar_provision_rxh(db: Session, operario_id: int,
                  {"cuenta_id": c_79.id, "debe": Decimal("0"), "haber": total}])
         cxp = CuentaPorPagar(
             proveedor_id=sup.id, numero_factura=numero,
+            origen_tipo="DESTAJO",
             tipo_comprobante="RECIBO_HONORARIOS",
             monto_total=float(total), monto_pagado=0.0,
             saldo_pendiente=float(total - ret), retencion=float(ret),

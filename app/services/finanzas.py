@@ -200,6 +200,16 @@ def ensure_cxp_tipo_comprobante_column(db: Session) -> None:
         "ADD COLUMN tipo_comprobante VARCHAR(20) DEFAULT 'FACTURA'")
 
 
+def ensure_cxp_origen_tipo_column(db: Session) -> None:
+    """Nivelación idempotente para `origen_tipo` en CxP."""
+    ensure_column(
+        db, "cuentas_por_pagar", "origen_tipo",
+        "ALTER TABLE cuentas_por_pagar ADD COLUMN IF NOT EXISTS "
+        "origen_tipo VARCHAR(20) DEFAULT 'COMPRAS'",
+        "ALTER TABLE cuentas_por_pagar "
+        "ADD COLUMN origen_tipo VARCHAR(20) DEFAULT 'COMPRAS'")
+
+
 # ── Costeo absorbente: tarifa por minuto de taller ───────────────────
 def planilla_taller_mes(db: Session, anio: int, mes: int) -> Decimal:
     """Planilla mensual (gastos 6211) de centros tipo TALLER (921/922/923)."""

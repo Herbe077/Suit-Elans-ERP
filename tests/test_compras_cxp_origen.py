@@ -1,0 +1,153 @@
+"""CxP comerciales: origen, espejo RECEIVED→BILLED sin duplicar y dummy fuera."""
+from datetime import date
+from decimal import Decimal
+
+
+def _db():
+    from app.core.database import Base, SessionLocal, engine
+    from app.services import finanzas as f
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    f.seed_pcge_basico(db)
+    f.ensure_cxp_tipo_comprobante_column(db)
+    f.ensure_cxp_origen_tipo_column(db)
+    return db
+
+
+def _limpia(db):
+    from app.models.finanzas import (AsientoContable, CuentaPorPagar,
+                                     LineaAsientoContable)
+    from app.models.inventario import (DetalleOrdenCompra, MovimientoKardex,
+                                       OrdenCompra)
+    from app.models.purchasing import PurchaseOrder, Supplier
+    for m in (LineaAsientoContable, AsientoContable, MovimientoKardex,
+              DetalleOrdenCompra, CuentaPorPagar, OrdenCompra,
+              PurchaseOrder):
+        db.query(m).delete()
+    db.query(Supplier).filter(Supplier.nombre.like("TCO-%")).delete(
+        synchronize_session=False)
+    db.query(Supplier).filter(
+        Supplier.nombre == "Personal Destajo").delete(
+        synchronize_session=False)
+    db.commit()
+
+
+def _oc_recibida(db, tag, total_linea=870.0):
+    from app.models.inventario import DetalleOrdenCompra, OrdenCompra
+    from app.models.inventario import ProductoInsumo
+    from app.models.purchasing import Supplier
+    from app.services import compras_kardex as ck
+    sup = Supplier(nombre=f"TCO-{tag}")
+    db.add(sup)
+    db.flush()
+    prod = ProductoInsumo(sku=f"TCO-{tag}", nombre=f"Insumo {tag}",
+                          categoria="TELA", unidad_medida="METROS",
+                          stock_fisico=0.0)
+    db.add(prod)
+    db.flush()
+    oc = OrdenCompra(proveedor_id=sup.id, folio=f"OC-TCO-{tag}",
+                     estado="APPROVED", monto_total=round(total_linea, 2))
+    db.add(oc)
+    db.flush()
+    d = DetalleOrdenCompra(orden_compra_id=oc.id, producto_id=prod.id,
+                           cantidad_solicitada=10, precio_unitario=total_linea / 10)
+    db.add(d)
+    db.commit()
+    ck.recepcionar_oc(db, oc.id, {d.id: 10.0})
+    return oc
+
+
+def test_dummy_filtrado_y_purgado():
+    from app.models.purchasing import Supplier
+    from app.services import purchasing as po_svc
+    db = _db()
+    _limpia(db)
+    db.add(Supplier(nombre="Personal Destajo", ruc="00000000000"))
+    db.add(Supplier(nombre="TCO-Real"))
+    db.commit()
+    vis = [s.nombre for s in po_svc.proveedores_visibles(db)]
+    assert "TCO-Real" in vis and "Personal Destajo" not in vis
+    rep = po_svc.purgar_proveedor_dummy(db)
+    assert rep["eliminados"] == 1 and rep["conservados"] == []
+    assert db.query(Supplier).filter(
+        Supplier.nombre == "Personal Destajo").count() == 0
+    _limpia(db)
+    db.close()
+
+
+def test_dummy_referenciado_se_conserva():
+    from app.models.finanzas import CuentaPorPagar
+    from app.models.purchasing import Supplier
+    from app.services import purchasing as po_svc
+    db = _db()
+    _limpia(db)
+    sup = Supplier(nombre="Personal Destajo", ruc="00000000000")
+    db.add(sup)
+    db.flush()
+    db.add(CuentaPorPagar(proveedor_id=sup.id, numero_factura="X-1",
+                          monto_total=10.0, saldo_pendiente=10.0,
+                          estado="POR_PAGAR"))
+    db.commit()
+    rep = po_svc.purgar_proveedor_dummy(db)
+    assert rep["eliminados"] == 0
+    assert rep["conservados"][0]["usos"] == ["cuentas_por_pagar"]
+    _limpia(db)
+    db.close()
+
+
+def test_facturar_actualiza_espejo_sin_duplicar():
+    from app.models.finanzas import CuentaPorPagar
+    from app.services import compras_kardex as ck
+    db = _db()
+    _limpia(db)
+    oc = _oc_recibida(db, "UPD")
+    rep = ck.reparar_cxp_compras(db)
+    assert rep["creadas"] == 1
+    base = db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.orden_compra_id == oc.id).all()
+    assert len(base) == 1 and base[0].numero_factura == oc.folio
+    r = ck.facturar_oc(db, oc.id, "F001-TCO-1", date.today())
+    assert r["estado"] == "BILLED"
+    assert r["base"] == 737.29 and r["total"] == 870.0
+    filas = db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.orden_compra_id == oc.id).all()
+    assert len(filas) == 1  # actualiza, no duplica
+    cxp = filas[0]
+    assert cxp.numero_factura == "F001-TCO-1"
+    assert cxp.tipo_comprobante == "FACTURA" and cxp.origen_tipo == "COMPRAS"
+    assert cxp.monto_total == 870.0 and cxp.saldo_pendiente == 870.0
+    assert cxp.estado == "POR_PAGAR"
+    _limpia(db)
+    db.close()
+
+
+def test_reparar_billed_crea_cxp_con_totales():
+    from app.models.finanzas import CuentaPorPagar
+    from app.services import compras_kardex as ck
+    db = _db()
+    _limpia(db)
+    oc = _oc_recibida(db, "BIL", total_linea=476.0)
+    oc.estado = "BILLED"
+    oc.numero_factura = "F001-TCO-2"
+    oc.subtotal = 403.39
+    oc.igv = 72.61
+    oc.monto_total = 476.0
+    db.commit()
+    rep = ck.reparar_cxp_compras(db)
+    assert rep["creadas"] == 1
+    cxp = db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.orden_compra_id == oc.id).first()
+    assert cxp is not None and cxp.monto_total == 476.0
+    assert cxp.saldo_pendiente == 476.0 and cxp.estado == "POR_PAGAR"
+    assert cxp.origen_tipo == "COMPRAS"
+    _limpia(db)
+    db.close()
+
+
+def test_cxp_muestra_origen_y_pagar(client, auth_cookies):
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    oc = _oc_recibida(db, "VIS")
+    db.close()
+    t = client.get("/finanzas/cuentas-por-pagar", cookies=auth_cookies).text
+    assert "COMPRAS" in t and oc.folio in t

@@ -35,6 +35,7 @@ class CuentaPorPagar(Base):
     proveedor_id: Mapped[int] = mapped_column(ForeignKey("suppliers.id"), index=True)
     purchase_order_id: Mapped[int | None] = mapped_column(ForeignKey("purchase_orders.id"), nullable=True)
     orden_compra_id: Mapped[int | None] = mapped_column(ForeignKey("ordenes_compra.id"), nullable=True)
+    origen_tipo: Mapped[str] = mapped_column(String(20), default="COMPRAS")  # COMPRAS/GASTOS/DESTAJO
     tipo_comprobante: Mapped[str] = mapped_column(String(20), default="FACTURA")  # FACTURA/BOLETA/RECIBO_HONORARIOS/OTROS
     numero_factura: Mapped[str | None] = mapped_column(String(40), nullable=True)
     monto_total: Mapped[float] = mapped_column(Float, default=0.0)
