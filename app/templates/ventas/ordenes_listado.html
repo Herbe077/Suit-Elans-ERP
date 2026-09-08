@@ -46,7 +46,9 @@
         <button type="button" onclick="abrirCobro({{ o.id }}, '{{ o.folio }}', {{ (o.total * min_anticipo / 100 - o.anticipo)|round(2) if (o.total * min_anticipo / 100 - o.anticipo) > 0 else o.saldo }}, 'Anticipo (≥ {{ min_anticipo }}%)')" class="text-xs bg-borgo text-white rounded-full px-3 py-1.5 font-bold">Confirmar y Cobrar Anticipo (≥ {{ min_anticipo }}%)</button>
         <span class="text-xs text-slate-400">Cotización pendiente de confirmación.</span>
       {% elif o.estado == 'confirmado' %}
+        {% if o.saldo > 0 %}
         <button type="button" onclick="abrirCobro({{ o.id }}, '{{ o.folio }}', {{ o.saldo }}, 'Saldo')" class="text-xs bg-borgo text-white rounded-full px-3 py-1.5 font-bold">💳 Registrar Pago / Saldo</button>
+        {% endif %}
         {% if o.saldo <= 0 and taller_ok.get(o.id, True) %}
           <form method="post" action="/ventas/ordenes/{{ o.id }}/entregar" onsubmit="return confirm('¿Marcar {{ o.folio }} como entregado?')"><button class="text-xs underline text-laton-dark">Marcar entregado</button></form>
         {% elif not taller_ok.get(o.id, True) %}
