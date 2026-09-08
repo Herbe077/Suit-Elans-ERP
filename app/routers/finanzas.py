@@ -416,8 +416,46 @@ def cxp_pagar(cid: int, monto: float = Form(...), cuenta_origen: str = Form("Ban
         return HTMLResponse(str(e), status_code=400)
     return RedirectResponse("/finanzas/cuentas-por-pagar", status_code=303)
 
+
+@router.post("/tesoreria/pagar", response_class=HTMLResponse)
+def tesoreria_pagar(
+    gasto_id: str = Form(""), cxp_id: str = Form(""), monto: str = Form(""),
+    medio: str = Form("banco"), voucher: str = Form(""),
+    back: str = Form("/finanzas/cuentas-por-pagar"),
+    db: Session = Depends(get_db), user=FinanzasAuth,
+):
+    """Ventana única de pago (modalPago): gastos y CxP invocan esta ruta.
+
+    Con gasto_id paga gasto + espejo CxP; con cxp_id paga la CxP (y su gasto
+    espejo si salda). Todo vía Tesorería: un commit, EGRESO + diario 10.
+    """
+    if not back.startswith("/"):
+        back = "/finanzas/cuentas-por-pagar"
+    from app.services import contabilidad as contab
+    from app.services import tesoreria_service as tes
+    try:
+        monto_f = float(monto) if (monto or "").strip() else None
+    except Exception:
+        return HTMLResponse("Monto inválido", status_code=400)
+    try:
+        if (gasto_id or "").strip():
+            tes.ejecutar_pago_proveedor(
+                db, int(gasto_id), medio_pago=medio or "banco",
+                monto=monto_f, usuario_id=user.id,
+                voucher=voucher or None)
+        elif (cxp_id or "").strip():
+            cuenta = tes.cuenta_por_medio(medio or "banco")
+            contab.pagar_proveedor(db, int(cxp_id), float(monto_f or 0),
+                                   cuenta_codigo=cuenta, usuario_id=user.id,
+                                   voucher=voucher or None)
+        else:
+            return HTMLResponse("Indica gasto_id o cxp_id", status_code=400)
+    except ValueError as e:
+        return HTMLResponse(str(e), status_code=400)
+    return RedirectResponse(back, status_code=303)
+
 @router.get("/gastos", response_class=HTMLResponse)
-def gastos_list(request: Request, estado: str = Query(""), categoria: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
+def gastos_list(request: Request, estado: str = Query(""), categoria: str = Query(""), error: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
     try:
         svc.seed_pcge_basico(db)
         svc.ensure_gasto_retencion_column(db)
@@ -452,7 +490,7 @@ def gastos_list(request: Request, estado: str = Query(""), categoria: str = Quer
             "user": user, "tab": "gastos", "gastos": gastos, "cuentas": cuentas,
             "centros": centros, "proveedores": proveedores,
             "cuentas_map": cuentas_map, "prov_map": prov_map,
-            "estado": estado, "categoria": categoria,
+            "estado": estado, "categoria": categoria, "error": error,
             "categorias": ["ALQUILER", "ALQUILER_NATURAL", "HONORARIOS", "HONORARIOS_RXH",
                            "PLANILLA", "ACTIVO_FIJO", "OTRO"],
             "map": svc.CATEGORIA_GASTO_MAP,
@@ -472,7 +510,8 @@ def gastos_crear(
     categoria: str = Form("OTRO"), cuenta_codigo: str = Form(""),
     monto_total: float = Form(0), monto_base: float = Form(0),
     igv: float = Form(0), retencion: float = Form(0), glosa: str = Form(""),
-    centro_costo_id: str = Form(""), db: Session = Depends(get_db), user=FinanzasAuth,
+    centro_costo_id: str = Form(""), condicion_pago: str = Form("CREDITO"),
+    medio_pago: str = Form("banco"), db: Session = Depends(get_db), user=FinanzasAuth,
 ):
     try:
         fe = date.fromisoformat(fecha) if fecha else date.today()
@@ -507,7 +546,7 @@ def gastos_crear(
     # Provisión atómica con bloqueo de período cerrado
     from app.services import contabilidad as contab
     try:
-        contab.registrar_gasto_atomico(
+        gasto, _as = contab.registrar_gasto_atomico(
             db, fecha=fe, categoria=cat, monto_base=monto_base, monto_igv=igv,
             cuenta_codigo=cta, proveedor_id=pid, ruc_proveedor=ruc or None,
             tipo_comprobante=tipo_comprobante or None, numero_comprobante=numero_comprobante or None,
@@ -521,6 +560,16 @@ def gastos_crear(
         contab.sincronizar_cxp_desde_gastos(db)
     except Exception as e:
         _logger.warning("sync gasto→CxP omitido: %s", e)
+    # Contado: provisión + cancelación en el mismo instante vía Tesorería.
+    if (condicion_pago or "CREDITO").upper() == "CONTADO":
+        try:
+            from app.services import tesoreria_service as _tes
+            _tes.ejecutar_pago_proveedor(
+                db, gasto.id, medio_pago=medio_pago or "banco",
+                usuario_id=user.id)
+        except Exception as e:
+            _logger.warning("pago al contado fallido (gasto %s): %s", gasto.id, e)
+            return RedirectResponse("/finanzas/gastos?error=pago", status_code=303)
     return RedirectResponse("/finanzas/gastos", status_code=303)
 
 

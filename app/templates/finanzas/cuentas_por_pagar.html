@@ -33,11 +33,7 @@
         <td class="whitespace-nowrap px-3 py-2 font-sans">{{ badge(c.estado or 'POR_PAGAR', "danger" if c.estado=='POR_PAGAR' else "warning" if c.estado=='PARCIAL' else "success") }}</td>
         <td class="whitespace-nowrap px-3 py-2 font-sans">
           {% if (c.saldo_pendiente or 0)>0.01 %}
-          <form method="post" action="/finanzas/cuentas-por-pagar/{{ c.id }}/pagar" class="flex gap-1 items-end">
-            <label>Monto S/<input name="monto" type="number" step="0.01" min="0.01" max="{{ c.saldo_pendiente or 0 }}" placeholder="0.00" class="border rounded px-1 py-0.5 w-20 block mt-0.5"></label>
-            <label>Origen<select name="cuenta_origen" class="border rounded px-1 py-0.5 block mt-0.5 bg-white"><option>Banco</option><option>Caja</option><option>Caja General</option></select></label>
-            <button class="bg-slate-800 text-white rounded px-2 py-0.5 font-semibold self-end">Pagar</button>
-          </form>
+          <button type="button" onclick="abrirModalPago('cxp', {{ c.id }}, '{{ c.numero_factura or c.id }}', {{ c.saldo_pendiente or 0 }})" class="bg-slate-800 text-white rounded px-2 py-0.5 font-semibold">Pagar</button>
           {% else %}<span class="text-emerald-700 font-semibold">✔ PAGADO</span>{% endif %}
         </td>
       </tr>
@@ -45,6 +41,41 @@
     </tbody>
   </table>
 </div>
+<div id="modal-pago" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" onclick="cerrarModalPago()"></div>
+  <form method="post" action="/finanzas/tesoreria/pagar" class="relative bg-white rounded-xl shadow p-4 w-full max-w-sm text-sm">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="font-bold">💳 Pagar <span id="pago-ref" class="font-mono font-normal text-slate-500"></span></h2>
+      <button type="button" onclick="cerrarModalPago()" class="text-slate-400 border rounded-full w-7 h-7" aria-label="Cerrar">✕</button>
+    </div>
+    <input type="hidden" name="gasto_id" id="pago-gasto" value="">
+    <input type="hidden" name="cxp_id" id="pago-cxp" value="">
+    <input type="hidden" name="back" value="/finanzas/cuentas-por-pagar">
+    <label class="block mb-2">Monto S/
+      <input name="monto" id="pago-monto" type="number" step="0.01" min="0.01" required class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block mb-2">Medio de pago
+      <select name="medio" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="banco">Banco BCP</option><option value="caja">Caja Chica</option><option value="yape">Yape</option><option value="transferencia">Transferencia</option><option value="efectivo">Efectivo</option></select>
+    </label>
+    <label class="block mb-3">N° Operación / Voucher (opc.)
+      <input name="voucher" placeholder="Ej. OP-2026-001" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <button class="w-full bg-slate-800 text-white rounded-lg py-2 font-bold">Confirmar pago</button>
+  </form>
+</div>
+<script>
+function abrirModalPago(tipo, id, ref, saldo) {
+  document.getElementById('pago-gasto').value = tipo === 'gasto' ? id : '';
+  document.getElementById('pago-cxp').value = tipo === 'cxp' ? id : '';
+  document.getElementById('pago-ref').textContent = ref;
+  document.getElementById('pago-monto').value = saldo;
+  document.getElementById('pago-monto').max = saldo;
+  document.getElementById('modal-pago').classList.remove('hidden');
+}
+function cerrarModalPago() {
+  document.getElementById('modal-pago').classList.add('hidden');
+}
+</script>
 <p class="text-xs text-slate-400 mt-2">Egresos bancarios / caja general → MovimientoFinanciero EGRESO.</p>
 </div>
 {% endblock %}

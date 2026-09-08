@@ -14,7 +14,8 @@ from app.models.user import User
 from app.schemas.api import (
     AppointmentApiIn, CompanyIn, CompanyOut, ContactIn, InvoiceIn, InvoiceOut,
     LeadIn, LeadOut, LeadPatch, OrderOut, ProductIn, QuotationIn, QuotationLineIn,
-    QuotationOut, StockAdjustIn, TokenOut, VariantIn, VariantOut,
+    QuotationOut, StockAdjustIn, TesoreriaPagoIn, TesoreriaPagoOut, TokenOut,
+    VariantIn, VariantOut,
 )
 from app.services import billing as billing_svc
 from app.services import crm as crm_svc
@@ -260,3 +261,33 @@ def get_invoice(iid: int, db: Session = Depends(get_db), user: User = Auth):
     if not inv:
         raise HTTPException(404, "Comprobante no encontrado")
     return inv
+
+
+@router.post("/tesoreria/pagar-gasto", response_model=TesoreriaPagoOut)
+def tesoreria_pagar_gasto(data: TesoreriaPagoIn, db: Session = Depends(get_db),
+                          user: User = Auth):
+    """Pago unificado de Tesorería (gasto + CxP + caja + diario)."""
+    from app.services import contabilidad as contab
+    from app.services import tesoreria_service as tes
+    try:
+        if data.gasto_id:
+            return tes.ejecutar_pago_proveedor(
+                db, data.gasto_id, medio_pago=data.medio_pago or "banco",
+                monto=data.monto, usuario_id=user.id,
+                voucher=data.voucher)
+        if data.cxp_id:
+            if not data.monto:
+                raise ValueError("monto es obligatorio para pagar CxP")
+            r = contab.pagar_proveedor(
+                db, data.cxp_id, float(data.monto),
+                cuenta_codigo=tes.cuenta_por_medio(data.medio_pago or "banco"),
+                usuario_id=user.id, voucher=data.voucher)
+            cxp = db.get(contab.CuentaPorPagar, data.cxp_id)
+            return {"gasto_id": None, "cxp_id": data.cxp_id,
+                    "asiento_id": r["asiento_id"],
+                    "asiento_numero": r["asiento_numero"],
+                    "monto": float(data.monto), "gasto_estado": None,
+                    "cxp_estado": cxp.estado if cxp else r["estado"]}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    raise HTTPException(status_code=400, detail="Indica gasto_id o cxp_id")

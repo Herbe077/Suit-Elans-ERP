@@ -524,9 +524,11 @@ def provisionar_compra(db: Session, proveedor_id: int, base: float, igv: float =
 
 # ── PAGO CxP: 4212 / 1011/1041 + flujo ──────────────────────────────
 def pagar_proveedor(db: Session, cxp_id: int, monto: float, cuenta_codigo: str = "1041",
-                    usuario_id: int | None = None, fecha: date | None = None) -> dict:
+                    usuario_id: int | None = None, fecha: date | None = None,
+                    voucher: str | None = None) -> dict:
     """Abono a proveedor: CxP + MovFin EGRESO + Cash + asiento PAGO, atómico.
-    Estados: POR_PAGAR / PARCIAL / PAGADO."""
+    Estados: POR_PAGAR / PARCIAL / PAGADO. Si la CxP salda, marca PAGADO su
+    gasto espejo (sincronía CxP→Gastos, sin commit extra)."""
     seed_pcge_basico(db)
     try:
         exigir_periodo_abierto(db, fecha)
@@ -541,12 +543,15 @@ def pagar_proveedor(db: Session, cxp_id: int, monto: float, cuenta_codigo: str =
         cxp.saldo_pendiente = float(max(
             _d(cxp.monto_total) - _d(cxp.monto_pagado) - _d(cxp.retencion), Decimal("0")))
         cxp.estado = "PAGADO" if _d(cxp.saldo_pendiente) <= Decimal("0.01") else "PARCIAL"
+        from app.services import tesoreria_service as _tes
+        _tes.marcar_gasto_pagado_si_saldado(db, cxp)
         ref = cxp.numero_factura or f"CxP-{cxp.id}"
+        glosa_v = f" V:{voucher.strip()}" if (voucher or "").strip() else ""
         db.add(MovimientoFinanciero(tipo="EGRESO", categoria="Compra de Telas",
                                     monto=float(monto_d),
                                     cuenta_origen="Banco" if cuenta_codigo == "1041" else "Caja",
                                     comprobante_ref=ref, usuario_id=usuario_id,
-                                    descripcion=f"Pago CxP {ref}"))
+                                    descripcion=f"Pago CxP {ref}{glosa_v}"))
         db.add(CashMovement(tipo="egreso", concepto=f"Pago proveedor {ref}",
                             monto=float(monto_d), metodo="transferencia",
                             usuario_id=usuario_id))
@@ -602,53 +607,32 @@ def registrar_gasto_atomico(db: Session, fecha: date, categoria: str,
 
 def pagar_gasto_atomico(db: Session, gasto_id: int, cuenta_origen_codigo: str = "104",
                         usuario_id: int | None = None,
-                        fecha: date | None = None) -> dict:
-    """Pago de gasto: pasivo / caja-banco por el NETO (total − retención IR)
-    + MovFin EGRESO + Cash, atómico. La retención queda por pagar en 40172."""
-    from app.services import finanzas as fin
+                        fecha: date | None = None,
+                        medio_pago: str | None = None,
+                        voucher: str | None = None,
+                        monto: float | Decimal | None = None) -> dict:
+    """Pago de gasto vía Tesorería centralizada (gasto + CxP + caja + diario).
+
+    Mantiene el contrato anterior (gasto_id/asiento_id/nuevos_asientos).
+    Delega en `tesoreria_service.ejecutar_pago_proveedor`.
+    """
+    from app.models.finanzas import AsientoContable as _Asiento
+    from app.services import tesoreria_service as _tes
 
     seed_pcge_basico(db)
     try:
         exigir_periodo_abierto(db, fecha)
-        gasto = db.query(GastoRegistrado).with_for_update().filter(
-            GastoRegistrado.id == gasto_id).first()
-        if not gasto:
-            raise ValueError("Gasto no encontrado")
-        if gasto.estado == "PAGADO":
-            raise ValueError("El gasto ya está PAGADO")
-        total = _d(gasto.monto_total)
-        if total <= 0:
-            raise ValueError("Total inválido")
-        neto = total - _d(getattr(gasto, "retencion", 0) or 0)
-        if neto <= 0:
-            raise ValueError("Neto a pagar inválido (revisa la retención)")
-        c_prov = _cuenta(db, fin.pasivo_por_categoria(gasto.categoria))
-        c_caja = _cuenta(db, cuenta_origen_codigo if cuenta_origen_codigo in ("101", "104") else "104")
-        asientos_antes = {a.id for a in db.query(fin.AsientoContable).filter(
-            fin.AsientoContable.origen_tipo == "PAGO",
-            fin.AsientoContable.origen_id == gasto.id).all()}
-        asiento = crear_asiento_flush(
-            db, fecha or date.today(), f"Pago gasto {gasto.numero_comprobante or gasto.id}",
-            "PAGO", gasto.id,
-            [{"cuenta_id": c_prov.id, "debe": neto, "haber": Decimal("0")},
-             {"cuenta_id": c_caja.id, "debe": Decimal("0"), "haber": neto}])
-        gasto.estado = "PAGADO"
-        db.add(MovimientoFinanciero(tipo="EGRESO", categoria="Costos Operativos",
-                                    monto=float(neto),
-                                    cuenta_origen="Banco" if c_caja.codigo == "104" else "Caja",
-                                    comprobante_ref=gasto.numero_comprobante,
-                                    usuario_id=usuario_id,
-                                    descripcion=f"Pago gasto {gasto.categoria}"))
-        db.add(CashMovement(tipo="egreso",
-                            concepto=f"Pago gasto {gasto.numero_comprobante or gasto.id}",
-                            monto=float(neto), metodo="transferencia",
-                            usuario_id=usuario_id))
-        db.commit()
-        return {"gasto_id": gasto.id, "asiento_id": asiento.id,
-                "nuevos_asientos": sorted(set(asientos_antes) | {asiento.id})}
+        asientos_antes = {a.id for a in db.query(_Asiento).filter(
+            _Asiento.origen_tipo == "PAGO",
+            _Asiento.origen_id == gasto_id).all()}
     except Exception:
-        db.rollback()
-        raise
+        asientos_antes = set()
+    medio = medio_pago or ("caja" if cuenta_origen_codigo == "101" else "banco")
+    res = _tes.ejecutar_pago_proveedor(
+        db, gasto_id, medio_pago=medio, cuenta_origen_id=cuenta_origen_codigo,
+        monto=monto, usuario_id=usuario_id, voucher=voucher, fecha=fecha)
+    return {"gasto_id": res["gasto_id"], "asiento_id": res["asiento_id"],
+            "nuevos_asientos": sorted(asientos_antes | {res["asiento_id"]})}
 
 
 # ── Sync gastos PENDIENTES → CxP (bandeja única de tesorería) ──────

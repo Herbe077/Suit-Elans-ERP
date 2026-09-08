@@ -163,3 +163,21 @@ class InvoiceOut(BaseModel):
     estado: str
 
     model_config = {"from_attributes": True}
+
+
+class TesoreriaPagoIn(BaseModel):
+    gasto_id: int | None = None
+    cxp_id: int | None = None
+    monto: float | None = None
+    medio_pago: str = "banco"
+    voucher: str | None = None
+
+
+class TesoreriaPagoOut(BaseModel):
+    gasto_id: int | None = None
+    cxp_id: int | None = None
+    asiento_id: int
+    asiento_numero: str
+    monto: float
+    gasto_estado: str | None = None
+    cxp_estado: str | None = None
