@@ -5,14 +5,14 @@ No importa rendimiento directamente, solo lectura SQL.
 from datetime import date, timedelta
 from decimal import Decimal
 from fastapi import APIRouter, Depends, Form, Request, Query
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 import csv, io
 from urllib.parse import quote as _quote
 
-from app.core.config import BASE_DIR
+from app.core.config import BASE_DIR, settings
 from app.core.database import get_db
 from app.core.deps import require_roles
 from app.models.billing import CajaTurno, CashMovement, Invoice
@@ -25,6 +25,21 @@ import app.services.finanzas as svc
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _error_500(origen: str, e: Exception):
+    """Diagnóstico: traceback completo a logs y JSON 500 estructurado.
+
+    El traceback íntegro siempre va a los logs del servidor (Render);
+    el cuerpo JSON lo incluye solo fuera de producción.
+    """
+    import traceback as _tb
+    _tb.print_exc()
+    logger.error("Error en %s: %s: %s", origen, type(e).__name__, e)
+    body: dict = {"error": f"{type(e).__name__}: {e}"}
+    if not settings.is_production:
+        body["traceback"] = _tb.format_exc()
+    return JSONResponse(body, status_code=500)
 
 router = APIRouter(prefix="/finanzas", tags=["finanzas"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
@@ -351,35 +366,42 @@ def cxc_conciliar(cuenta_id: int = Form(...), monto: float = Form(...), db: Sess
 
 @router.get("/cuentas-por-pagar", response_class=HTMLResponse)
 def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
-    _sync_cxp(db)
-    # Bandeja Única de Tesorería: espeja gastos pendientes (incl. RxH) como CxP.
-    # Solo el PAGAR genera el EGRESO real (MovimientoFinanciero + 1011/1041).
     try:
-        from app.services import contabilidad as _contab
-        _contab.sincronizar_cxp_desde_gastos(db)
+        _sync_cxp(db)
+        # Bandeja Única de Tesorería: espeja gastos pendientes (incl. RxH) como CxP.
+        # Solo el PAGAR genera el EGRESO real (MovimientoFinanciero + 1011/1041).
+        try:
+            from app.services import contabilidad as _contab
+            _contab.sincronizar_cxp_desde_gastos(db)
+        except Exception as e:
+            _logger.warning("sync gastos→CxP omitido: %s", e)
+        q=db.query(CuentaPorPagar)
+        if estado: q=q.filter(CuentaPorPagar.estado==estado.upper())
+        if proveedor:
+            try:
+                q=q.filter(CuentaPorPagar.proveedor_id==int(proveedor))
+            except ValueError:
+                like=f"%{proveedor}%"
+                ids=[s.id for s in db.query(Supplier).filter(Supplier.nombre.like(like)).all()]
+                q=q.filter(CuentaPorPagar.proveedor_id.in_(ids or [0]))
+        cuentas=q.order_by(CuentaPorPagar.id.desc()).limit(200).all()
+        proveedores={s.id:s for s in db.query(Supplier).all()}
+        # Nombre tolerante a nulos/huérfanos: destajo/RxH sin proveedor directo
+        # muestra 'Personal Destajo / Sastre' en vez de romper la vista.
+        nombres_cxp={}
+        for c in cuentas:
+            try:
+                sup = proveedores.get(getattr(c, "proveedor_id", None))
+                nombres_cxp[c.id] = sup.nombre if sup and sup.nombre else "Personal Destajo / Sastre"
+            except Exception:
+                nombres_cxp[c.id] = "Personal Destajo / Sastre"
+        return templates.TemplateResponse(request, "finanzas/cuentas_por_pagar.html", {"user":user,"tab":"cxp","cuentas":cuentas,"proveedores":proveedores,"nombres_cxp":nombres_cxp,"estado":estado,"proveedor":proveedor,"suppliers":db.query(Supplier).order_by(Supplier.nombre).all()})
     except Exception as e:
-        _logger.warning("sync gastos→CxP omitido: %s", e)
-    q=db.query(CuentaPorPagar)
-    if estado: q=q.filter(CuentaPorPagar.estado==estado.upper())
-    if proveedor:
         try:
-            q=q.filter(CuentaPorPagar.proveedor_id==int(proveedor))
-        except ValueError:
-            like=f"%{proveedor}%"
-            ids=[s.id for s in db.query(Supplier).filter(Supplier.nombre.like(like)).all()]
-            q=q.filter(CuentaPorPagar.proveedor_id.in_(ids or [0]))
-    cuentas=q.order_by(CuentaPorPagar.id.desc()).limit(200).all()
-    proveedores={s.id:s for s in db.query(Supplier).all()}
-    # Nombre tolerante a nulos/huérfanos: destajo/RxH sin proveedor directo
-    # muestra 'Personal Destajo / Sastre' en vez de romper la vista.
-    nombres_cxp={}
-    for c in cuentas:
-        try:
-            sup = proveedores.get(getattr(c, "proveedor_id", None))
-            nombres_cxp[c.id] = sup.nombre if sup and sup.nombre else "Personal Destajo / Sastre"
+            db.rollback()
         except Exception:
-            nombres_cxp[c.id] = "Personal Destajo / Sastre"
-    return templates.TemplateResponse(request, "finanzas/cuentas_por_pagar.html", {"user":user,"tab":"cxp","cuentas":cuentas,"proveedores":proveedores,"nombres_cxp":nombres_cxp,"estado":estado,"proveedor":proveedor,"suppliers":db.query(Supplier).order_by(Supplier.nombre).all()})
+            pass
+        return _error_500("/finanzas/cuentas-por-pagar", e)
 
 @router.post("/cuentas-por-pagar", response_class=HTMLResponse)
 def cxp_crear(proveedor_id: int = Form(...), numero_factura: str = Form(""), monto_total: float = Form(...), retencion: float = Form(0), fecha_emision: str = Form(""), fecha_vencimiento: str = Form(""), db: Session = Depends(get_db), user=FinanzasAuth):
@@ -420,44 +442,51 @@ def cxp_pagar(cid: int, monto: float = Form(...), cuenta_origen: str = Form("Ban
 
 @router.get("/gastos", response_class=HTMLResponse)
 def gastos_list(request: Request, estado: str = Query(""), categoria: str = Query(""), db: Session = Depends(get_db), user=FinanzasAuth):
-    svc.seed_pcge_basico(db)
-    svc.ensure_gasto_retencion_column(db)
-    q = db.query(GastoRegistrado).order_by(GastoRegistrado.id.desc())
-    if estado:
-        q = q.filter(GastoRegistrado.estado == estado.upper())
-    if categoria:
-        q = q.filter(GastoRegistrado.categoria == categoria.upper())
-    gastos = q.limit(200).all()
-    # Normaliza registros antiguos con nulos (retención/comprobante/cuenta)
-    # para que la plantilla nunca evalúe None inesperados.
-    for g in gastos:
+    try:
+        svc.seed_pcge_basico(db)
+        svc.ensure_gasto_retencion_column(db)
+        q = db.query(GastoRegistrado).order_by(GastoRegistrado.id.desc())
+        if estado:
+            q = q.filter(GastoRegistrado.estado == estado.upper())
+        if categoria:
+            q = q.filter(GastoRegistrado.categoria == categoria.upper())
+        gastos = q.limit(200).all()
+        # Normaliza registros antiguos con nulos (retención/comprobante/cuenta)
+        # para que la plantilla nunca evalúe None inesperados.
+        for g in gastos:
+            try:
+                if getattr(g, "retencion", None) is None:
+                    g.retencion = 0.0
+                if not getattr(g, "tipo_comprobante", None):
+                    g.tipo_comprobante = "FACTURA"
+                if getattr(g, "monto_base", None) is None:
+                    g.monto_base = 0.0
+                if getattr(g, "monto_igv", None) is None:
+                    g.monto_igv = 0.0
+                if getattr(g, "monto_total", None) is None:
+                    g.monto_total = 0.0
+            except Exception:
+                continue
+        cuentas = db.query(CuentaContable).filter(CuentaContable.activo == True).order_by(CuentaContable.codigo).all()  # noqa: E712
+        centros = db.query(CentroCosto).filter(CentroCosto.activo == True).order_by(CentroCosto.codigo).all()  # noqa: E712
+        proveedores = db.query(Supplier).order_by(Supplier.nombre).all()
+        cuentas_map = {c.id: c.codigo for c in db.query(CuentaContable).all()}
+        prov_map = {s.id: s.nombre for s in proveedores}
+        return templates.TemplateResponse(request, "finanzas/gastos.html", {
+            "user": user, "tab": "gastos", "gastos": gastos, "cuentas": cuentas,
+            "centros": centros, "proveedores": proveedores,
+            "cuentas_map": cuentas_map, "prov_map": prov_map,
+            "estado": estado, "categoria": categoria,
+            "categorias": ["ALQUILER", "ALQUILER_NATURAL", "HONORARIOS", "HONORARIOS_RXH",
+                           "PLANILLA", "ACTIVO_FIJO", "OTRO"],
+            "map": svc.CATEGORIA_GASTO_MAP,
+        })
+    except Exception as e:
         try:
-            if getattr(g, "retencion", None) is None:
-                g.retencion = 0.0
-            if not getattr(g, "tipo_comprobante", None):
-                g.tipo_comprobante = "FACTURA"
-            if getattr(g, "monto_base", None) is None:
-                g.monto_base = 0.0
-            if getattr(g, "monto_igv", None) is None:
-                g.monto_igv = 0.0
-            if getattr(g, "monto_total", None) is None:
-                g.monto_total = 0.0
+            db.rollback()
         except Exception:
-            continue
-    cuentas = db.query(CuentaContable).filter(CuentaContable.activo == True).order_by(CuentaContable.codigo).all()  # noqa: E712
-    centros = db.query(CentroCosto).filter(CentroCosto.activo == True).order_by(CentroCosto.codigo).all()  # noqa: E712
-    proveedores = db.query(Supplier).order_by(Supplier.nombre).all()
-    cuentas_map = {c.id: c.codigo for c in db.query(CuentaContable).all()}
-    prov_map = {s.id: s.nombre for s in proveedores}
-    return templates.TemplateResponse(request, "finanzas/gastos.html", {
-        "user": user, "tab": "gastos", "gastos": gastos, "cuentas": cuentas,
-        "centros": centros, "proveedores": proveedores,
-        "cuentas_map": cuentas_map, "prov_map": prov_map,
-        "estado": estado, "categoria": categoria,
-        "categorias": ["ALQUILER", "ALQUILER_NATURAL", "HONORARIOS", "HONORARIOS_RXH",
-                       "PLANILLA", "ACTIVO_FIJO", "OTRO"],
-        "map": svc.CATEGORIA_GASTO_MAP,
-    })
+            pass
+        return _error_500("/finanzas/gastos", e)
 
 
 @router.post("/gastos", response_class=HTMLResponse)
