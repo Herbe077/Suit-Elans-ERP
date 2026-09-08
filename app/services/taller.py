@@ -159,10 +159,37 @@ def registrar_prueba(db: Session, gid: int, numero: int, correcciones: dict,
                       fotos=fotos or None, foto_path=(fotos or [None])[0],
                       completada=not hay_notas)
     db.add(p)
-    # La prueba no mueve sola de fase: habilita el pase a EN_CONFECCION.
-    if numero == 1 and columna(g.estado_taller) in ("POR_CORTAR", "EN_CORTE",
-                                                    "ARMADO_HILVAN"):
-        g.estado_taller = "EN_PRUEBA"
+    if not hay_notas:
+        # Prueba aprobada/sin ajustes: avanza al siguiente paso del taller
+        # (confección) para que salga de "Pruebas pendientes".
+        if columna(g.estado_taller) in ("POR_CORTAR", "EN_CORTE",
+                                        "ARMADO_HILVAN", "EN_PRUEBA"):
+            g.estado_taller = "EN_CONFECCION"
+            g.paso_confeccion = True
+    else:
+        # Con observaciones: queda en prueba (habilita el pase manual).
+        if numero == 1 and columna(g.estado_taller) in ("POR_CORTAR", "EN_CORTE",
+                                                        "ARMADO_HILVAN"):
+            g.estado_taller = "EN_PRUEBA"
+    db.commit()
+    db.refresh(p)
+    return p
+
+
+def confirmar_prueba(db: Session, prueba_id: int) -> PruebaEntalle:
+    """Marca una prueba como completada/aprobada y avanza la prenda a
+    EN_CONFECCION (siguiente paso del taller). No toca SAM ni kardex."""
+    p = db.get(PruebaEntalle, prueba_id)
+    if not p:
+        raise ValueError("Prueba no encontrada")
+    g = db.get(Garment, p.garment_id)
+    if not g:
+        raise ValueError("Prenda no encontrada")
+    p.completada = True
+    if columna(g.estado_taller) in ("POR_CORTAR", "EN_CORTE",
+                                    "ARMADO_HILVAN", "EN_PRUEBA"):
+        g.estado_taller = "EN_CONFECCION"
+        g.paso_confeccion = True
     db.commit()
     db.refresh(p)
     return p

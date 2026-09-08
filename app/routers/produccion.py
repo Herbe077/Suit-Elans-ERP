@@ -596,13 +596,24 @@ def _zonas(tipo: str):
 
 @router.get("/pruebas", response_class=HTMLResponse)
 def pruebas(request: Request, db: Session = Depends(get_db), user=Auth):
+    from app.models.order import PruebaEntalle
     candidatas = db.query(Garment).join(Order, Garment.order_id == Order.id).filter(
         Order.estado.notin_(["entregado", "cancelado"]),
-        Garment.estado_taller.in_(["ARMADO_HILVAN", "EN_PRUEBA", "EN_CONFECCION"])).order_by(
+        Garment.estado_taller.in_(["ARMADO_HILVAN", "EN_PRUEBA"])).order_by(
         Garment.id.desc()).limit(80).all()
+    # Solo pendientes/programadas: excluye prendas cuya última prueba ya
+    # está completada/aprobada (completada == True).
+    pendientes: list[Garment] = []
+    for g in candidatas:
+        ultima = db.query(PruebaEntalle).filter(
+            PruebaEntalle.garment_id == g.id).order_by(
+            PruebaEntalle.id.desc()).first()
+        if ultima is not None and bool(getattr(ultima, "completada", False)):
+            continue
+        pendientes.append(g)
     items = [{"g": g, "folio": (db.get(Order, g.order_id).folio
                                 if db.get(Order, g.order_id) else "?"),
-              "zonas": _zonas(g.tipo)} for g in candidatas]
+              "zonas": _zonas(g.tipo)} for g in pendientes]
     duenos = _duenos_por_orden(db, [g.order_id for g in candidatas])
     for it in items:
         it["dueno"] = duenos.get(it["g"].order_id, "—")
@@ -714,7 +725,26 @@ async def registrar_prueba(request: Request, garment_id: int = Form(None),  # ty
             pass
     except ValueError as e:
         return HTMLResponse(str(e), status_code=400)
-    return RedirectResponse(f"/produccion/ficha/{garment_id}?ok=prueba", status_code=303)
+    # Tras confirmar la prueba vuelve al taller general (no a la ficha).
+    if request.headers.get("hx-request"):
+        return HTMLResponse("", status_code=200,
+                            headers={"HX-Redirect": "/produccion/kanban"})
+    return RedirectResponse("/produccion/kanban", status_code=303)
+
+
+@router.post("/pruebas/{pid}/confirmar", response_class=HTMLResponse)
+def confirmar_prueba_endpoint(pid: int, request: Request,
+                              db: Session = Depends(get_db), user=Auth):
+    """Confirma una prueba pendiente: la marca completada y avanza la prenda
+    a EN_CONFECCION. Redirige al taller general."""
+    try:
+        svc.confirmar_prueba(db, pid)
+    except ValueError as e:
+        return HTMLResponse(str(e), status_code=400)
+    if request.headers.get("hx-request"):
+        return HTMLResponse("", status_code=200,
+                            headers={"HX-Redirect": "/produccion/kanban"})
+    return RedirectResponse("/produccion/kanban", status_code=303)
 
 
 @router.get("/calidad", response_class=HTMLResponse)
@@ -797,7 +827,10 @@ async def aprobar(gid: int, request: Request, observaciones: str = Form(""),
     if "application/json" in (request.headers.get("accept") or ""):
         from fastapi.responses import JSONResponse
         return JSONResponse({"id": gid, "estado": "CALIDAD_OK"})
-    return RedirectResponse(f"/produccion/ficha/{gid}?ok=calidad", status_code=303)
+    if request.headers.get("hx-request"):
+        return HTMLResponse("", status_code=200,
+                            headers={"HX-Redirect": "/produccion/kanban"})
+    return RedirectResponse("/produccion/kanban", status_code=303)
 
 
 # --- Compatibilidad: fichaje SAM ---
