@@ -575,3 +575,40 @@ def test_rubros_eerr():
     assert r["capital_50"] == Decimal("40000")
     assert r["total_patrimonio"] == bg["patrimonio_total"] == Decimal("41000")
     _limpia(db); db.close()
+
+
+def test_cxp_provision_no_genera_egreso_y_pago_si():
+    """CxP: provisionar NO crea EGRESO de caja; solo el pago lo crea.
+
+    Provisión → CxP POR_PAGAR + asiento 4212, cero MovimientoFinanciero EGRESO
+    y cero Cash egreso (la liquidez no se mueve). Pago parcial → un EGRESO por
+    el monto amortizado (no por el total del comprobante).
+    """
+    from sqlalchemy import func
+    from app.models.billing import CashMovement
+    from app.models.finanzas import CuentaPorPagar, MovimientoFinanciero
+    from app.services import contabilidad as C
+    from app.services import finanzas as f
+    db = _db(); _limpia(db)
+    from app.models.purchasing import Supplier
+    sup = Supplier(nombre="CT-CXP-FLUJO"); db.add(sup); db.commit(); db.refresh(sup)
+    r = C.provisionar_compra(db, sup.id, 2000.0, 360.0, numero_factura="F001-CT-FLUJO")
+    cxp = db.get(CuentaPorPagar, r["cxp_id"])
+    assert cxp.estado == "POR_PAGAR" and cxp.monto_pagado == 0.0
+    assert db.query(MovimientoFinanciero).filter(
+        MovimientoFinanciero.tipo == "EGRESO").count() == 0
+    assert db.query(CashMovement).filter(
+        CashMovement.tipo == "egreso").count() == 0
+    egr = db.query(func.coalesce(func.sum(MovimientoFinanciero.monto), 0)).filter(
+        MovimientoFinanciero.tipo == "EGRESO").scalar() or 0
+    assert float(egr) == 0.0
+    # el pasivo sí queda provisionado en 42
+    assert f.obtener_balance_general(db)["rubros"]["cxp_42"] == Decimal("2360")
+    # pago parcial 1000 → EGRESO por lo amortizado, no por el total
+    p1 = C.pagar_proveedor(db, r["cxp_id"], 1000.0, "1041")
+    assert p1["estado"] == "PARCIAL"
+    movs = db.query(MovimientoFinanciero).filter(
+        MovimientoFinanciero.tipo == "EGRESO").all()
+    assert len(movs) == 1 and movs[0].monto == 1000.0
+    db.query(CuentaPorPagar).delete(); db.query(Supplier).filter(Supplier.id == sup.id).delete()
+    _limpia(db); db.close()
