@@ -32,6 +32,37 @@ def _hostiles(db):
     db.commit()
 
 
+def test_ensure_retencion_usa_ddl_postgres():
+    """En Neon/PG el helper debe usar ADD COLUMN IF NOT EXISTS (sin PRAGMA)."""
+    from unittest.mock import MagicMock, patch
+    from app.services import finanzas as f
+    fake_bind = MagicMock()
+    fake_bind.dialect.name = "postgresql"
+    fake_db = MagicMock()
+    fake_db.get_bind.return_value = fake_bind
+    fake_inspect = MagicMock()
+    fake_inspect.return_value.get_columns.return_value = [{"name": "id"}]
+    with patch("sqlalchemy.inspect", fake_inspect):
+        f.ensure_gasto_retencion_column(fake_db)
+    ddl = str(fake_db.execute.call_args[0][0])
+    assert "IF NOT EXISTS" in ddl and "retencion" in ddl
+    assert "PRAGMA" not in ddl
+
+
+def test_ensure_retencion_noop_si_columna_existe():
+    from unittest.mock import MagicMock, patch
+    from app.services import finanzas as f
+    fake_bind = MagicMock()
+    fake_bind.dialect.name = "sqlite"
+    fake_db = MagicMock()
+    fake_db.get_bind.return_value = fake_bind
+    fake_inspect = MagicMock()
+    fake_inspect.return_value.get_columns.return_value = [{"name": "retencion"}]
+    with patch("sqlalchemy.inspect", fake_inspect):
+        f.ensure_gasto_retencion_column(fake_db)
+    fake_db.execute.assert_not_called()
+
+
 def test_cxp_200_con_huerfanos_y_rxh(client, auth_cookies):
     from app.core.database import SessionLocal
     db = SessionLocal()

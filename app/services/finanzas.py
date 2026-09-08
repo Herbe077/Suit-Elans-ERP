@@ -124,20 +124,31 @@ def seed_centros_costo_sastreria(db: Session) -> int:
 
 
 def ensure_gasto_retencion_column(db: Session) -> None:
-    """Migración liviana: agrega `retencion` a gastos_registrados si falta.
+    """Migración liviana agnóstica de dialecto para `retencion`.
 
     Los tests usan create_all (columna ya presente); las BD existentes se
-    nivelan con ALTER TABLE idempotente. No usa commit propio: acompaña la
-    transacción del llamante (DDL transaccional en SQLite/Postgres).
+    nivelan de forma idempotente: PostgreSQL con
+    `ADD COLUMN IF NOT EXISTS ... DOUBLE PRECISION`, SQLite con
+    verificación previa vía inspection (PRAGMA no existe en PG).
+    No usa commit propio: acompaña la transacción del llamante.
     """
     try:
+        from sqlalchemy import inspect as _inspect
         from sqlalchemy import text as _text
-        cols = [r[1] for r in db.execute(
-            _text("PRAGMA table_info(gastos_registrados)")).all()]
+        bind = db.get_bind()
+        try:
+            cols = {c["name"] for c in _inspect(bind).get_columns("gastos_registrados")}
+        except Exception:
+            cols = set()
         if "retencion" not in cols:
-            db.execute(_text(
-                "ALTER TABLE gastos_registrados "
-                "ADD COLUMN retencion FLOAT DEFAULT 0.0"))
+            if bind.dialect.name == "postgresql":
+                db.execute(_text(
+                    "ALTER TABLE gastos_registrados ADD COLUMN IF NOT EXISTS "
+                    "retencion DOUBLE PRECISION DEFAULT 0.0"))
+            else:
+                db.execute(_text(
+                    "ALTER TABLE gastos_registrados "
+                    "ADD COLUMN retencion FLOAT DEFAULT 0.0"))
     except Exception:
         pass
 

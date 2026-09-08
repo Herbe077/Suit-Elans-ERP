@@ -1,8 +1,9 @@
 """Punto de entrada FastAPI — Suit Elans ERP & MES."""
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.cors import CORSMiddleware
@@ -14,6 +15,8 @@ from app.api import v1 as api_v1
 from app.models import *  # noqa: F401,F403 — registra modelos para create_all
 from app.routers import admin, auth, comercial, dashboard, finanzas, inventario, legacy, produccion, reportes, rendimiento, taller_cierre, ventas
 from app.modules.rendimiento.router import router as rendimiento_router
+
+log = logging.getLogger("suitelans.errors")
 
 
 @asynccontextmanager
@@ -37,6 +40,23 @@ def _safe_db_label() -> str:
 
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Red de seguridad: imprime el traceback completo en logs y devuelve 500.
+
+    Los handlers específicos (HTTPException, validación) siguen teniendo
+    prioridad; esto solo captura errores no controlados (ej. SQL por
+    columna faltante en producción) para diagnosticarlos en Render/Neon.
+    """
+    log.exception("500 %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor (revisa los logs)."},
+    )
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
