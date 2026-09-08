@@ -37,6 +37,7 @@ from app.models.inventario import (
 )
 from app.services.contabilidad import exigir_periodo_abierto
 from app.services.finanzas import (
+    ORIGEN_MAT_PRIMA,
     crear_asiento_flush,
     get_cuenta_by_codigo,
     seed_pcge_basico,
@@ -299,13 +300,20 @@ def recepcionar_oc(db: Session, oc_id: int, recepciones: dict[int, float],
 def asegurar_cxp_recepcion(db: Session, oc_id: int):
     """Crea el espejo CxP de una OC recibida si falta (folio temporal).
 
-    Solo para RECEIVED/PARTIALLY_RECEIVED sin factura: BILLED lo gestiona
-    facturar_oc. No genera asientos. Retorna la CxP o None (sin monto).
+    Estándar 2 tiempos (devengado): GUIA_RECEPCION / POR_FACTURAR con el
+    folio como comprobante_ref y nota de mercadería sin factura fiscal.
+    Solo RECEIVED/PARTIALLY_RECEIVED: BILLED lo gestiona facturar_oc.
+    No genera asientos. Retorna la CxP o None (sin monto).
     """
-    from app.services.finanzas import (ensure_cxp_origen_tipo_column,
+    from datetime import timedelta as _td
+    from app.services.finanzas import (ensure_cxp_actividad_flujo_column,
+                                       ensure_cxp_observacion_column,
+                                       ensure_cxp_origen_tipo_column,
                                        ensure_cxp_tipo_comprobante_column)
     ensure_cxp_tipo_comprobante_column(db)
     ensure_cxp_origen_tipo_column(db)
+    ensure_cxp_actividad_flujo_column(db)
+    ensure_cxp_observacion_column(db)
     oc = db.get(OrdenCompra, oc_id)
     if not oc:
         return None
@@ -323,11 +331,16 @@ def asegurar_cxp_recepcion(db: Session, oc_id: int):
         return None
     cxp = CuentaPorPagar(
         proveedor_id=oc.proveedor_id, orden_compra_id=oc.id,
-        origen_tipo="COMPRAS", tipo_comprobante="OTROS",
+        origen_tipo=ORIGEN_MAT_PRIMA, actividad_flujo="OPERATIVO",
+        tipo_comprobante="GUIA_RECEPCION",
         numero_factura=oc.folio or f"OC-{oc.id}",
         monto_total=float(total), monto_pagado=0.0,
         saldo_pendiente=float(total), fecha_emision=oc.fecha_emision,
-        estado="POR_PAGAR")
+        fecha_vencimiento=(oc.fecha_emision + _td(days=30)
+                           if oc.fecha_emision else None),
+        observacion="Mercadería recibida en almacén "
+                    "(pendiente de comprobante fiscal)",
+        estado="POR_FACTURAR")
     db.add(cxp)
     db.commit()
     return cxp
@@ -401,23 +414,32 @@ def facturar_oc(db: Session, oc_id: int, numero_factura: str,
         cxp = db.query(CuentaPorPagar).filter(
             CuentaPorPagar.orden_compra_id == oc.id).first()
         if cxp is None:
+            from datetime import timedelta as _td
             cxp = CuentaPorPagar(
                 proveedor_id=oc.proveedor_id, orden_compra_id=oc.id,
-                tipo_comprobante="FACTURA", origen_tipo="COMPRAS",
+                tipo_comprobante="FACTURA", origen_tipo=ORIGEN_MAT_PRIMA,
+                actividad_flujo="OPERATIVO",
                 numero_factura=numero_factura, monto_total=float(total),
                 monto_pagado=0.0, saldo_pendiente=float(total),
-                fecha_emision=fecha, estado="POR_PAGAR",
+                fecha_emision=fecha,
+                fecha_vencimiento=fecha + _td(days=30),
+                observacion=f"Facturada con {numero_factura}",
+                estado="POR_PAGAR",
             )
             db.add(cxp)
             db.flush()
         else:
             # Actualiza el espejo creado en RECEIVED (folio) con la factura:
             # conserva lo ya amortizado y re-calcula el saldo.
+            from datetime import timedelta as _td
             cxp.proveedor_id = oc.proveedor_id
             cxp.tipo_comprobante = "FACTURA"
-            cxp.origen_tipo = "COMPRAS"
+            cxp.origen_tipo = ORIGEN_MAT_PRIMA
+            cxp.actividad_flujo = "OPERATIVO"
             cxp.numero_factura = numero_factura
             cxp.monto_total = float(total)
+            cxp.fecha_vencimiento = fecha + _td(days=30)
+            cxp.observacion = f"Facturada con {numero_factura}"
             cxp.saldo_pendiente = float(max(
                 _d(total) - _d(cxp.monto_pagado) - _d(cxp.retencion),
                 Decimal("0")))
@@ -485,18 +507,25 @@ def _asiento_provision_oc(db: Session, oc) -> object | None:
 def reparar_cxp_compras(db: Session) -> dict:
     """Recorre OCs RECEIVED/PARTIALLY_RECEIVED/BILLED y asegura su CxP.
 
-    - BILLED con factura: crea o actualiza el espejo (FACTURA/COMPRAS) con
-      el total de la OC, conservando lo ya amortizado, y verifica el
+    - BILLED con factura: crea o actualiza el espejo (FACTURA, POR_PAGAR)
+      con el total de la OC, conservando lo ya amortizado, y verifica el
       asiento de provisión 6011/40111/4212 (lo crea si falta).
-    - RECEIVED sin factura: crea el espejo con el folio como comprobante.
+    - RECEIVED sin factura (devengado): espejo GUIA_RECEPCION en
+      POR_FACTURAR con el folio como comprobante_ref y nota de mercadería
+      sin comprobante fiscal.
     No duplica: todo es idempotente. Retorna conteos y asiento por OC.
     """
-    from app.services.finanzas import (ensure_cxp_origen_tipo_column,
+    from datetime import timedelta as _td
+    from app.services.finanzas import (ensure_cxp_actividad_flujo_column,
+                                       ensure_cxp_observacion_column,
+                                       ensure_cxp_origen_tipo_column,
                                        ensure_cxp_tipo_comprobante_column,
                                        seed_pcge_basico)
     seed_pcge_basico(db)
     ensure_cxp_tipo_comprobante_column(db)
     ensure_cxp_origen_tipo_column(db)
+    ensure_cxp_actividad_flujo_column(db)
+    ensure_cxp_observacion_column(db)
     rep = {"creadas": 0, "actualizadas": 0, "omitidas": [],
            "asientos": {}}
     for oc in db.query(OrdenCompra).all():
@@ -509,29 +538,41 @@ def reparar_cxp_compras(db: Session) -> dict:
         try:
             cxp = db.query(CuentaPorPagar).filter(
                 CuentaPorPagar.orden_compra_id == oc.id).first()
+            fv = (oc.fecha_emision + _td(days=30)) if oc.fecha_emision else None
             if est == "BILLED" and (oc.numero_factura or "").strip():
                 numero, tipo = oc.numero_factura.strip(), "FACTURA"
                 total = _d(oc.monto_total)
+                estado, obs = "POR_PAGAR", f"Facturada con {numero}"
             else:
-                numero, tipo = oc.folio or f"OC-{oc.id}", "OTROS"
+                numero, tipo = oc.folio or f"OC-{oc.id}", "GUIA_RECEPCION"
                 total = _d(oc.monto_total)
+                estado = "POR_FACTURAR"
+                obs = ("Mercadería recibida en almacén "
+                       "(pendiente de comprobante fiscal)")
             if total <= 0:
                 rep["omitidas"].append((oc.folio or oc.id, "sin monto"))
                 continue
             if cxp is None:
                 db.add(CuentaPorPagar(
                     proveedor_id=oc.proveedor_id, orden_compra_id=oc.id,
-                    origen_tipo="COMPRAS", tipo_comprobante=tipo,
+                    origen_tipo=ORIGEN_MAT_PRIMA, actividad_flujo="OPERATIVO",
+                    tipo_comprobante=tipo,
                     numero_factura=numero, monto_total=float(total),
                     monto_pagado=0.0, saldo_pendiente=float(total),
-                    fecha_emision=oc.fecha_emision, estado="POR_PAGAR"))
+                    fecha_emision=oc.fecha_emision, fecha_vencimiento=fv,
+                    observacion=obs, estado=estado))
                 rep["creadas"] += 1
             else:
-                cxp.origen_tipo = "COMPRAS"
+                cxp.origen_tipo = ORIGEN_MAT_PRIMA
+                if getattr(cxp, "actividad_flujo", None) is None:
+                    cxp.actividad_flujo = "OPERATIVO"
+                if cxp.fecha_vencimiento is None:
+                    cxp.fecha_vencimiento = fv
                 if est == "BILLED" and (oc.numero_factura or "").strip():
                     cxp.tipo_comprobante = "FACTURA"
                     cxp.numero_factura = oc.numero_factura.strip()
                     cxp.monto_total = float(total)
+                    cxp.observacion = f"Facturada con {numero}"
                     cxp.saldo_pendiente = float(max(
                         total - _d(cxp.monto_pagado) - _d(cxp.retencion),
                         Decimal("0")))
@@ -539,6 +580,15 @@ def reparar_cxp_compras(db: Session) -> dict:
                         cxp.estado = "PAGADO"
                     elif _d(cxp.monto_pagado) > 0:
                         cxp.estado = "PARCIAL"
+                    else:
+                        cxp.estado = "POR_PAGAR"
+                    rep["actualizadas"] += 1
+                elif (cxp.estado or "") == "POR_PAGAR" and (cxp.tipo_comprobante or "") in ("OTROS", "", None):
+                    # Normaliza espejos legacy de recepción al estándar 2 tiempos.
+                    cxp.tipo_comprobante = "GUIA_RECEPCION"
+                    cxp.estado = "POR_FACTURAR"
+                    cxp.observacion = ("Mercadería recibida en almacén "
+                                       "(pendiente de comprobante fiscal)")
                     rep["actualizadas"] += 1
             if est == "BILLED":
                 try:

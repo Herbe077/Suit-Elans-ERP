@@ -106,7 +106,8 @@ def _sync_cxp(db):
             total = float(po.total or 0)
             if total <= 0:
                 continue
-            cxp = CuentaPorPagar(proveedor_id=po.supplier_id, purchase_order_id=po.id, origen_tipo="COMPRAS", numero_factura=po.folio or None, monto_total=total, monto_pagado=0, saldo_pendiente=total, retencion=0, estado="POR_PAGAR", fecha_emision=date.today(), fecha_vencimiento=date.today()+timedelta(days=30))
+            from app.services.finanzas import ORIGEN_MAT_PRIMA
+            cxp = CuentaPorPagar(proveedor_id=po.supplier_id, purchase_order_id=po.id, origen_tipo=ORIGEN_MAT_PRIMA, actividad_flujo="OPERATIVO", numero_factura=po.folio or None, monto_total=total, monto_pagado=0, saldo_pendiente=total, retencion=0, estado="POR_PAGAR", fecha_emision=date.today(), fecha_vencimiento=date.today()+timedelta(days=30))
             db.add(cxp)
             db.flush()
             # Provisión contable de la obligación: DEBE 602 / HABER 4212,
@@ -369,6 +370,8 @@ def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), d
     try:
         svc.ensure_cxp_tipo_comprobante_column(db)
         svc.ensure_cxp_origen_tipo_column(db)
+        svc.ensure_cxp_actividad_flujo_column(db)
+        svc.ensure_cxp_observacion_column(db)
         _sync_cxp(db)
         # Red de seguridad: espejos de OCs RECEIVED/BILLED siempre presentes.
         try:

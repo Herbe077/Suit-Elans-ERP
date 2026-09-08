@@ -20,7 +20,7 @@ Mapa de eventos (cuentas analíticas):
 Bloqueo de períodos: exigir_periodo_abierto() deniega cualquier evento con
 fecha en período CERRADO/BLOQUEADO (los routers traducen a 400).
 """
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -515,15 +515,19 @@ def provisionar_compra(db: Session, proveedor_id: int, base: float, igv: float =
             lineas.append({"cuenta_id": c40111.id, "debe": igv_d, "haber": Decimal("0")})
         lineas.append({"cuenta_id": c4212.id, "debe": Decimal("0"), "haber": total})
         fecha = fecha or date.today()
-        # CxP primero (origen COMPRAS, amortizable; sin flujo hasta el pago)
+        # CxP primero (origen MATERIA PRIMA, amortizable; sin flujo hasta el pago)
+        from app.services.finanzas import ORIGEN_MAT_PRIMA
         cxp = CuentaPorPagar(proveedor_id=proveedor_id, purchase_order_id=purchase_order_id,
                              orden_compra_id=orden_compra_id,
-                             origen_tipo="COMPRAS",
+                             origen_tipo=ORIGEN_MAT_PRIMA,
+                             actividad_flujo="OPERATIVO",
                              numero_factura=(numero_factura or None),
                              monto_total=float(total), monto_pagado=0.0,
                              saldo_pendiente=float(total - _d(retencion)),
                              retencion=float(_d(retencion)), fecha_emision=fecha,
-                             fecha_vencimiento=fecha_vencimiento, estado="POR_PAGAR")
+                             fecha_vencimiento=fecha_vencimiento or (
+                                 fecha + timedelta(days=30)),
+                             estado="POR_PAGAR")
         db.add(cxp)
         db.flush()
         asiento = crear_asiento_flush(
@@ -550,6 +554,9 @@ def pagar_proveedor(db: Session, cxp_id: int, monto: float, cuenta_codigo: str =
             CuentaPorPagar.id == cxp_id).first()
         if not cxp:
             raise ValueError("Cuenta por pagar no encontrada")
+        if (cxp.estado or "") == "POR_FACTURAR":
+            raise ValueError(
+                "Deuda aún sin factura fiscal: exige el BILLED antes de pagar")
         monto_d = _d(monto)
         if monto_d <= 0 or monto_d - _d(cxp.saldo_pendiente) > Decimal("0.000001"):
             raise ValueError(f"Monto inválido (saldo: {cxp.saldo_pendiente})")
@@ -659,13 +666,19 @@ def sincronizar_cxp_desde_gastos(db: Session) -> int:
     Clave idempotente: numero_comprobante (o GASTO-{id}) + proveedor.
     Retorna espejos creados.
     """
+    from datetime import timedelta as _td
     from app.services.finanzas import (ensure_cxp_tipo_comprobante_column,
-                                         ensure_cxp_origen_tipo_column,
-                                         ensure_gasto_retencion_column)
+                                       ensure_cxp_origen_tipo_column,
+                                       ensure_gasto_retencion_column,
+                                       origen_por_categoria_gasto)
 
     ensure_gasto_retencion_column(db)
     ensure_cxp_tipo_comprobante_column(db)
     ensure_cxp_origen_tipo_column(db)
+    from app.services.finanzas import ensure_cxp_actividad_flujo_column
+    from app.services.finanzas import ensure_cxp_observacion_column
+    ensure_cxp_actividad_flujo_column(db)
+    ensure_cxp_observacion_column(db)
     creados = 0
     gastos = db.query(GastoRegistrado).filter(
         GastoRegistrado.estado == "PENDIENTE").all()
@@ -696,15 +709,27 @@ def sincronizar_cxp_desde_gastos(db: Session) -> int:
                 CuentaPorPagar.numero_factura == clave,
                 CuentaPorPagar.proveedor_id == pid).first()
             if ya:
+                # Normaliza espejos legacy al estándar de 4 orígenes.
+                try:
+                    from app.services.finanzas import ORIGEN_LEGACY_MAP
+                    if (ya.origen_tipo or "") in ORIGEN_LEGACY_MAP:
+                        ya.origen_tipo = ORIGEN_LEGACY_MAP[ya.origen_tipo]
+                except Exception:
+                    pass
                 continue
             ret = float(getattr(g, "retencion", 0) or 0)
+            es_activo = (g.categoria or "").upper() == "ACTIVO_FIJO"
+            fv = g.fecha_vencimiento or (
+                g.fecha_emision + _td(days=30) if g.fecha_emision else None)
             db.add(CuentaPorPagar(
                 proveedor_id=pid, numero_factura=clave,
-                origen_tipo="GASTOS",
+                origen_tipo=origen_por_categoria_gasto(g.categoria),
+                actividad_flujo="INVERSION" if es_activo else "OPERATIVO",
                 tipo_comprobante=(g.tipo_comprobante or "FACTURA"),
                 monto_total=total, monto_pagado=0.0,
                 saldo_pendiente=round(max(total - ret, 0.0), 2),
                 retencion=ret, fecha_emision=g.fecha_emision,
+                fecha_vencimiento=fv,
                 estado="POR_PAGAR"))
             creados += 1
         except Exception:

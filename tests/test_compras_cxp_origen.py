@@ -115,7 +115,7 @@ def test_facturar_actualiza_espejo_sin_duplicar():
     assert len(filas) == 1  # actualiza, no duplica
     cxp = filas[0]
     assert cxp.numero_factura == "F001-TCO-1"
-    assert cxp.tipo_comprobante == "FACTURA" and cxp.origen_tipo == "COMPRAS"
+    assert cxp.tipo_comprobante == "FACTURA" and cxp.origen_tipo == "PROVEEDORES MATERIA PRIMA"
     assert cxp.monto_total == 870.0 and cxp.saldo_pendiente == 870.0
     assert cxp.estado == "POR_PAGAR"
     _limpia(db)
@@ -140,7 +140,7 @@ def test_reparar_billed_crea_cxp_con_totales():
         CuentaPorPagar.orden_compra_id == oc.id).first()
     assert cxp is not None and cxp.monto_total == 476.0
     assert cxp.saldo_pendiente == 476.0 and cxp.estado == "POR_PAGAR"
-    assert cxp.origen_tipo == "COMPRAS"
+    assert cxp.origen_tipo == "PROVEEDORES MATERIA PRIMA"
     _limpia(db)
     db.close()
 
@@ -151,7 +151,7 @@ def test_cxp_muestra_origen_y_pagar(client, auth_cookies):
     oc = _oc_recibida(db, "VIS")
     db.close()
     t = client.get("/finanzas/cuentas-por-pagar", cookies=auth_cookies).text
-    assert "COMPRAS" in t and oc.folio in t
+    assert "PROVEEDORES MATERIA PRIMA" in t and oc.folio in t
 
 
 def test_recepcion_crea_espejo_obligatorio():
@@ -163,8 +163,11 @@ def test_recepcion_crea_espejo_obligatorio():
     cxp = db.query(CuentaPorPagar).filter(
         CuentaPorPagar.orden_compra_id == oc.id).first()
     assert cxp is not None  # espejo automático al recibir
-    assert cxp.numero_factura == oc.folio and cxp.origen_tipo == "COMPRAS"
-    assert cxp.estado == "POR_PAGAR" and cxp.saldo_pendiente == 870.0
+    assert cxp.numero_factura == oc.folio and cxp.origen_tipo == "PROVEEDORES MATERIA PRIMA"
+    assert cxp.tipo_comprobante == "GUIA_RECEPCION" and cxp.estado == "POR_FACTURAR"
+    assert cxp.saldo_pendiente == 870.0 and cxp.actividad_flujo == "OPERATIVO"
+    assert (cxp.observacion or "").startswith("Mercadería recibida")
+    assert cxp.fecha_vencimiento is not None
     # segunda reparación no duplica
     rep = ck.reparar_cxp_compras(db)
     assert db.query(CuentaPorPagar).filter(
@@ -216,5 +219,89 @@ def test_reparar_backfill_asiento_billed_legado():
     assert db.query(AsientoContable).filter(
         AsientoContable.origen_tipo == "COMPRA",
         AsientoContable.origen_id == oc.id).count() == 1
+    _limpia(db)
+    db.close()
+
+
+def test_por_facturar_bloquea_pago_y_billed_lo_habilita():
+    from app.models.finanzas import CuentaPorPagar
+    from app.services import compras_kardex as ck
+    from app.services import contabilidad as C
+    db = _db()
+    _limpia(db)
+    oc = _oc_recibida(db, "BLQ")
+    cxp = db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.orden_compra_id == oc.id).first()
+    assert cxp.estado == "POR_FACTURAR"
+    try:
+        C.pagar_proveedor(db, cxp.id, 100.0, "1041")
+        assert False, "pagar sin factura debió fallar"
+    except ValueError as e:
+        assert "factura" in str(e).lower()
+    ck.facturar_oc(db, oc.id, "F001-BLQ-1", date.today())
+    db.close()
+    db = _db()
+    cxp = db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.orden_compra_id == oc.id).first()
+    assert cxp.estado == "POR_PAGAR" and cxp.tipo_comprobante == "FACTURA"
+    p = C.pagar_proveedor(db, cxp.id, cxp.saldo_pendiente, "1041")
+    assert p["estado"] == "PAGADO"
+    _limpia(db)
+    db.close()
+
+
+def test_gasto_activo_fijo_origen_e_inversion():
+    from datetime import date as _d
+    from app.models.finanzas import CuentaPorPagar
+    from app.models.purchasing import Supplier
+    from app.services import contabilidad as C
+    from app.services import finanzas as f
+    db = _db()
+    _limpia(db)
+    f.seed_pcge_basico(db)
+    sup = Supplier(nombre="TCO-ACT")
+    db.add(sup)
+    db.flush()
+    g, _a = f.registrar_gasto_operativo(
+        db, fecha=_d.today(), categoria="ACTIVO_FIJO", monto_base=5000,
+        tipo_comprobante="FACTURA", numero_comprobante="F-ACT-001",
+        proveedor_id=sup.id)
+    n = C.sincronizar_cxp_desde_gastos(db)
+    assert n == 1
+    cxp = db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.numero_factura == "F-ACT-001").first()
+    assert cxp is not None
+    assert cxp.origen_tipo == "ACTIVOS Y MAQUINARIA"
+    assert cxp.actividad_flujo == "INVERSION"
+    assert cxp.fecha_vencimiento is not None
+    _limpia(db)
+    db.close()
+
+
+def test_origenes_legacy_se_normalizan():
+    from datetime import date as _d
+    from app.models.finanzas import CuentaPorPagar
+    from app.models.purchasing import Supplier
+    from app.services import contabilidad as C
+    from app.services import finanzas as f
+    db = _db()
+    _limpia(db)
+    f.seed_pcge_basico(db)
+    sup = Supplier(nombre="TCO-LEG2")
+    db.add(sup)
+    db.flush()
+    g, _a = f.registrar_gasto_operativo(
+        db, fecha=_d.today(), categoria="OTRO", monto_base=200,
+        tipo_comprobante="FACTURA", numero_comprobante="F-LEG-002",
+        proveedor_id=sup.id)
+    # espejo legacy con origen antiguo
+    db.add(CuentaPorPagar(proveedor_id=sup.id, numero_factura="F-LEG-002",
+                          origen_tipo="GASTOS", monto_total=236.0,
+                          saldo_pendiente=236.0, estado="POR_PAGAR"))
+    db.commit()
+    C.sincronizar_cxp_desde_gastos(db)
+    cxp = db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.numero_factura == "F-LEG-002").first()
+    assert cxp.origen_tipo == "GASTOS OPERATIVOS"
     _limpia(db)
     db.close()

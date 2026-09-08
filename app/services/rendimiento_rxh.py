@@ -176,13 +176,16 @@ def generar_provision_rxh(db: Session, operario_id: int,
                 db, fecha, f"Destino 9211 RxH {numero}", "HONORARIOS", gasto.id,
                 [{"cuenta_id": c_dest.id, "debe": total, "haber": Decimal("0")},
                  {"cuenta_id": c_79.id, "debe": Decimal("0"), "haber": total}])
+        from datetime import timedelta as _td
+        from app.services.finanzas import ORIGEN_SERVICIOS
         cxp = CuentaPorPagar(
             proveedor_id=sup.id, numero_factura=numero,
-            origen_tipo="DESTAJO",
+            origen_tipo=ORIGEN_SERVICIOS, actividad_flujo="OPERATIVO",
             tipo_comprobante="RECIBO_HONORARIOS",
             monto_total=float(total), monto_pagado=0.0,
             saldo_pendiente=float(total - ret), retencion=float(ret),
-            fecha_emision=fecha, estado="POR_PAGAR")
+            fecha_emision=fecha, fecha_vencimiento=fecha + _td(days=30),
+            estado="POR_PAGAR")
         db.add(cxp)
         db.flush()
         for r in regs:

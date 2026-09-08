@@ -200,14 +200,70 @@ def ensure_cxp_tipo_comprobante_column(db: Session) -> None:
         "ADD COLUMN tipo_comprobante VARCHAR(20) DEFAULT 'FACTURA'")
 
 
+# Orígenes estándar de CxP (bandeja única de tesorería).
+ORIGEN_MAT_PRIMA = "PROVEEDORES MATERIA PRIMA"
+ORIGEN_SERVICIOS = "SERVICIOS TERCERIZADOS"
+ORIGEN_GASTOS_OP = "GASTOS OPERATIVOS"
+ORIGEN_ACTIVOS = "ACTIVOS Y MAQUINARIA"
+ORIGENES_CXP = (ORIGEN_MAT_PRIMA, ORIGEN_SERVICIOS, ORIGEN_GASTOS_OP, ORIGEN_ACTIVOS)
+# Legados → estándar (migración de datos).
+ORIGEN_LEGACY_MAP = {"COMPRAS": ORIGEN_MAT_PRIMA, "GASTOS": ORIGEN_GASTOS_OP,
+                     "DESTAJO": ORIGEN_SERVICIOS}
+
+
+def origen_por_categoria_gasto(categoria: str | None) -> str:
+    """ACTIVO_FIJO → activos/maquinaria; el resto → gastos operativos."""
+    return ORIGEN_ACTIVOS if (categoria or "").upper() == "ACTIVO_FIJO" else ORIGEN_GASTOS_OP
+
+
+def ensure_cxp_actividad_flujo_column(db: Session) -> None:
+    """Nivelación idempotente para `actividad_flujo` en CxP."""
+    ensure_column(
+        db, "cuentas_por_pagar", "actividad_flujo",
+        "ALTER TABLE cuentas_por_pagar ADD COLUMN IF NOT EXISTS "
+        "actividad_flujo VARCHAR(20) DEFAULT 'OPERATIVO'",
+        "ALTER TABLE cuentas_por_pagar "
+        "ADD COLUMN actividad_flujo VARCHAR(20) DEFAULT 'OPERATIVO'")
+
+
+def ensure_cxp_observacion_column(db: Session) -> None:
+    """Nivelación idempotente para `observacion` en CxP."""
+    ensure_column(
+        db, "cuentas_por_pagar", "observacion",
+        "ALTER TABLE cuentas_por_pagar ADD COLUMN IF NOT EXISTS "
+        "observacion VARCHAR(255)",
+        "ALTER TABLE cuentas_por_pagar "
+        "ADD COLUMN observacion VARCHAR(255)")
+
+
 def ensure_cxp_origen_tipo_column(db: Session) -> None:
-    """Nivelación idempotente para `origen_tipo` en CxP."""
+    """Nivelación idempotente para `origen_tipo` en CxP (VARCHAR 40)."""
     ensure_column(
         db, "cuentas_por_pagar", "origen_tipo",
         "ALTER TABLE cuentas_por_pagar ADD COLUMN IF NOT EXISTS "
-        "origen_tipo VARCHAR(20) DEFAULT 'COMPRAS'",
+        "origen_tipo VARCHAR(40) DEFAULT 'PROVEEDORES MATERIA PRIMA'",
         "ALTER TABLE cuentas_por_pagar "
-        "ADD COLUMN origen_tipo VARCHAR(20) DEFAULT 'COMPRAS'")
+        "ADD COLUMN origen_tipo VARCHAR(40) DEFAULT 'PROVEEDORES MATERIA PRIMA'")
+
+
+def ensure_cxp_actividad_flujo_column(db: Session) -> None:
+    """Nivelación idempotente para `actividad_flujo` en CxP."""
+    ensure_column(
+        db, "cuentas_por_pagar", "actividad_flujo",
+        "ALTER TABLE cuentas_por_pagar ADD COLUMN IF NOT EXISTS "
+        "actividad_flujo VARCHAR(20) DEFAULT 'OPERATIVO'",
+        "ALTER TABLE cuentas_por_pagar "
+        "ADD COLUMN actividad_flujo VARCHAR(20) DEFAULT 'OPERATIVO'")
+
+
+def ensure_cxp_observacion_column(db: Session) -> None:
+    """Nivelación idempotente para `observacion` en CxP."""
+    ensure_column(
+        db, "cuentas_por_pagar", "observacion",
+        "ALTER TABLE cuentas_por_pagar ADD COLUMN IF NOT EXISTS "
+        "observacion VARCHAR(255)",
+        "ALTER TABLE cuentas_por_pagar "
+        "ADD COLUMN observacion VARCHAR(255)")
 
 
 # ── Costeo absorbente: tarifa por minuto de taller ───────────────────
