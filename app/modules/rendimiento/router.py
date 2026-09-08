@@ -308,6 +308,23 @@ def calculadora(request: Request, preset: str = Query("semana"), desde: str = Qu
         agg["cantidad"] += d.cantidad
     # lista usuarios para filtro
     usuarios = db.query(User).filter(User.is_active.is_(True)).order_by(User.full_name).all()
+    # Perfil Personal (DNI/RUC) por operario: vínculo user_id o nombre.
+    empleados_docs: dict[int, str] = {}
+    try:
+        from app.models.personnel import Empleado
+        emps = db.query(Empleado).filter(Empleado.activo.is_(True)).all()
+        por_user = {e.user_id: e for e in emps if e.user_id}
+        por_nombre = {(e.nombres or "").strip().lower() + " " + (e.apellidos or "").strip().lower(): e for e in emps}
+        for oid in {r.operario_id for r in pendientes}:
+            e = por_user.get(oid)
+            if not e:
+                u = users.get(oid)
+                if u and u.full_name:
+                    e = por_nombre.get(u.full_name.strip().lower())
+            if e and e.documento:
+                empleados_docs[oid] = e.documento
+    except Exception:
+        pass
     # lista órdenes para filtro
     prendas_opt = db.query(Garment).order_by(Garment.id.desc()).limit(50).all()
     orders_map = {o.id: o for o in db.query(Order).all()}
@@ -316,6 +333,7 @@ def calculadora(request: Request, preset: str = Query("semana"), desde: str = Qu
         "inicio": inicio, "fin": fin, "registros": registros, "detalles": detalles,
         "total_acumulado": total_acumulado, "n_prendas": n_prendas, "n_registros": len(registros),
         "por_operario": por_operario_list, "por_orden": por_orden, "por_actividad": por_actividad,
+        "empleados_docs": empleados_docs,
         "operario": operario, "orden": orden, "usuarios": usuarios, "prendas_opt": prendas_opt, "orders_map": orders_map, "catalogo": catalogo})
 
 @router.get("/calculadora/export")
@@ -353,6 +371,7 @@ def export_liquidacion(preset: str = Query("semana"), desde: str = Query(""), ha
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=liquidacion_{inicio}_{fin}.csv"})
 
 @router.post("/generar-rxh-cxp", response_class=HTMLResponse)
+@router.post("/automatizar-gasto-rxh", response_class=HTMLResponse)
 @router.post("/generar-rxh", response_class=HTMLResponse)
 @router.post("/generar-cxh", response_class=HTMLResponse)
 async def generar_rxh(request: Request, db: Session = Depends(get_db), user=FinanzasSM):

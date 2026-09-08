@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from app.models.finanzas import CuentaPorPagar, GastoRegistrado
 
 RETENCION_IR_4TA = Decimal("0.08")
+UMBRAL_RETENCION_AUTOMATICA = Decimal("1500")
 # Flujo nuevo: solo PENDIENTE. Legacy (creados antes de la simplificación)
 # también son provisionables una vez.
 ESTADOS_PROVISIONABLES = ("PENDIENTE", "REGISTRADO", "APROBADO",
@@ -41,7 +42,8 @@ def ensure_cuenta_4241(db: Session):
 
 
 def resolver_proveedor_sastre(db: Session, operario_id: int,
-                              ruc_dni: str | None = None):
+                              ruc_dni: str | None = None,
+                              nombre_preferido: str | None = None):
     """Mapea operario → Supplier por DNI/RUC (o nombre); lo crea si falta."""
     from app.models.purchasing import Supplier
     from app.models.user import User
@@ -52,7 +54,8 @@ def resolver_proveedor_sastre(db: Session, operario_id: int,
         if sup:
             return sup
     user = db.get(User, operario_id)
-    nombre = (user.full_name if user and user.full_name else f"Sastre {operario_id}").strip()
+    nombre = (nombre_preferido or "").strip() or (
+        user.full_name if user and user.full_name else f"Sastre {operario_id}").strip()
     sup = db.query(Supplier).filter(Supplier.nombre == nombre).first()
     if sup:
         return sup
@@ -85,6 +88,16 @@ def acumulado_operario(db: Session, operario_id: int,
     return total, regs
 
 
+def buscar_empleado(db: Session, ruc_dni: str | None):
+    """Perfil de Personal y Contratos por DNI/RUC (o None si no existe)."""
+    from app.models.personnel import Empleado
+    doc = (ruc_dni or "").strip()
+    if not doc:
+        return None
+    return db.query(Empleado).filter(
+        (Empleado.dni == doc) | (Empleado.ruc == doc)).first()
+
+
 def generar_provision_rxh(db: Session, operario_id: int,
                           numero_comprobante: str,
                           desde: date | None = None,
@@ -114,8 +127,14 @@ def generar_provision_rxh(db: Session, operario_id: int,
             GastoRegistrado.numero_comprobante == numero).first():
         raise ValueError(f"RxH {numero} ya registrado como gasto")
     exigir_periodo_abierto(db, date.today())
-    sup = resolver_proveedor_sastre(db, operario_id, ruc_dni)
-    ret = (total * RETENCION_IR_4TA).quantize(Decimal("0.01")) if con_retencion else Decimal("0")
+    emp = buscar_empleado(db, ruc_dni)
+    # Retención 8%: check explícito, o bandera del perfil, o suma > S/ 1500.
+    aplica_ret = bool(con_retencion) or bool(emp and emp.aplica_retencion_8) \
+        or total > UMBRAL_RETENCION_AUTOMATICA
+    sup = resolver_proveedor_sastre(
+        db, operario_id, ruc_dni,
+        nombre_preferido=emp.nombre_completo if emp else None)
+    ret = (total * RETENCION_IR_4TA).quantize(Decimal("0.01")) if aplica_ret else Decimal("0")
     fecha = date.today()
     try:
         c_gasto = get_cuenta_by_codigo(db, "6322")
@@ -162,4 +181,5 @@ def generar_provision_rxh(db: Session, operario_id: int,
     return {"cxp_id": cxp.id, "gasto_id": gasto.id,
             "asiento_id": asiento.id, "total": float(total),
             "retencion": float(ret), "neto": float(total - ret),
-            "registros": len(regs), "proveedor_id": sup.id}
+            "registros": len(regs), "proveedor_id": sup.id,
+            "empleado_id": emp.id if emp else None}

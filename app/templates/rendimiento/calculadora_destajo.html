@@ -31,16 +31,18 @@
     {% for r in por_operario %}
       <details class="text-xs border-b py-1">
         <summary class="flex justify-between cursor-pointer list-none"><span>{{ r.operario }} ({{ r.registros }} reg, {{ r.prendas }} prendas)</span><b>S/ {{ "%.2f"|format(r.total) }}</b></summary>
-        <form method="post" action="/rendimiento/generar-rxh-cxp" class="mt-2 grid gap-1.5 bg-[#FAF8F5] rounded-lg p-2">
+        {% if r.total > 0 %}
+        <form method="post" action="/rendimiento/automatizar-gasto-rxh" class="mt-2 grid gap-1.5 bg-[#FAF8F5] rounded-lg p-2">
           <input type="hidden" name="operario_id" value="{{ r.operario_id }}">
           <input type="hidden" name="desde" value="{{ desde }}">
           <input type="hidden" name="hasta" value="{{ hasta }}">
           <label>N° Recibo por Honorarios *<input name="numero_comprobante" required placeholder="E001-123" class="w-full border rounded px-2 py-1"></label>
-          <label>DNI / RUC del sastre<input name="ruc_dni" placeholder="DNI 8 dígitos" maxlength="11" class="w-full border rounded px-2 py-1"></label>
+          <label>DNI / RUC del sastre<input name="ruc_dni" value="{{ empleados_docs.get(r.operario_id, '') }}" placeholder="DNI 8 dígitos" maxlength="11" class="w-full border rounded px-2 py-1"></label>
           <label class="flex gap-2 items-center"><input type="checkbox" name="con_retencion" value="1" checked class="accent-[#370003]">Retención 8% IR 4ta (Neto = Total − Retención)</label>
-          <button type="submit" class="bg-borgo text-white rounded-lg py-1.5 font-bold">🧾 Generar Provisión RxH / CxP</button>
+          <button type="submit" class="bg-borgo text-white rounded-lg py-1.5 font-bold">🧾 Automatizar Provisión RxH (S/ {{ "%.2f"|format(r.total) }})</button>
           <p class="text-slate-400">Sin IGV. No mueve caja: la deuda va a CxP (POR_PAGAR).</p>
         </form>
+        {% else %}<p class="text-xs text-slate-400 mt-1">Sin saldo PENDIENTE por provisionar.</p>{% endif %}
       </details>
     {% else %}<p class="text-xs text-slate-400">Sin pendiente por provisionar.</p>{% endfor %}
   </div>

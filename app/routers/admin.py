@@ -19,6 +19,11 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 Auth = Depends(require_roles("ADMIN"))
 
+PERSONAL_DIR = BASE_DIR / "app" / "static" / "uploads" / "personal"
+PERSONAL_DIR.mkdir(parents=True, exist_ok=True)
+PERSONAL_EXTS = {".pdf", ".jpg", ".jpeg", ".png", ".webp"}
+PERSONAL_MAX_BYTES = 5 * 1024 * 1024
+
 
 def _is_admin_role(role: str) -> bool:
     return role.lower() == "admin" if role else False
@@ -142,3 +147,146 @@ async def guardar_config(request: Request, db: Session = Depends(get_db), user=A
     for clave in DEFAULTS:
         config_svc.set(db, clave, form.get(clave) or "")
     return RedirectResponse("/admin/configuracion", status_code=303)
+
+
+# ---------- Personal y Contratos ----------
+def _personal_ctx():
+    from app.models.personnel import PUESTOS, TIPOS_CONTRATO
+    return {"puestos": PUESTOS, "tipos": TIPOS_CONTRATO}
+
+
+async def _guardar_doc(upload, prefijo: str, emp_id: int | None) -> str | None:
+    """Guarda CV/contrato adjunto (máx 5 MB, pdf/imagen). Retorna filename."""
+    import uuid as _uuid
+    from pathlib import Path as _Path
+    if not upload or not getattr(upload, "filename", None):
+        return None
+    ext = _Path(upload.filename).suffix.lower()
+    if ext not in PERSONAL_EXTS:
+        raise ValueError(f"Extensión no permitida: {ext}")
+    raw = await upload.read(PERSONAL_MAX_BYTES + 1)
+    if len(raw) > PERSONAL_MAX_BYTES:
+        raise ValueError("Archivo mayor a 5 MB")
+    nombre = f"emp_{emp_id or 'new'}_{prefijo}_{_uuid.uuid4().hex[:8]}{ext}"
+    (PERSONAL_DIR / nombre).write_bytes(raw)
+    return nombre
+
+
+@router.get("/personal", response_class=HTMLResponse)
+def personal_list(request: Request, editar: str = "", error: str = "",
+                  db: Session = Depends(get_db), user=Auth):
+    from app.models.personnel import Empleado
+    from app.models.user import User as _User
+    emp = None
+    if editar.isdigit():
+        emp = db.get(Empleado, int(editar))
+    return templates.TemplateResponse(request, "admin/personal.html", {
+        "user": user, "error": error, "emp": emp,
+        "empleados": db.query(Empleado).order_by(Empleado.apellidos).all(),
+        "usuarios": db.query(_User).order_by(_User.full_name).all(),
+        **_personal_ctx()})
+
+
+@router.post("/personal", response_class=HTMLResponse)
+async def personal_crear(request: Request, db: Session = Depends(get_db), user=Auth):
+    from app.models.personnel import PUESTOS, TIPOS_CONTRATO, Empleado
+    form = await request.form()
+    nombres = (form.get("nombres") or "").strip()
+    apellidos = (form.get("apellidos") or "").strip()
+    dni = (form.get("dni") or "").strip() or None
+    ruc = (form.get("ruc") or "").strip() or None
+    puesto = (form.get("puesto") or "SASTRE_MAESTRO").strip().upper()
+    tipo = (form.get("tipo_contrato") or "DESTAJO_4TA").strip().upper()
+    if not nombres or not apellidos:
+        return RedirectResponse("/admin/personal?error=nombres", status_code=303)
+    if not dni and not ruc:
+        return RedirectResponse("/admin/personal?error=documento", status_code=303)
+    if puesto not in PUESTOS or tipo not in TIPOS_CONTRATO:
+        return RedirectResponse("/admin/personal?error=datos", status_code=303)
+    try:
+        uid = int(form.get("user_id")) if form.get("user_id") else None
+    except Exception:
+        uid = None
+    emp = Empleado(nombres=nombres, apellidos=apellidos, dni=dni, ruc=ruc,
+                   telefono=(form.get("telefono") or "").strip() or None,
+                   puesto=puesto, tipo_contrato=tipo,
+                   aplica_retencion_8=str(form.get("aplica_retencion_8") or "").lower() in ("1", "on", "true"),
+                   user_id=uid)
+    db.add(emp)
+    db.flush()
+    try:
+        emp.cv_filename = await _guardar_doc(form.get("cv"), "cv", emp.id) or None
+        emp.contrato_filename = await _guardar_doc(form.get("contrato"), "contrato", emp.id) or None
+    except ValueError:
+        db.rollback()
+        return RedirectResponse("/admin/personal?error=archivo", status_code=303)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        return RedirectResponse("/admin/personal?error=duplicado", status_code=303)
+    return RedirectResponse("/admin/personal", status_code=303)
+
+
+@router.post("/personal/{eid}", response_class=HTMLResponse)
+async def personal_editar(eid: int, request: Request, db: Session = Depends(get_db), user=Auth):
+    from app.models.personnel import PUESTOS, TIPOS_CONTRATO, Empleado
+    emp = db.get(Empleado, eid)
+    if not emp:
+        return RedirectResponse("/admin/personal", status_code=303)
+    form = await request.form()
+    if form.get("nombres"):
+        emp.nombres = str(form.get("nombres")).strip()
+    if form.get("apellidos"):
+        emp.apellidos = str(form.get("apellidos")).strip()
+    emp.dni = (form.get("dni") or "").strip() or None
+    emp.ruc = (form.get("ruc") or "").strip() or None
+    if (form.get("puesto") or "").strip().upper() in PUESTOS:
+        emp.puesto = str(form.get("puesto")).strip().upper()
+    if (form.get("tipo_contrato") or "").strip().upper() in TIPOS_CONTRATO:
+        emp.tipo_contrato = str(form.get("tipo_contrato")).strip().upper()
+    emp.aplica_retencion_8 = str(form.get("aplica_retencion_8") or "").lower() in ("1", "on", "true")
+    emp.telefono = (form.get("telefono") or "").strip() or None
+    try:
+        emp.user_id = int(form.get("user_id")) if form.get("user_id") else None
+    except Exception:
+        emp.user_id = None
+    emp.activo = str(form.get("activo") or "1").lower() in ("1", "on", "true")
+    try:
+        cv = await _guardar_doc(form.get("cv"), "cv", emp.id)
+        if cv:
+            emp.cv_filename = cv
+        ct = await _guardar_doc(form.get("contrato"), "contrato", emp.id)
+        if ct:
+            emp.contrato_filename = ct
+    except ValueError:
+        db.rollback()
+        return RedirectResponse(f"/admin/personal?editar={eid}&error=archivo", status_code=303)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        return RedirectResponse(f"/admin/personal?editar={eid}&error=duplicado", status_code=303)
+    return RedirectResponse("/admin/personal", status_code=303)
+
+
+@router.post("/personal/{eid}/eliminar", response_class=HTMLResponse)
+def personal_eliminar(eid: int, db: Session = Depends(get_db), user=Auth):
+    from app.models.personnel import Empleado
+    emp = db.get(Empleado, eid)
+    if emp:
+        db.delete(emp)
+        db.commit()
+    return RedirectResponse("/admin/personal", status_code=303)
+
+
+@router.get("/personal/{eid}/documento", response_class=HTMLResponse)
+def personal_documento(eid: int, tipo: str = "cv", db: Session = Depends(get_db), user=Auth):
+    from fastapi.responses import FileResponse
+    from app.models.personnel import Empleado
+    emp = db.get(Empleado, eid)
+    fname = (emp.cv_filename if tipo == "cv" else emp.contrato_filename) if emp else None
+    path = (PERSONAL_DIR / fname) if fname else None
+    if not path or not path.is_file():
+        return HTMLResponse("Documento no encontrado", status_code=404)
+    return FileResponse(str(path), filename=fname)

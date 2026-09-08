@@ -19,6 +19,7 @@ from app.models.inventario import (  # noqa: F401
 )
 from app.models.measurement import Measurement  # noqa: F401
 from app.models.order import ControlCalidad, Garment, Operation, Order, Payment, PruebaEntalle, WorkLog  # noqa: F401
+from app.models.personnel import Empleado  # noqa: F401
 from app.models.produccion import ControlCalidad as ControlCalidadProduccion  # noqa: F401
 from app.models.produccion import FichaMedidas, OrdenProduccion  # noqa: F401
 from app.models.produccion import PruebaEntalle as PruebaEntalleProduccion  # noqa: F401

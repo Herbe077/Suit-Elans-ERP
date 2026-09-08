@@ -540,6 +540,12 @@ def gastos_crear(
         )
     except Exception as e:
         return HTMLResponse(str(e), status_code=400)
+    # Espejo inmediato a la bandeja CxP (sin caja): el RxH manual queda
+    # POR_PAGAR al instante, con la misma transaccionalidad defensiva.
+    try:
+        contab.sincronizar_cxp_desde_gastos(db)
+    except Exception as e:
+        _logger.warning("sync gasto→CxP omitido: %s", e)
     return RedirectResponse("/finanzas/gastos", status_code=303)
 
 
