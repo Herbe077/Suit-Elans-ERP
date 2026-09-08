@@ -725,26 +725,26 @@ async def registrar_prueba(request: Request, garment_id: int = Form(None),  # ty
             pass
     except ValueError as e:
         return HTMLResponse(str(e), status_code=400)
-    # Tras confirmar la prueba vuelve al taller general (no a la ficha).
+    # Tras confirmar la prueba vuelve a Producción general (no a la ficha).
     if request.headers.get("hx-request"):
         return HTMLResponse("", status_code=200,
-                            headers={"HX-Redirect": "/produccion/kanban"})
-    return RedirectResponse("/produccion/kanban", status_code=303)
+                            headers={"HX-Redirect": "/produccion"})
+    return RedirectResponse("/produccion", status_code=303)
 
 
 @router.post("/pruebas/{pid}/confirmar", response_class=HTMLResponse)
 def confirmar_prueba_endpoint(pid: int, request: Request,
                               db: Session = Depends(get_db), user=Auth):
     """Confirma una prueba pendiente: la marca completada y avanza la prenda
-    a EN_CONFECCION. Redirige al taller general."""
+    a EN_CONFECCION. Redirige a Producción general."""
     try:
         svc.confirmar_prueba(db, pid)
     except ValueError as e:
         return HTMLResponse(str(e), status_code=400)
     if request.headers.get("hx-request"):
         return HTMLResponse("", status_code=200,
-                            headers={"HX-Redirect": "/produccion/kanban"})
-    return RedirectResponse("/produccion/kanban", status_code=303)
+                            headers={"HX-Redirect": "/produccion"})
+    return RedirectResponse("/produccion", status_code=303)
 
 
 @router.get("/calidad", response_class=HTMLResponse)
@@ -829,8 +829,8 @@ async def aprobar(gid: int, request: Request, observaciones: str = Form(""),
         return JSONResponse({"id": gid, "estado": "CALIDAD_OK"})
     if request.headers.get("hx-request"):
         return HTMLResponse("", status_code=200,
-                            headers={"HX-Redirect": "/produccion/kanban"})
-    return RedirectResponse("/produccion/kanban", status_code=303)
+                            headers={"HX-Redirect": "/produccion"})
+    return RedirectResponse("/produccion", status_code=303)
 
 
 # --- Compatibilidad: fichaje SAM ---
