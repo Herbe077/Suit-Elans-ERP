@@ -97,6 +97,7 @@ def main() -> int:
         if not args.apply:
             print("Dry-run: sin cambios. Re-ejecuta con --apply para borrar.")
             return 0
+        conn.commit()  # cierra la transacción de solo-lectura del conteo
         lista = ", ".join(f'"{t}"' for t in tablas)
         with conn.begin():
             conn.execute(text(f"TRUNCATE TABLE {lista} RESTART IDENTITY CASCADE"))

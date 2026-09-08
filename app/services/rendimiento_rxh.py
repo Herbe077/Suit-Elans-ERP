@@ -90,7 +90,8 @@ def acumulado_operario(db: Session, operario_id: int,
 
 def buscar_empleado(db: Session, ruc_dni: str | None):
     """Perfil de Personal y Contratos por DNI/RUC (o None si no existe)."""
-    from app.models.personnel import Empleado
+    from app.models.personnel import Empleado, ensure_empleados_table
+    ensure_empleados_table(db)
     doc = (ruc_dni or "").strip()
     if not doc:
         return None

@@ -311,7 +311,8 @@ def calculadora(request: Request, preset: str = Query("semana"), desde: str = Qu
     # Perfil Personal (DNI/RUC) por operario: vínculo user_id o nombre.
     empleados_docs: dict[int, str] = {}
     try:
-        from app.models.personnel import Empleado
+        from app.models.personnel import Empleado, ensure_empleados_table
+        ensure_empleados_table(db)
         emps = db.query(Empleado).filter(Empleado.activo.is_(True)).all()
         por_user = {e.user_id: e for e in emps if e.user_id}
         por_nombre = {(e.nombres or "").strip().lower() + " " + (e.apellidos or "").strip().lower(): e for e in emps}

@@ -35,3 +35,15 @@ class Empleado(Base):
     @property
     def documento(self) -> str | None:
         return self.ruc or self.dni
+
+
+def ensure_empleados_table(db) -> None:
+    """Crea la tabla empleados si falta (idempotente, agnóstico PG/SQLite).
+
+    Cubre BDs donde alembic nunca corrió (sin tabla alembic_version).
+    No usa commit propio: acompaña la transacción del llamante.
+    """
+    try:
+        Empleado.__table__.create(db.get_bind(), checkfirst=True)
+    except Exception:
+        pass
