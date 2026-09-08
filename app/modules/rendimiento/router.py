@@ -46,6 +46,28 @@ def _con_diagnostico(origen: str):
         return wrapper
     return deco
 
+def _grupos_tareo(catalogo: list) -> list[tuple[str, list]]:
+    """Agrupa la hoja de ruta por etapas de producción (posición 1-based).
+
+    a) Corte y Habilitación (01-06) · b) Fusionado y Planchado Base (10-13) ·
+    c) Confección y Ensamble (07-09, 14-30) · d) Acabados y Ojales (31+).
+    """
+    grupos = [("✂️ Corte y Habilitación", []),
+              ("🧵 Confección y Ensamble", []),
+              ("🔥 Fusionado y Planchado Base", []),
+              ("✨ Acabados y Ojales", [])]
+    for idx, op in enumerate(catalogo, start=1):
+        if 1 <= idx <= 6:
+            grupos[0][1].append(op)
+        elif 10 <= idx <= 13:
+            grupos[2][1].append(op)
+        elif idx >= 31:
+            grupos[3][1].append(op)
+        else:
+            grupos[1][1].append(op)
+    return [(t, ops) for t, ops in grupos if ops]
+
+
 def _ensure_catalogo(db: Session):
     """Seed idempotente 44 operaciones con código CAT-01.."""
     existing = db.query(CatalogoOperacion).count()
@@ -156,8 +178,18 @@ def registro_get(request: Request, todas: str = Query(""), db: Session = Depends
     # histórico del operario hoy
     hoy = date.today()
     mias = db.query(RegistroJornada).filter(RegistroJornada.operario_id==user.id, RegistroJornada.fecha==hoy).order_by(RegistroJornada.id.desc()).limit(10).all()
+    # resumen del día: operaciones marcadas + subtotal S/
+    mias_ids = [r.id for r in mias]
+    mias_dets = db.query(DetalleJornada).filter(DetalleJornada.registro_jornada_id.in_(mias_ids)).all() if mias_ids else []
+    mias_ops = sum((d.cantidad or 0) for d in mias_dets)
+    mias_subtotal = sum(((d.subtotal if d.subtotal is not None else Decimal("0")) for d in mias_dets), Decimal("0"))
+    # agrupación visual por etapas (posición 1-based en la hoja de ruta)
+    grupos = _grupos_tareo(catalogo)
     return templates.TemplateResponse(request, "rendimiento/registro_diario.html", {
-        "user": user, "tab": "registro", "catalogo": catalogo, "prendas": prendas, "orders": orders, "propietarios": propietarios, "empresas": empresas, "etapas": etapas, "mias": mias, "hoy": hoy, "todas": todas})
+        "user": user, "tab": "registro", "catalogo": catalogo, "grupos": grupos,
+        "prendas": prendas, "orders": orders, "propietarios": propietarios, "empresas": empresas, "etapas": etapas,
+        "mias": mias, "mias_ops": mias_ops, "mias_subtotal": mias_subtotal,
+        "hoy": hoy, "todas": todas})
 
 @router.post("/registro", response_class=HTMLResponse)
 async def registro_post(request: Request, db: Session = Depends(get_db), user=Auth):
