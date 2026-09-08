@@ -174,3 +174,19 @@ def test_automatizar_rxh_retencion_por_umbral_1500():
     assert cxp.saldo_pendiente == 1840.0
     _limpia_personal(db)
     db.close()
+
+
+def test_calculadora_y_personal_200_con_tablas_vacias():
+    from app.core.database import SessionLocal
+    from app.models.personnel import Empleado
+    from app.modules.rendimiento.models import (DetalleJornada,
+                                                RegistroJornada)
+    db = SessionLocal()
+    db.query(DetalleJornada).delete()
+    db.query(RegistroJornada).delete()
+    db.query(Empleado).delete()
+    db.commit()
+    db.close()
+    c, ck = _client_admin()
+    assert c.get("/rendimiento/calculadora", cookies=ck).status_code == 200
+    assert c.get("/admin/personal", cookies=ck).status_code == 200

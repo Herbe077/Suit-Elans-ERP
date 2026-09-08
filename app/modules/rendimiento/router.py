@@ -10,17 +10,41 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app.core.config import BASE_DIR
+from app.core.config import BASE_DIR, settings
 from app.core.constants import TALLER_TAREAS
 from app.core.database import get_db
 from app.core.deps import require_roles
 from app.models.order import Garment, Order
 from app.modules.rendimiento.models import CatalogoOperacion, DetalleJornada, RegistroJornada
+import functools
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/rendimiento", tags=["rendimiento"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 Auth = Depends(require_roles("SASTRE-MAESTRO", "SASTRE-ASISTENTE"))  # ADMIN pasa siempre
 FinanzasSM = Depends(require_roles("ADMIN", "FINANZAS", "SASTRE-MAESTRO"))
+
+
+def _con_diagnostico(origen: str):
+    """Envuelve el endpoint en try/except: imprime el traceback completo en
+    logs y devuelve un JSON 500 estructurado (traceback solo fuera de prod)."""
+    def deco(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except Exception as e:
+                traceback.print_exc()
+                logger.error("Error en %s: %s: %s", origen, type(e).__name__, e)
+                body: dict = {"error": f"{type(e).__name__}: {e}"}
+                if not settings.is_production:
+                    body["traceback"] = traceback.format_exc()
+                return JSONResponse(body, status_code=500)
+        return wrapper
+    return deco
 
 def _ensure_catalogo(db: Session):
     """Seed idempotente 44 operaciones con código CAT-01.."""
@@ -228,6 +252,7 @@ async def registro_post(request: Request, db: Session = Depends(get_db), user=Au
     return RedirectResponse(f"/rendimiento/registro?ok={reg.id}", status_code=303)
 
 @router.get("/calculadora", response_class=HTMLResponse)
+@_con_diagnostico("/rendimiento/calculadora")
 def calculadora(request: Request, preset: str = Query("semana"), desde: str = Query(""), hasta: str = Query(""), operario: str = Query(""), orden: str = Query(""), db: Session = Depends(get_db), user=Depends(require_roles("ADMIN", "FINANZAS", "SASTRE-MAESTRO", "SASTRE-ASISTENTE"))):
     _ensure_catalogo(db)
     # si el usuario ingresó ambas fechas, mandan sobre el preset

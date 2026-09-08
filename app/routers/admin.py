@@ -1,12 +1,16 @@
 """Ámbito Administración: usuarios/roles, operaciones SAM y sede."""
+import functools
+import logging
+import traceback
+
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core import security
-from app.core.config import BASE_DIR
+from app.core.config import BASE_DIR, settings
 from app.core.constants import ROLES_CANONICOS
 from app.core.database import get_db
 from app.core.deps import require_roles
@@ -18,6 +22,26 @@ from app.services import config as config_svc
 router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 Auth = Depends(require_roles("ADMIN"))
+
+logger = logging.getLogger(__name__)
+
+
+def _con_diagnostico(origen: str):
+    """Envuelve el endpoint en try/except: traceback a logs + JSON 500."""
+    def deco(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except Exception as e:
+                traceback.print_exc()
+                logger.error("Error en %s: %s: %s", origen, type(e).__name__, e)
+                body: dict = {"error": f"{type(e).__name__}: {e}"}
+                if not settings.is_production:
+                    body["traceback"] = traceback.format_exc()
+                return JSONResponse(body, status_code=500)
+        return wrapper
+    return deco
 
 PERSONAL_DIR = BASE_DIR / "app" / "static" / "uploads" / "personal"
 PERSONAL_DIR.mkdir(parents=True, exist_ok=True)
@@ -173,6 +197,7 @@ async def _guardar_doc(upload, prefijo: str, emp_id: int | None) -> str | None:
 
 
 @router.get("/personal", response_class=HTMLResponse)
+@_con_diagnostico("/admin/personal")
 def personal_list(request: Request, editar: str = "", error: str = "",
                   db: Session = Depends(get_db), user=Auth):
     from app.models.personnel import Empleado, ensure_empleados_table

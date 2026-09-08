@@ -68,7 +68,7 @@
     <tbody>
     {% for r in registros %}
       <tr class="border-b">
-        <td class="font-mono">#{{ r.id }}</td><td>{{ r.fecha }}</td><td>{{ por_operario|selectattr('operario_id','equalto', r.operario_id)|first|default({}) }}</td><td>{{ r.observaciones or '' }}</td><td><span class="px-1.5 py-0.5 rounded text-xs {{ 'bg-amber-100' if r.estado=='PENDIENTE' else 'bg-emerald-100' if r.estado=='PROVISIONADO' else 'bg-slate-200' }}">{{ r.estado }}</span></td>
+        <td class="font-mono">#{{ r.id }}</td><td>{{ r.fecha }}</td><td>{{ por_operario|selectattr('operario_id','equalto', r.operario_id)|first|default({}) }}</td><td>{{ r.observaciones or '' }}</td><td><span class="px-1.5 py-0.5 rounded text-xs {{ 'bg-amber-100' if (r.estado or 'PENDIENTE')=='PENDIENTE' else 'bg-emerald-100' if r.estado=='PROVISIONADO' else 'bg-slate-200' }}">{{ r.estado or 'PENDIENTE' }}</span></td>
         <td>{% if r.estado=='PROVISIONADO' %}✔ PROVISIONADO{% else %}⏳ PENDIENTE{% endif %}</td>
       </tr>
     {% else %}<tr><td colspan="6" class="text-center p-2 text-slate-400">Sin registros en rango.</td></tr>{% endfor %}
