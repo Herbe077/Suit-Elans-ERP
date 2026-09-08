@@ -13,14 +13,23 @@ def _client_admin():
     return c, {"suitelans_token": r.cookies.get("suitelans_token")}
 
 
-def test_tareo_ux_buscador_toggle_grupos():
+def test_tareo_ux_buscador_etapas_continuas():
     c, ck = _client_admin()
     t = c.get("/rendimiento/registro?todas=1", cookies=ck).text
     assert "Buscar operación (ej: OP-09, mangas)..." in t
-    assert "Solo disponibles" in t and "Ver todas (" in t
-    for grupo in ("Corte y Habilitación", "Confección y Ensamble",
-                  "Fusionado y Planchado", "Acabados y Ojales"):
-        assert grupo in t
+    for etapa in ("Etapa 1 - Corte y Habilitación Base",
+                  "Etapa 2 - Pre-costuras y Estructura",
+                  "Etapa 3 - Fusionado y Adhesivos",
+                  "Etapa 4 - Armado de Delantero y Refuerzos",
+                  "Etapa 5 - Ensamble de Contrapechos e Internos",
+                  "Etapa 6 - Planchado de Montaje e Internos",
+                  "Etapa 7 - Hilvanado y Uniones Principales",
+                  "Etapa 8 - Costuras de Refuerzo y Bastas",
+                  "Etapa 9 - Sisa y Montaje de Mangas",
+                  "Etapa 10 - Ojales, Limpieza y Acabado Final"):
+        assert etapa in t
+    # lista continua: sin acordeones que oculten la secuencia
+    assert "<details" not in t
     assert "tareo-card" in t and "op_" in t
     assert "Confirmar y guardado del tareo diario" in t
 
