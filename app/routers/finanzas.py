@@ -370,7 +370,16 @@ def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), d
             q=q.filter(CuentaPorPagar.proveedor_id.in_(ids or [0]))
     cuentas=q.order_by(CuentaPorPagar.id.desc()).limit(200).all()
     proveedores={s.id:s for s in db.query(Supplier).all()}
-    return templates.TemplateResponse(request, "finanzas/cuentas_por_pagar.html", {"user":user,"tab":"cxp","cuentas":cuentas,"proveedores":proveedores,"estado":estado,"proveedor":proveedor,"suppliers":db.query(Supplier).order_by(Supplier.nombre).all()})
+    # Nombre tolerante a nulos/huérfanos: destajo/RxH sin proveedor directo
+    # muestra 'Personal Destajo / Sastre' en vez de romper la vista.
+    nombres_cxp={}
+    for c in cuentas:
+        try:
+            sup = proveedores.get(getattr(c, "proveedor_id", None))
+            nombres_cxp[c.id] = sup.nombre if sup and sup.nombre else "Personal Destajo / Sastre"
+        except Exception:
+            nombres_cxp[c.id] = "Personal Destajo / Sastre"
+    return templates.TemplateResponse(request, "finanzas/cuentas_por_pagar.html", {"user":user,"tab":"cxp","cuentas":cuentas,"proveedores":proveedores,"nombres_cxp":nombres_cxp,"estado":estado,"proveedor":proveedor,"suppliers":db.query(Supplier).order_by(Supplier.nombre).all()})
 
 @router.post("/cuentas-por-pagar", response_class=HTMLResponse)
 def cxp_crear(proveedor_id: int = Form(...), numero_factura: str = Form(""), monto_total: float = Form(...), retencion: float = Form(0), fecha_emision: str = Form(""), fecha_vencimiento: str = Form(""), db: Session = Depends(get_db), user=FinanzasAuth):
@@ -419,6 +428,22 @@ def gastos_list(request: Request, estado: str = Query(""), categoria: str = Quer
     if categoria:
         q = q.filter(GastoRegistrado.categoria == categoria.upper())
     gastos = q.limit(200).all()
+    # Normaliza registros antiguos con nulos (retención/comprobante/cuenta)
+    # para que la plantilla nunca evalúe None inesperados.
+    for g in gastos:
+        try:
+            if getattr(g, "retencion", None) is None:
+                g.retencion = 0.0
+            if not getattr(g, "tipo_comprobante", None):
+                g.tipo_comprobante = "FACTURA"
+            if getattr(g, "monto_base", None) is None:
+                g.monto_base = 0.0
+            if getattr(g, "monto_igv", None) is None:
+                g.monto_igv = 0.0
+            if getattr(g, "monto_total", None) is None:
+                g.monto_total = 0.0
+        except Exception:
+            continue
     cuentas = db.query(CuentaContable).filter(CuentaContable.activo == True).order_by(CuentaContable.codigo).all()  # noqa: E712
     centros = db.query(CentroCosto).filter(CentroCosto.activo == True).order_by(CentroCosto.codigo).all()  # noqa: E712
     proveedores = db.query(Supplier).order_by(Supplier.nombre).all()

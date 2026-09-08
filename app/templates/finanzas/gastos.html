@@ -129,8 +129,8 @@ gastoModo();
         <td class="p-2 font-mono">{{ g.id }}</td>
         <td>{{ g.fecha_emision }}</td>
         <td>{{ prov_map.get(g.proveedor_id, '') }}{% if g.ruc_proveedor %} ({{ g.ruc_proveedor }}){% elif not g.proveedor_id %}—{% endif %}{% if g.glosa %}<br><span class="text-slate-400">{{ g.glosa }}</span>{% endif %}</td>
-        <td class="font-mono">{{ g.tipo_comprobante or '' }} {{ g.numero_comprobante or '' }}</td>
-        <td><span class="px-1.5 py-0.5 rounded bg-slate-100">{{ g.categoria.replace('_', ' ')|title if g.categoria else '—' }}</span></td>
+        <td class="font-mono">{{ (g.tipo_comprobante or 'FACTURA') }} {{ g.numero_comprobante or '' }}</td>
+        <td><span class="px-1.5 py-0.5 rounded bg-slate-100">{{ (g.categoria or 'OTRO').replace('_', ' ')|title }}</span></td>
         <td class="font-mono hidden md:table-cell">{{ cuentas_map.get(g.cuenta_id, g.cuenta_id or '—') }}</td>
         <td class="text-right">{{ soles(g.monto_base or 0) }}</td>
         <td class="text-right">{{ soles(g.monto_igv or 0) }}</td>
