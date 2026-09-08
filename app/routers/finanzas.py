@@ -370,6 +370,12 @@ def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), d
         svc.ensure_cxp_tipo_comprobante_column(db)
         svc.ensure_cxp_origen_tipo_column(db)
         _sync_cxp(db)
+        # Red de seguridad: espejos de OCs RECEIVED/BILLED siempre presentes.
+        try:
+            from app.services import compras_kardex as _ck
+            _ck.reparar_cxp_compras(db)
+        except Exception as e:
+            _logger.warning("reparar CxP compras omitido: %s", e)
         # Bandeja Única de Tesorería: espeja gastos pendientes (incl. RxH) como CxP.
         # Solo el PAGAR genera el EGRESO real (MovimientoFinanciero + 1011/1041).
         try:

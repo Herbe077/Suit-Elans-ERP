@@ -280,12 +280,57 @@ def recepcionar_oc(db: Session, oc_id: int, recepciones: dict[int, float],
         _espejo_legacy_recepcion(db, oc, items, usuario_id)
 
         db.commit()
+        # Espejo obligatorio en CxP al recibir (folio temporal si no hay
+        # factura). Best-effort en transacción propia: jamás bloquea la
+        # recepción ni altera su atomicidad.
+        try:
+            asegurar_cxp_recepcion(db, oc.id)
+        except Exception:
+            pass
         return {"oc_id": oc.id, "estado": oc.estado, "asiento_id": asiento.id,
                 "asiento_numero": asiento.numero, "valorizado": float(total_valorizado),
                 "kardex_ids": [k.id for k in kardex_rows]}
     except Exception:
         db.rollback()
         raise
+
+
+# ── Espejo CxP al recibir (obligatorio) ────────────────────────────
+def asegurar_cxp_recepcion(db: Session, oc_id: int):
+    """Crea el espejo CxP de una OC recibida si falta (folio temporal).
+
+    Solo para RECEIVED/PARTIALLY_RECEIVED sin factura: BILLED lo gestiona
+    facturar_oc. No genera asientos. Retorna la CxP o None (sin monto).
+    """
+    from app.services.finanzas import (ensure_cxp_origen_tipo_column,
+                                       ensure_cxp_tipo_comprobante_column)
+    ensure_cxp_tipo_comprobante_column(db)
+    ensure_cxp_origen_tipo_column(db)
+    oc = db.get(OrdenCompra, oc_id)
+    if not oc:
+        return None
+    try:
+        est = normalizar_estado_oc(oc.estado)
+    except Exception:
+        return None
+    if est not in ("RECEIVED", "PARTIALLY_RECEIVED"):
+        return None
+    if db.query(CuentaPorPagar).filter(
+            CuentaPorPagar.orden_compra_id == oc.id).first():
+        return None
+    total = _d(oc.monto_total)
+    if total <= 0:
+        return None
+    cxp = CuentaPorPagar(
+        proveedor_id=oc.proveedor_id, orden_compra_id=oc.id,
+        origen_tipo="COMPRAS", tipo_comprobante="OTROS",
+        numero_factura=oc.folio or f"OC-{oc.id}",
+        monto_total=float(total), monto_pagado=0.0,
+        saldo_pendiente=float(total), fecha_emision=oc.fecha_emision,
+        estado="POR_PAGAR")
+    db.add(cxp)
+    db.commit()
+    return cxp
 
 
 # ── Facturación / provisión (601 + 4011 / 421 + CxP) ────────────────
@@ -402,20 +447,58 @@ def facturar_oc(db: Session, oc_id: int, numero_factura: str,
 
 
 # ── Reparación: OCs sin espejo en CxP ─────────────────────────────
+def _asiento_provision_oc(db: Session, oc) -> object | None:
+    """Backfill del asiento 6011/40111/4212 para una OC BILLED sin provisión.
+
+    Solo hace flush (sin commit/rollback): el llamante gestiona la
+    transacción (idealmente con SAVEPOINT). Retorna el asiento existente
+    o creado, o None si no hay monto o el período está cerrado. Nunca lanza.
+    """
+    from app.models.finanzas import AsientoContable
+    from app.services.finanzas import crear_asiento_flush
+    try:
+        total = _d(oc.monto_total)
+        if total <= 0:
+            return None
+        cxp = db.query(CuentaPorPagar).filter(
+            CuentaPorPagar.orden_compra_id == oc.id).first()
+        cand = db.query(AsientoContable).filter(
+            AsientoContable.origen_tipo == "COMPRA",
+            AsientoContable.origen_id.in_(
+                [x for x in (oc.id, cxp.id if cxp else None) if x])).all()
+        if cand:
+            return cand[0]
+        exigir_periodo_abierto(db, oc.fecha_factura or date.today())
+        base, igv, _tot = desglose_igv(total)
+        c6011, c40111, c4212 = _cuenta(db, CTA_6011), _cuenta(db, CTA_40111), _cuenta(db, CTA_4212)
+        return crear_asiento_flush(
+            db, oc.fecha_factura or date.today(),
+            f"Provisión {(oc.numero_factura or '').strip() or oc.folio or oc.id} OC {oc.folio or oc.id}",
+            "COMPRA", oc.id,
+            ([{"cuenta_id": c6011.id, "debe": base, "haber": Decimal("0")}]
+             + ([{"cuenta_id": c40111.id, "debe": igv, "haber": Decimal("0")}] if igv > 0 else [])
+             + [{"cuenta_id": c4212.id, "debe": Decimal("0"), "haber": total}]))
+    except Exception:
+        return None
+
+
 def reparar_cxp_compras(db: Session) -> dict:
     """Recorre OCs RECEIVED/PARTIALLY_RECEIVED/BILLED y asegura su CxP.
 
     - BILLED con factura: crea o actualiza el espejo (FACTURA/COMPRAS) con
-      el total de la OC, conservando lo ya amortizado.
+      el total de la OC, conservando lo ya amortizado, y verifica el
+      asiento de provisión 6011/40111/4212 (lo crea si falta).
     - RECEIVED sin factura: crea el espejo con el folio como comprobante.
-    No genera asientos (la provisión vive en facturar_oc). Idempotente.
-    Retorna {"creadas": n, "actualizadas": n, "omitidas": [(folio, motivo)]}.
+    No duplica: todo es idempotente. Retorna conteos y asiento por OC.
     """
     from app.services.finanzas import (ensure_cxp_origen_tipo_column,
-                                       ensure_cxp_tipo_comprobante_column)
+                                       ensure_cxp_tipo_comprobante_column,
+                                       seed_pcge_basico)
+    seed_pcge_basico(db)
     ensure_cxp_tipo_comprobante_column(db)
     ensure_cxp_origen_tipo_column(db)
-    rep = {"creadas": 0, "actualizadas": 0, "omitidas": []}
+    rep = {"creadas": 0, "actualizadas": 0, "omitidas": [],
+           "asientos": {}}
     for oc in db.query(OrdenCompra).all():
         try:
             est = normalizar_estado_oc(oc.estado)
@@ -457,6 +540,14 @@ def reparar_cxp_compras(db: Session) -> dict:
                     elif _d(cxp.monto_pagado) > 0:
                         cxp.estado = "PARCIAL"
                     rep["actualizadas"] += 1
+            if est == "BILLED":
+                try:
+                    with db.begin_nested():
+                        asiento = _asiento_provision_oc(db, oc)
+                        if asiento is not None:
+                            rep["asientos"][oc.folio or oc.id] = asiento.numero
+                except Exception:
+                    pass
         except Exception as e:
             rep["omitidas"].append((getattr(oc, "folio", oc.id), str(e)[:80]))
             continue

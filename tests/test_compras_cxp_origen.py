@@ -101,11 +101,12 @@ def test_facturar_actualiza_espejo_sin_duplicar():
     db = _db()
     _limpia(db)
     oc = _oc_recibida(db, "UPD")
-    rep = ck.reparar_cxp_compras(db)
-    assert rep["creadas"] == 1
+    # el hook de recepción ya dejó el espejo con el folio
     base = db.query(CuentaPorPagar).filter(
         CuentaPorPagar.orden_compra_id == oc.id).all()
     assert len(base) == 1 and base[0].numero_factura == oc.folio
+    rep = ck.reparar_cxp_compras(db)
+    assert rep["creadas"] == 0  # nada nuevo: el espejo ya existe
     r = ck.facturar_oc(db, oc.id, "F001-TCO-1", date.today())
     assert r["estado"] == "BILLED"
     assert r["base"] == 737.29 and r["total"] == 870.0
@@ -134,7 +135,7 @@ def test_reparar_billed_crea_cxp_con_totales():
     oc.monto_total = 476.0
     db.commit()
     rep = ck.reparar_cxp_compras(db)
-    assert rep["creadas"] == 1
+    assert rep["actualizadas"] == 1  # el espejo del hook se actualiza
     cxp = db.query(CuentaPorPagar).filter(
         CuentaPorPagar.orden_compra_id == oc.id).first()
     assert cxp is not None and cxp.monto_total == 476.0
@@ -151,3 +152,69 @@ def test_cxp_muestra_origen_y_pagar(client, auth_cookies):
     db.close()
     t = client.get("/finanzas/cuentas-por-pagar", cookies=auth_cookies).text
     assert "COMPRAS" in t and oc.folio in t
+
+
+def test_recepcion_crea_espejo_obligatorio():
+    from app.models.finanzas import CuentaPorPagar
+    from app.services import compras_kardex as ck
+    db = _db()
+    _limpia(db)
+    oc = _oc_recibida(db, "REC")
+    cxp = db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.orden_compra_id == oc.id).first()
+    assert cxp is not None  # espejo automático al recibir
+    assert cxp.numero_factura == oc.folio and cxp.origen_tipo == "COMPRAS"
+    assert cxp.estado == "POR_PAGAR" and cxp.saldo_pendiente == 870.0
+    # segunda reparación no duplica
+    rep = ck.reparar_cxp_compras(db)
+    assert db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.orden_compra_id == oc.id).count() == 1
+    _limpia(db)
+    db.close()
+
+
+def test_reparar_backfill_asiento_billed_legado():
+    from app.models.finanzas import AsientoContable, CuentaPorPagar
+    from app.models.inventario import OrdenCompra
+    from app.models.purchasing import Supplier
+    from app.services import compras_kardex as ck
+    db = _db()
+    _limpia(db)
+    sup = Supplier(nombre="TCO-LEG")
+    db.add(sup)
+    db.flush()
+    # OC BILLED legada: totales pero sin CxP ni asiento de provisión
+    oc = OrdenCompra(proveedor_id=sup.id, folio="OC-TCO-LEG",
+                     estado="BILLED", numero_factura="F001-LEG-001",
+                     subtotal=737.29, igv=132.71, monto_total=870.0,
+                     fecha_factura=date.today())
+    db.add(oc)
+    db.commit()
+    rep = ck.reparar_cxp_compras(db)
+    assert rep["creadas"] == 1
+    cxp = db.query(CuentaPorPagar).filter(
+        CuentaPorPagar.orden_compra_id == oc.id).first()
+    assert cxp is not None and cxp.tipo_comprobante == "FACTURA"
+    prov = db.query(AsientoContable).filter(
+        AsientoContable.origen_tipo == "COMPRA",
+        AsientoContable.origen_id == oc.id).all()
+    assert len(prov) == 1
+    from app.models.finanzas import CuentaContable, LineaAsientoContable
+    lineas = db.query(LineaAsientoContable).filter(
+        LineaAsientoContable.asiento_id == prov[0].id).all()
+    mapa = {}
+    for l in lineas:
+        c = db.get(CuentaContable, l.cuenta_id)
+        mapa[c.codigo] = (Decimal(str(l.debe)), Decimal(str(l.haber)))
+    assert mapa["6011"] == (Decimal("737.29"), Decimal("0"))
+    assert mapa["40111"] == (Decimal("132.71"), Decimal("0"))
+    assert mapa["4212"] == (Decimal("0"), Decimal("870"))
+    assert rep["asientos"].get("OC-TCO-LEG") == prov[0].numero
+    # segunda pasada: nada nuevo
+    rep2 = ck.reparar_cxp_compras(db)
+    assert rep2["creadas"] == 0
+    assert db.query(AsientoContable).filter(
+        AsientoContable.origen_tipo == "COMPRA",
+        AsientoContable.origen_id == oc.id).count() == 1
+    _limpia(db)
+    db.close()
