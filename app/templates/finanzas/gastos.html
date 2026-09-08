@@ -12,7 +12,7 @@
       <input name="fecha" type="date" value="{{ '' }}" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
     </label>
     <label class="block min-w-0">Categoría
-      <select name="categoria" id="g-cat" onchange="gastoModo()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate">
+      <select name="categoria" id="g-cat" onchange="gastoCategoria()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate">
         {% for cat in categorias %}<option value="{{ cat }}">{{ cat|replace('_', ' ')|title }}</option>{% endfor %}
       </select>
     </label>
@@ -54,15 +54,34 @@
     <div class="block min-w-0">Monto Total S/
       <div id="g-total" class="border rounded px-2 py-1.5 mt-0.5 bg-[#FAF8F5] font-bold">S/ 0.00</div>
     </div>
+    <div class="block min-w-0">Cuenta contable
+      <div id="g-cuenta" class="border rounded px-2 py-1.5 mt-0.5 bg-[#FAF8F5] font-bold font-mono">—</div>
+    </div>
     <div class="self-end"><button class="bg-[#370003] text-white rounded px-4 py-1.5 font-bold w-full">Registrar gasto</button></div>
   </form>
 </div>
 <script>
 var GASTO_SIN_IGV = ['PLANILLA', 'HONORARIOS_RXH', 'ALQUILER_NATURAL'];
+var GASTO_CUENTA = {'ALQUILER': '6311', 'ALQUILER_NATURAL': '6311',
+  'HONORARIOS': '6322', 'HONORARIOS_RXH': '6322', 'PLANILLA': '6211',
+  'ACTIVO_FIJO': '3341', 'OTRO': '6511'};
+// Al cambiar de categoría se preselecciona el comprobante y la cuenta.
+function gastoCategoria() {
+  var cat = document.getElementById('g-cat').value;
+  var tipoSel = document.getElementById('g-tipo');
+  if (cat === 'HONORARIOS' || cat === 'HONORARIOS_RXH') {
+    tipoSel.value = 'RECIBO_HONORARIOS';
+  } else if (cat === 'PLANILLA') {
+    tipoSel.value = 'OTROS';
+  } else {
+    tipoSel.value = 'FACTURA';
+  }
+  gastoModo();
+}
 function gastoModo() {
   var cat = document.getElementById('g-cat').value;
   var tipo = document.getElementById('g-tipo').value;
-  var esRxh = cat === 'HONORARIOS_RXH' || tipo === 'RECIBO_HONORARIOS';
+  var esRxh = cat === 'HONORARIOS' || cat === 'HONORARIOS_RXH' || tipo === 'RECIBO_HONORARIOS';
   var sinIgv = GASTO_SIN_IGV.indexOf(cat) !== -1 || esRxh;
   var esPlanilla = cat === 'PLANILLA';
   function vis(id, mostrar) {
@@ -94,12 +113,14 @@ function gastoModo() {
     if (lbR) lbR.textContent = 'RUC';
     if (lbN) lbN.textContent = 'N° Comprobante';
   }
+  var badge = document.getElementById('g-cuenta');
+  if (badge) badge.textContent = GASTO_CUENTA[cat] || '—';
   gastoCalc(sinIgv);
 }
 function gastoCalc(sinIgv) {
   var cat = document.getElementById('g-cat').value;
   var tipo = document.getElementById('g-tipo').value;
-  var esRxh = cat === 'HONORARIOS_RXH' || tipo === 'RECIBO_HONORARIOS';
+  var esRxh = cat === 'HONORARIOS' || cat === 'HONORARIOS_RXH' || tipo === 'RECIBO_HONORARIOS';
   if (sinIgv === undefined) {
     sinIgv = GASTO_SIN_IGV.indexOf(cat) !== -1 || esRxh;
   }

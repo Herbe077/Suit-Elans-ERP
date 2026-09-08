@@ -404,31 +404,6 @@ def cxp(request: Request, estado: str = Query(""), proveedor: str = Query(""), d
             pass
         return _error_500("/finanzas/cuentas-por-pagar", e)
 
-@router.post("/cuentas-por-pagar", response_class=HTMLResponse)
-def cxp_crear(proveedor_id: int = Form(...), numero_factura: str = Form(""), monto_total: float = Form(...), retencion: float = Form(0), fecha_emision: str = Form(""), fecha_vencimiento: str = Form(""), db: Session = Depends(get_db), user=FinanzasAuth):
-    from datetime import timedelta
-    if monto_total <= 0:
-        return HTMLResponse("monto_total debe ser positivo", status_code=400)
-    if retencion < 0 or retencion > monto_total:
-        return HTMLResponse("retencion inválida (0 <= retencion <= total)", status_code=400)
-    try:
-        fe=date.fromisoformat(fecha_emision) if fecha_emision else date.today()
-        fv=date.fromisoformat(fecha_vencimiento) if fecha_vencimiento else date.today()+timedelta(days=30)
-    except Exception:
-        fe=date.today(); fv=date.today()+timedelta(days=30)
-    # Provisión atómica: el monto ingresado es TOTAL FINAL con IGV incluido.
-    # Base = total/1.18, IGV = total - base, pasivo 4212 = total.
-    from app.services import contabilidad as contab
-    try:
-        base = round(monto_total / 1.18, 2)
-        contab.provisionar_compra(db, proveedor_id=proveedor_id, base=base,
-                                  igv=round(monto_total - base, 2),
-                                  numero_factura=numero_factura or None, fecha=fe,
-                                  retencion=retencion, fecha_vencimiento=fv)
-    except ValueError as e:
-        return HTMLResponse(str(e), status_code=400)
-    return RedirectResponse("/finanzas/cuentas-por-pagar", status_code=303)
-
 @router.post("/cuentas-por-pagar/{cid}/pagar", response_class=HTMLResponse)
 def cxp_pagar(cid: int, monto: float = Form(...), cuenta_origen: str = Form("Banco"), db: Session = Depends(get_db), user=FinanzasAuth):
     # Pago atómico: CxP + EGRESO flujo + caja + asiento 4212/1011-1041 (bloquea período cerrado)
