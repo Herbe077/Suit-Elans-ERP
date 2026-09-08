@@ -880,7 +880,7 @@ def obtener_balance_general(db: Session, periodo_id: int | None = None,
         "cxc_12": _rubro(("12",), False, ("122",)),
         "inventarios": _rubro(("21", "24"), False),
         "tributos_40": _rubro(("40",), True),
-        "cxp_42": _rubro(("42",), True),
+        "cxp_42": _rubro(("42", "46"), True),
         "anticipos_122": _rubro(("122",), True),
         "capital_50": _rubro(("50",), True),
     }

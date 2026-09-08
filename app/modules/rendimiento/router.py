@@ -361,10 +361,13 @@ def liquidar_registro(registro_id: int = Form(...), db: Session = Depends(get_db
     reg = db.get(RegistroJornada, registro_id)
     if not reg:
         return RedirectResponse("/rendimiento/calculadora", status_code=303)
-    # integra con Finanzas: crea MovimientoFinanciero EGRESO y CuentaPorPagar
+    # integra con Finanzas: crea la obligación en CxP (POR_PAGAR).
+    # El EGRESO de flujo de caja se genera SOLO al pagar efectivamente
+    # (pagar_proveedor/pagar_gasto); crear un EGRESO aquí inflaría el flujo
+    # con obligaciones aún no liquidadas (monto_pagado 0.00).
     total = sum((d.subtotal for d in db.query(DetalleJornada).filter(DetalleJornada.registro_jornada_id==reg.id).all()), Decimal("0"))
     try:
-        from app.models.finanzas import MovimientoFinanciero, CuentaPorPagar
+        from app.models.finanzas import CuentaPorPagar
         from app.models.purchasing import Supplier
         # busca proveedor genérico personal o crea
         sup = db.query(Supplier).filter(Supplier.nombre=="Personal Destajo").first()
@@ -377,7 +380,25 @@ def liquidar_registro(registro_id: int = Form(...), db: Session = Depends(get_db
         if not cpp:
             cpp = __import__("app.models.finanzas", fromlist=["CuentaPorPagar"]).CuentaPorPagar(proveedor_id=sup.id, numero_factura=f"LIQ-{reg.id}", monto_total=float(total), monto_pagado=0, saldo_pendiente=float(total), estado="POR_PAGAR", fecha_emision=date.today())
             db.add(cpp)
-        db.add(MovimientoFinanciero(tipo="EGRESO", categoria="Pago Servicios", monto=float(total), cuenta_origen="Caja", comprobante_ref=f"LIQ-{reg.id}", usuario_id=user.id, descripcion=f"Liquidación destajo registro {reg.id} operario {reg.operario_id}"))
+            db.flush()
+            # Provisión contable de la obligación: DEBE 6211 (MOD) / HABER 4212.
+            try:
+                from app.services.finanzas import (
+                    crear_asiento_flush, get_cuenta_by_codigo, seed_pcge_basico)
+                from app.services.contabilidad import exigir_periodo_abierto
+                from decimal import Decimal as _D
+                seed_pcge_basico(db)
+                exigir_periodo_abierto(db, date.today())
+                c_mod = get_cuenta_by_codigo(db, "6211")
+                c_prov = get_cuenta_by_codigo(db, "4212")
+                if c_mod and c_prov and _D(str(total)) > 0:
+                    crear_asiento_flush(
+                        db, date.today(), f"Provisión destajo LIQ-{reg.id}",
+                        "COMPRA", cpp.id,
+                        [{"cuenta_id": c_mod.id, "debe": _D(str(total)), "haber": _D("0")},
+                         {"cuenta_id": c_prov.id, "debe": _D("0"), "haber": _D(str(total))}])
+            except Exception:
+                pass
     except Exception:
         pass
     reg.estado = "LIQUIDADO"

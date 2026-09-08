@@ -313,6 +313,102 @@ def registrar_costo_ventas(db: Session, order_id: int, monto: float,
         raise
 
 
+# ── COSTO DE VENTAS BESPOKE (a medida): 6911 / 2111 (o 2411) ─────
+def costo_produccion_pedido(db: Session, order_id: int) -> float:
+    """Costo de producción del pedido: Kardex SALIDA_TALLER + M.O. destajo.
+
+    M.O. = minutos WorkLog terminados × tarifa_minuto_taller (fallback 0.35).
+    None-safe: registros nulos suman 0.0; sin prendas/insumos → 0.0.
+    """
+    from sqlalchemy import func as _func
+
+    from app.models.inventario import MovimientoKardex
+    from app.models.order import Garment, WorkLog
+
+    try:
+        mat = db.query(_func.coalesce(_func.sum(MovimientoKardex.costo_total), 0)).filter(
+            MovimientoKardex.orden_venta_id == order_id,
+            MovimientoKardex.tipo_movimiento == "SALIDA_TALLER").scalar() or 0
+    except Exception:
+        mat = 0
+    try:
+        mat = float(mat or 0)
+    except (TypeError, ValueError):
+        mat = 0.0
+    try:
+        garments = db.query(Garment).filter(Garment.order_id == order_id).all() or []
+        gids = [g.id for g in garments if getattr(g, "id", None) is not None]
+        if gids:
+            minutos = db.query(_func.coalesce(_func.sum(WorkLog.minutos_reales), 0)).filter(
+                WorkLog.garment_id.in_(gids),
+                WorkLog.estado == "terminado").scalar() or 0
+        else:
+            minutos = 0
+        minutos = float(minutos or 0)
+    except (TypeError, ValueError):
+        minutos = 0.0
+    except Exception:
+        minutos = 0.0
+    try:
+        from app.services.finanzas import tarifa_minuto_taller
+        tarifa = float(tarifa_minuto_taller(db) or 0.35)
+    except Exception:
+        tarifa = 0.35
+    if not tarifa or tarifa <= 0:
+        tarifa = 0.35
+    return round((mat or 0.0) + (minutos * tarifa), 2)
+
+
+def registrar_costo_ventas_bespoke(db: Session, order_id: int,
+                                   usuario_id: int | None = None,
+                                   fecha: date | None = None) -> dict | None:
+    """Asiento de costo de ventas al completar orden a medida (bespoke).
+
+    DEBE 6911 (Costo de Ventas) / HABER 2111 (Productos Terminados);
+    si 2111 no tiene saldo deudor suficiente, HABER 2411 (consumo directo).
+    Idempotente por pedido (un asiento COSTO_VENTAS por orden).
+    Retorna None si el costo es 0 (nada que reconocer).
+    """
+    from app.services.finanzas import crear_asiento_flush, saldo_cuenta
+
+    seed_pcge_basico(db)
+    order = db.get(Order, order_id)
+    if not order:
+        raise ValueError("Pedido no encontrado")
+    from app.models.finanzas import AsientoContable as _Asiento
+    ya = db.query(_Asiento) \
+        .filter(_Asiento.origen_tipo == "COSTO_VENTAS",
+                _Asiento.origen_id == order.id).first()
+    if ya:
+        return {"asiento_id": ya.id, "asiento_numero": ya.numero,
+                "monto": 0.0, "existente": True}
+    monto_d = _d(costo_produccion_pedido(db, order.id))
+    if monto_d <= 0:
+        return None
+    try:
+        exigir_periodo_abierto(db, fecha)
+        c_costo = _cuenta(db, CTA_COSTO_VTAS)
+        # Prefiere 2111 si hay saldo; si no, 2411 (consumo directo a medida).
+        haber_codigo = CTA_PT
+        try:
+            if saldo_cuenta(db, CTA_PT) < monto_d:
+                haber_codigo = "2411"
+        except Exception:
+            haber_codigo = CTA_PT
+        c_haber = _cuenta(db, haber_codigo)
+        asiento = crear_asiento_flush(
+            db, fecha or date.today(), f"Costo ventas {order.folio}", "COSTO_VENTAS",
+            order.id,
+            [{"cuenta_id": c_costo.id, "debe": monto_d, "haber": Decimal("0")},
+             {"cuenta_id": c_haber.id, "debe": Decimal("0"), "haber": monto_d}])
+        db.commit()
+        return {"asiento_id": asiento.id, "asiento_numero": asiento.numero,
+                "monto": float(monto_d), "haber": haber_codigo}
+    except Exception:
+        db.rollback()
+        raise
+
+
 # ── COBRO: 1011/1041 / 1212 + flujo ─────────────────────────────────
 def cobrar_venta(db: Session, order_id: int, monto: float, metodo: str,
                  cuenta_codigo: str = "1011", usuario_id: int | None = None,

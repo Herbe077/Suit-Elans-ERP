@@ -91,7 +91,30 @@ def _sync_cxp(db):
             total = float(po.total or 0)
             if total <= 0:
                 continue
-            db.add(CuentaPorPagar(proveedor_id=po.supplier_id, purchase_order_id=po.id, monto_total=total, monto_pagado=0, saldo_pendiente=total, retencion=0, estado="POR_PAGAR", fecha_emision=date.today(), fecha_vencimiento=date.today()+timedelta(days=30)))
+            cxp = CuentaPorPagar(proveedor_id=po.supplier_id, purchase_order_id=po.id, monto_total=total, monto_pagado=0, saldo_pendiente=total, retencion=0, estado="POR_PAGAR", fecha_emision=date.today(), fecha_vencimiento=date.today()+timedelta(days=30))
+            db.add(cxp)
+            db.flush()
+            # Provisión contable de la obligación: DEBE 602 / HABER 4212,
+            # para que el Balance General (42/46) refleje el pasivo.
+            # Defensivo: si la provisión falla, la CxP igual persiste.
+            try:
+                from decimal import Decimal as _D
+                from app.services.contabilidad import exigir_periodo_abierto
+                svc.seed_pcge_basico(db)
+                exigir_periodo_abierto(db, date.today())
+                c_compra = svc.get_cuenta_by_codigo(db, "602")
+                c_prov = svc.get_cuenta_by_codigo(db, "4212")
+                ya = db.query(AsientoContable).filter(
+                    AsientoContable.origen_tipo == "COMPRA",
+                    AsientoContable.origen_id == cxp.id).first()
+                if c_compra and c_prov and not ya and total > 0:
+                    svc.crear_asiento_flush(
+                        db, date.today(), f"Provisión CxP PO {po.folio or po.id}",
+                        "COMPRA", cxp.id,
+                        [{"cuenta_id": c_compra.id, "debe": _D(str(total)), "haber": _D("0")},
+                         {"cuenta_id": c_prov.id, "debe": _D("0"), "haber": _D(str(total))}])
+            except Exception as e:
+                _logger.warning("provisión CxP %s omitida: %s", po.folio, e)
     db.commit()
 
 @router.get("", response_class=HTMLResponse)

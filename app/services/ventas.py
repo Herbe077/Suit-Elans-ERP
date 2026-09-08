@@ -237,4 +237,21 @@ def entregar(db: Session, order_id: int) -> Order:
         g.estado_taller = "entregado"
     db.commit()
     db.refresh(order)
+    # Costo de ventas automático (69) al completar: Kardex + destajo/SAM
+    # → DEBE 6911 / HABER 2111 (o 2411 consumo directo). No bloquea la
+    # entrega si no hay costo o el período está cerrado.
+    try:
+        from app.services import contabilidad as contab
+        contab.registrar_costo_ventas_bespoke(db, order.id)
+    except Exception:
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "costo ventas %s omitido", getattr(order, "folio", order_id),
+            exc_info=True)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        order = db.get(Order, order_id)
+    db.refresh(order)
     return order
