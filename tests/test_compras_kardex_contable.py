@@ -3,7 +3,7 @@
 Cubre el spec:
 - OC DRAFT no afecta stock/contabilidad; APPROVED habilita recepción.
 - Recepción -> Kardex ENTRADA valorizado + CPP + asiento DEBE 2411 / HABER 6111.
-    - Facturación -> provisión DEBE 602 + DEBE 40111 / HABER 4212 + CxP, estado BILLED.
+    - Facturación -> provisión DEBE 6011 + DEBE 40111 / HABER 4212 + CxP, estado BILLED.
 - Consumo taller -> DEBE 6111 / HABER 2411. Merma -> DEBE 6591 / HABER 2411.
 - Atomicidad: fallo en recepción no deja kardex/asiento parcial.
 - Landed prorrateado por valor antes del CPP final.
@@ -129,7 +129,7 @@ def test_recepcion_parcial_total_con_cpp_y_asiento_241_611():
     db.close()
 
 
-def test_facturar_provision_602_4011_421_y_billed():
+def test_facturar_provision_6011_40111_4212_y_billed():
     from app.models.finanzas import CuentaPorPagar
     from app.services import compras_kardex as ck
     db = _db()
@@ -142,7 +142,7 @@ def test_facturar_provision_602_4011_421_y_billed():
     # Precio ingresado con IGV incluido: total 1000 → base 847.46, igv 152.54.
     assert r["base"] == 847.46 and r["igv"] == 152.54 and r["total"] == 1000.0
     mapa = _lineas_de_asiento(db, r["asiento_id"])
-    assert mapa["602"] == (Decimal("847.46"), Decimal("0"))
+    assert mapa["6011"] == (Decimal("847.46"), Decimal("0"))
     assert mapa["40111"] == (Decimal("152.54"), Decimal("0"))
     assert mapa["4212"] == (Decimal("0"), Decimal("1000"))
     cxp = db.get(CuentaPorPagar, r["cxp_id"])
@@ -204,4 +204,40 @@ def test_rollback_atomico_en_recepcion_fallida():
     # la OC sigue viva y operable tras el rollback
     r = ck.recepcionar_oc(db, oc.id, {dets[0].id: 10.0})
     assert r["estado"] == "RECEIVED"
+    db.close()
+
+
+def test_facturar_870_entra_cxp_y_se_paga():
+    """Ejemplo auditoría: total 870 → base 737.29 + igv 132.71.
+
+    Provisión 6011/40111/4212, CxP FACTURA POR_PAGAR por 870 y pago total
+    que la salda con EGRESO en caja (visible en /cxp para Pagar).
+    """
+    from app.models.finanzas import CuentaPorPagar, MovimientoFinanciero
+    from app.services import compras_kardex as ck
+    from app.services import contabilidad as contab
+    db = _db()
+    sup = _nuevo_proveedor(db, "SUP-870")
+    prod = _nuevo_producto(db, "SKU-870-001")
+    oc, dets = _nueva_oc(db, sup.id, "OC-870-001", [(prod.id, 10, 87.0)],
+                         estado="APPROVED")
+    ck.recepcionar_oc(db, oc.id, {dets[0].id: 10.0})
+    r = ck.facturar_oc(db, oc.id, "F001-000123", date.today())
+    assert r["estado"] == "BILLED"
+    assert r["base"] == 737.29 and r["igv"] == 132.71 and r["total"] == 870.0
+    mapa = _lineas_de_asiento(db, r["asiento_id"])
+    assert mapa["6011"] == (Decimal("737.29"), Decimal("0"))
+    assert mapa["40111"] == (Decimal("132.71"), Decimal("0"))
+    assert mapa["4212"] == (Decimal("0"), Decimal("870"))
+    cxp = db.get(CuentaPorPagar, r["cxp_id"])
+    assert cxp.tipo_comprobante == "FACTURA"
+    assert cxp.numero_factura == "F001-000123"
+    assert cxp.monto_total == 870.0 and cxp.saldo_pendiente == 870.0
+    assert cxp.estado == "POR_PAGAR"
+    # Pagar desde la bandeja: salda y mueve caja
+    p = contab.pagar_proveedor(db, cxp.id, 870.0, "1041")
+    assert p["estado"] == "PAGADO" and p["saldo"] == 0.0
+    assert db.query(MovimientoFinanciero).filter(
+        MovimientoFinanciero.tipo == "EGRESO",
+        MovimientoFinanciero.comprobante_ref == "F001-000123").count() == 1
     db.close()

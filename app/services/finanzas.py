@@ -86,7 +86,7 @@ PCGE_ANALITICAS = [
     ("4212", "Emitidas - Proveedores", "PASIVO", 3, "421", 4, True),
     ("5011", "Capital Social", "PATRIMONIO", 3, "501", 5, True),
     ("5911", "Utilidades Acumuladas", "PATRIMONIO", 2, "59", 5, True),
-    ("6011", "Mercaderías", "GASTO", 3, "601", 6, True),
+    ("6011", "Compras - Materia Prima", "GASTO", 3, "601", 6, True),
     ("602", "Materias Primas", "GASTO", 2, "60", 6, True),
     ("6111", "Variación de existencias - Materias primas", "GASTO", 3, "611", 6, True),
     ("6591", "Otros gastos de gestión - Mermas y desmedros", "GASTO", 3, "659", 6, True),

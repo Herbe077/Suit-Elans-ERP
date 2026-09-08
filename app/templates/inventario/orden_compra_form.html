@@ -11,6 +11,13 @@
   <span class="text-sm text-slate-500">{{ prov.nombre if prov }} · S/ {{ "%.2f"|format(oc.monto_total) }}</span>
 </div>
 <p class="text-xs text-slate-500 mt-1">Emisión: {{ oc.fecha_emision }} · Entrega esperada: {{ oc.fecha_entrega_esperada or '—' }}{% if oc.numero_factura %} · 🧾 {{ oc.numero_factura }} ({{ oc.fecha_factura or 's/f' }}){% endif %}</p>
+{% set _bt = ((oc.monto_total or 0) / 1.18) %}
+{% set _bt = (_bt * 100)|round / 100 %}
+<div class="grid grid-cols-3 gap-2 mt-2 text-xs max-w-xl">
+  <div class="bg-white rounded-lg shadow px-3 py-2"><p class="text-slate-500">Subtotal Neto (Base)</p><p class="font-bold font-mono">S/ {{ "%.2f"|format(_bt) }}</p></div>
+  <div class="bg-white rounded-lg shadow px-3 py-2"><p class="text-slate-500">IGV (18%)</p><p class="font-bold font-mono">S/ {{ "%.2f"|format((oc.monto_total or 0) - _bt) }}</p></div>
+  <div class="bg-white rounded-lg shadow px-3 py-2 border-t-2 border-[#C5A880]"><p class="text-slate-500">Total Inc. IGV</p><p class="font-bold font-mono">S/ {{ "%.2f"|format(oc.monto_total or 0) }}</p></div>
+</div>
 
 {# ——— Paso del flujo ——— #}
 {% set pasos = ['DRAFT', 'APPROVED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'BILLED'] %}
@@ -73,7 +80,7 @@
     <h2 class="font-bold mb-2 text-sm">Facturar <span class="font-normal text-slate-400">→ BILLED</span></h2>
     {% if estado_canon == 'BILLED' %}
       {% for c in cxps %}<p class="text-xs">🧾 {{ c.numero_factura }} · Total S/ {{ "%.2f"|format(c.monto_total) }} · Saldo S/ {{ "%.2f"|format(c.saldo_pendiente) }} · {{ c.estado }}</p>{% endfor %}
-      <p class="text-xs text-slate-500 mt-1">Base S/ {{ "%.2f"|format(oc.subtotal) }} · IGV S/ {{ "%.2f"|format(oc.igv) }} · Total S/ {{ "%.2f"|format(oc.monto_total) }}</p>
+      <p class="text-xs text-slate-500 mt-1">Subtotal Neto S/ {{ "%.2f"|format(oc.subtotal) }} · IGV (18%) S/ {{ "%.2f"|format(oc.igv) }} · Total Inc. IGV S/ {{ "%.2f"|format(oc.monto_total) }}</p>
     {% elif estado_canon in ('DRAFT', 'APPROVED') %}
     <p class="text-xs text-slate-500 bg-marfil border border-[#C5A880]/40 rounded px-3 py-2">Requiere recepción de mercadería previa.</p>
     {% else %}
@@ -94,7 +101,7 @@
   <div class="text-xs border-b py-2 flex flex-wrap justify-between items-center gap-2">
     <span>{{ p.nombre if p else ('Prod#' ~ d.producto_id) }} <span class="text-slate-400">{{ p.sku if p }}</span><br>
       Sol: {{ d.cantidad_solicitada }} · Rec: {{ d.cantidad_recibida }} · <b>Pend: {{ d.pendiente }}</b> ·
-      Precio S/ {{ "%.2f"|format(d.precio_unitario) }}{% if d.descuento_unitario %} − Dto S/ {{ "%.2f"|format(d.descuento_unitario) }}{% endif %} + Landed/u S/ {{ "%.2f"|format(d.landed_unitario or 0) }} = <b>Final S/ {{ "%.2f"|format(d.costo_unitario_final or d.precio_unitario) }}</b>
+      Precio S/ {{ "%.2f"|format(d.precio_unitario) }} <span class="text-slate-400">(IGV incl. · Neto S/ {{ "%.2f"|format(d.precio_unitario / 1.18) }} sin IGV)</span>{% if d.descuento_unitario %} − Dto S/ {{ "%.2f"|format(d.descuento_unitario) }}{% endif %} + Landed/u S/ {{ "%.2f"|format(d.landed_unitario or 0) }} = <b>Final S/ {{ "%.2f"|format(d.costo_unitario_final or d.precio_unitario) }}</b> <span class="text-slate-400" title="Costo unitario neto (sin IGV) usado para valorizar el inventario en la Cuenta 2411">ⓘ neto → 2411</span>
       {% if p %} · <span class="text-slate-500">CPP S/ {{ "%.2f"|format(p.costo_promedio or p.costo_unitario or 0) }} · Stock {{ p.stock_fisico }}</span>{% endif %}</span>
     {% if d.pendiente > 0 and estado_canon in ('APPROVED', 'PARTIALLY_RECEIVED') %}
     <form method="post" action="/inventario/compras/orden/{{ oc.id }}/recibir" class="flex gap-1 shrink-0" aria-label="Recibir en kardex">
@@ -135,7 +142,7 @@
 <div class="bg-white rounded-xl shadow p-4 mt-3 border-t-2 border-[#C5A880]">
   <h2 class="font-bold mb-2 text-sm">Kardex valorizado <span class="font-normal text-slate-500">(S/ {{ "%.2f"|format(valorizado) }})</span></h2>
   {% for k in kardex %}
-  <div class="text-xs border-b py-1">ENTRADA {{ k.cantidad }} u × S/ {{ "%.2f"|format(k.costo_unitario or 0) }} = <b>S/ {{ "%.2f"|format(k.costo_total or 0) }}</b> · Saldo {{ k.saldo_fisico }} u (S/ {{ "%.2f"|format(k.saldo_valorizado or 0) }}) · <span class="text-slate-500">{{ k.doc_ref or '' }} · {{ k.fecha }}</span>{% if k.asiento_id %} · <span class="text-slate-500">asiento #{{ k.asiento_id }}</span>{% endif %}</div>
+  <div class="text-xs border-b py-1">ENTRADA {{ k.cantidad }} u × S/ {{ "%.2f"|format(k.costo_unitario or 0) }} <span class="text-slate-400" title="Costo unitario neto (sin IGV) utilizado para la valorización de inventarios en la Cuenta 2411">(neto sin IGV → 2411)</span> = <b>S/ {{ "%.2f"|format(k.costo_total or 0) }}</b> · Saldo {{ k.saldo_fisico }} u (S/ {{ "%.2f"|format(k.saldo_valorizado or 0) }}) · <span class="text-slate-500">{{ k.doc_ref or '' }} · {{ k.fecha }}</span>{% if k.asiento_id %} · <span class="text-slate-500">asiento #{{ k.asiento_id }}</span>{% endif %}</div>
   {% else %}<p class="text-xs text-slate-400">Sin recepciones: en DRAFT no se genera Kardex ni asientos.</p>{% endfor %}
   {% for a in asientos %}<p class="text-xs mt-1">📒 {{ a.numero }} · {{ a.fecha }} · {{ a.glosa }} ({{ a.origen_tipo }})</p>{% endfor %}
   <p class="text-xs text-slate-400 mt-2" title="Cada recepción genera: DEBE 241 (materias primas) / HABER 611 (variación de existencias). La facturación provisiona: DEBE 601 + 4011 (IGV) / HABER 421 (proveedores).">ⓘ Cada recepción genera asiento 241/611; la facturación, 601+4011/421.</p>

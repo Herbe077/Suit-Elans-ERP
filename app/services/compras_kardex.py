@@ -56,7 +56,7 @@ def desglose_igv(total: float | Decimal) -> tuple[Decimal, Decimal, Decimal]:
 # Cuentas PCGE usadas por este servicio (analíticas).
 CTA_2411 = "2411"    # Materia prima - Telas y avíos (activo)
 CTA_6111 = "6111"    # Variación de existencias (gasto)
-CTA_6011 = "602"     # Compras de materias primas (gasto)
+CTA_6011 = "6011"    # Compras - Materia prima (gasto, provisión OC)
 CTA_40111 = "40111"  # IGV crédito fiscal (activo/pasivo según plan)
 CTA_4212 = "4212"    # Proveedores - Emitidas (pasivo)
 CTA_6591 = "6591"    # Mermas y desmedros (gasto)
@@ -294,8 +294,8 @@ def facturar_oc(db: Session, oc_id: int, numero_factura: str,
     """RECEIVED (o PARTIALLY_RECEIVED) -> BILLED.
 
     Genera en la misma transacción:
-      - provisión DEBE 602 (base) + DEBE 40111 (IGV) / HABER 4212 (total)
-      - CuentaPorPagar vinculada a la OC (idempotente por numero_factura).
+      - provisión DEBE 6011 (base neta) + DEBE 40111 (IGV) / HABER 4212 (total)
+      - CuentaPorPagar FACTURA vinculada a la OC (idempotente por numero_factura).
     La base es lo efectivamente RECIBIDO (cantidad_recibida * precio neto +
     landed prorrateado), no lo solicitado.
     """
@@ -355,6 +355,7 @@ def facturar_oc(db: Session, oc_id: int, numero_factura: str,
 
         cxp = CuentaPorPagar(
             proveedor_id=oc.proveedor_id, orden_compra_id=oc.id,
+            tipo_comprobante="FACTURA",
             numero_factura=numero_factura, monto_total=float(total),
             monto_pagado=0.0, saldo_pendiente=float(total),
             fecha_emision=fecha, estado="POR_PAGAR",
