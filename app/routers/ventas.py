@@ -473,17 +473,37 @@ def abrir(saldo_apertura: float = Form(0), db: Session = Depends(get_db), user=A
         ventas_svc.abrir_turno(db, user.id, saldo_apertura)
     except ValueError:
         return RedirectResponse("/ventas/caja?error=turno", status_code=303)
+    except Exception:
+        # Fallo de BD (p.ej. esquema degradado): rollback + aviso, jamás 500.
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return RedirectResponse("/ventas/caja?error=turno", status_code=303)
     return RedirectResponse("/ventas/caja", status_code=303)
 
 
 @router.post("/caja/cerrar")
 def cerrar(saldo_real: float = Form(...), db: Session = Depends(get_db), user=Auth):
-    turno = ventas_svc.turno_abierto(db, user.id)
+    try:
+        turno = ventas_svc.turno_abierto(db, user.id)
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return RedirectResponse("/ventas/caja?error=turno", status_code=303)
     if not turno:
         return RedirectResponse("/ventas/caja?error=turno", status_code=303)
     try:
         t = ventas_svc.cerrar_turno(db, turno.id, saldo_real, user.id)
     except ValueError:
+        return RedirectResponse("/ventas/caja?error=monto", status_code=303)
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
         return RedirectResponse("/ventas/caja?error=monto", status_code=303)
     return RedirectResponse(f"/ventas/caja?error=cierre_{t.diferencia}", status_code=303)
 

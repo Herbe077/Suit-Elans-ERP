@@ -326,15 +326,58 @@ def actividad_flujo_gasto(categoria: str | None, actividad: str | None = None) -
         return valor
     return "INVERSION" if (categoria or "").upper() == "ACTIVO_FIJO" else "OPERATIVO"
 
+def ensure_caja_turnos_table(db: Session) -> None:
+    """Crea caja_turnos si falta (BDs donde alembic nunca corrió esa revisión)."""
+    try:
+        from app.models.billing import CajaTurno
+        CajaTurno.__table__.create(db.get_bind(), checkfirst=True)
+    except Exception:
+        pass
+
+
+def ensure_caja_columns(db: Session) -> None:
+    """Nivelación idempotente de caja/turnos y flag corporativo.
+
+    Cubre el caso de BDs longevas donde una migración no corrió:
+    sin estas columnas cualquier listado de caja/clientes devuelve 500.
+    """
+    ensure_column(
+        db, "cash_movements", "turno_id",
+        "ALTER TABLE cash_movements ADD COLUMN IF NOT EXISTS turno_id INTEGER",
+        "ALTER TABLE cash_movements ADD COLUMN turno_id INTEGER")
+    ensure_column(
+        db, "cash_movements", "medio_pago",
+        "ALTER TABLE cash_movements ADD COLUMN IF NOT EXISTS medio_pago VARCHAR(20)",
+        "ALTER TABLE cash_movements ADD COLUMN medio_pago VARCHAR(20)")
+    ensure_column(
+        db, "cash_movements", "cuenta_contable_id",
+        "ALTER TABLE cash_movements ADD COLUMN IF NOT EXISTS cuenta_contable_id INTEGER",
+        "ALTER TABLE cash_movements ADD COLUMN cuenta_contable_id INTEGER")
+    ensure_column(
+        db, "clients", "es_corporativo",
+        "ALTER TABLE clients ADD COLUMN IF NOT EXISTS es_corporativo BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE clients ADD COLUMN es_corporativo BOOLEAN DEFAULT FALSE")
+    ensure_column(
+        db, "clients", "company_id",
+        "ALTER TABLE clients ADD COLUMN IF NOT EXISTS company_id INTEGER",
+        "ALTER TABLE clients ADD COLUMN company_id INTEGER")
+    ensure_column(
+        db, "orders", "concepto",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS concepto VARCHAR(255)",
+        "ALTER TABLE orders ADD COLUMN concepto VARCHAR(255)")
+
+
 def ensure_runtime_schema(db: Session) -> dict:
     """Nivelación DDL única para arranque/scripts. PROHIBIDO en requests.
 
     El DDL por request (con pgbouncer) apila locks ACCESS EXCLUSIVE y
     cuelga la app. Esto corre una sola vez en el boot (ver lifespan):
-    columnas CxP/gastos, ensanchado de origen_tipo a VARCHAR(40) en PG y
-    tabla empleados. Con commit propio; nunca lanza.
+    columnas CxP/gastos, ensanchado de origen_tipo a VARCHAR(40) en PG,
+    tabla empleados, tabla/columnas de caja-turnos y flag corporativo.
+    Con commit propio; nunca lanza.
     """
-    estado: dict = {"columnas": True, "origen_40": False, "empleados": False}
+    estado: dict = {"columnas": True, "origen_40": False, "empleados": False,
+                    "caja": False}
     try:
         ensure_gasto_retencion_column(db)
         ensure_cxp_tipo_comprobante_column(db)
@@ -342,6 +385,9 @@ def ensure_runtime_schema(db: Session) -> dict:
         ensure_cxp_actividad_flujo_column(db)
         ensure_cxp_observacion_column(db)
         ensure_gasto_flujo_columns(db)
+        ensure_caja_turnos_table(db)
+        ensure_caja_columns(db)
+        estado["caja"] = True
         try:
             bind = db.get_bind()
             if bind.dialect.name == "postgresql":
