@@ -1,0 +1,1466 @@
+{
+  "project_root": "/home/herbias/Projects/Suit-Elans-ERP",
+  "metrics": {
+    "python_files": 91,
+    "models": 80,
+    "static_routes": 167,
+    "templates": 58
+  },
+  "findings": [
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "seed.py",
+      "line": 14,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "seed.py",
+      "line": 21,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "seed.py",
+      "line": 23,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "seed.py",
+      "line": 28,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "seed.py",
+      "line": 32,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "seed.py",
+      "line": 71,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "seed.py",
+      "line": 72,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/main.py",
+      "line": 24,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 259,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 260,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 261,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/inspect_project.py",
+      "line": 267,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/inspect_project.py",
+      "line": 394,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/inspect_project.py",
+      "line": 432,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/inspect_project.py",
+      "line": 633,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/inspect_project.py",
+      "line": 680,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "Uso de eval() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 775,
+      "recommendation": "Eliminar eval() o sustituirlo por parsing seguro."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "Uso de eval() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 780,
+      "recommendation": "Eliminar eval() o sustituirlo por parsing seguro."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "Uso de eval() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 783,
+      "recommendation": "Eliminar eval() o sustituirlo por parsing seguro."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "Uso de exec() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 787,
+      "recommendation": "Eliminar exec() salvo que exista una justificación muy controlada."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "Uso de exec() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 792,
+      "recommendation": "Eliminar exec() salvo que exista una justificación muy controlada."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "Uso de exec() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 795,
+      "recommendation": "Eliminar exec() salvo que exista una justificación muy controlada."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2127,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2138,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2150,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2166,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2189,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2209,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2229,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2250,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2267,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2283,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2324,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2339,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2354,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2369,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2411,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2443,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2451,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2634,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2638,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2642,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/inspect_project.py",
+      "line": 2643,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "SEGURIDAD",
+      "message": "DEBUG=True puede exponer información sensible en producción.",
+      "file": "app/inspect_project.py",
+      "line": 133,
+      "recommendation": "Revisar la configuración antes de desplegar a producción."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "verify=False deshabilita la verificación TLS.",
+      "file": "app/inspect_project.py",
+      "line": 138,
+      "recommendation": "Revisar la configuración antes de desplegar a producción."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "shell=True puede introducir riesgo de command injection.",
+      "file": "app/inspect_project.py",
+      "line": 150,
+      "recommendation": "Revisar la configuración antes de desplegar a producción."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "shell=True puede introducir riesgo de command injection.",
+      "file": "app/inspect_project.py",
+      "line": 804,
+      "recommendation": "Revisar la configuración antes de desplegar a producción."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "shell=True puede introducir riesgo de command injection.",
+      "file": "app/inspect_project.py",
+      "line": 809,
+      "recommendation": "Revisar la configuración antes de desplegar a producción."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "shell=True puede introducir riesgo de command injection.",
+      "file": "app/inspect_project.py",
+      "line": 812,
+      "recommendation": "Revisar la configuración antes de desplegar a producción."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/models/inventory.py",
+      "line": 89,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/models/inventory.py",
+      "line": 94,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "app/models/inventory.py",
+      "line": 83,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "app/models/inventory.py",
+      "line": 85,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "app/models/inventory.py",
+      "line": 88,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/models/produccion.py",
+      "line": 101,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/models/ventas.py",
+      "line": 24,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/models/ventas.py",
+      "line": 103,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 159,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 210,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 228,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 286,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 380,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 404,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 497,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 536,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "Uso de print() detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 603,
+      "recommendation": "Usar logging estructurado en código de aplicación."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 636,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 647,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 672,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/inventario.py",
+      "line": 697,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/ventas.py",
+      "line": 59,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/ventas.py",
+      "line": 62,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/ventas.py",
+      "line": 87,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/ventas.py",
+      "line": 90,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/ventas.py",
+      "line": 106,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/ventas.py",
+      "line": 109,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/ventas.py",
+      "line": 200,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 83,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 247,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 447,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 551,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 556,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 578,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 588,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 595,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 617,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 637,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 688,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/routers/produccion.py",
+      "line": 710,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/services/inventory.py",
+      "line": 57,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/services/taller.py",
+      "line": 133,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/services/ventas.py",
+      "line": 97,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "CALIDAD",
+      "message": "except: captura todas las excepciones sin especificarlas.",
+      "file": "app/modules/rendimiento/router.py",
+      "line": 96,
+      "recommendation": "Capturar excepciones específicas y registrar el error."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "CALIDAD",
+      "message": "except: captura todas las excepciones sin especificarlas.",
+      "file": "app/modules/rendimiento/router.py",
+      "line": 112,
+      "recommendation": "Capturar excepciones específicas y registrar el error."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "CALIDAD",
+      "message": "except: captura todas las excepciones sin especificarlas.",
+      "file": "app/modules/rendimiento/router.py",
+      "line": 121,
+      "recommendation": "Capturar excepciones específicas y registrar el error."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "CALIDAD",
+      "message": "except: captura todas las excepciones sin especificarlas.",
+      "file": "app/modules/rendimiento/router.py",
+      "line": 152,
+      "recommendation": "Capturar excepciones específicas y registrar el error."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "CALIDAD",
+      "message": "except: captura todas las excepciones sin especificarlas.",
+      "file": "app/modules/rendimiento/router.py",
+      "line": 159,
+      "recommendation": "Capturar excepciones específicas y registrar el error."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "CALIDAD",
+      "message": "except: captura todas las excepciones sin especificarlas.",
+      "file": "app/modules/rendimiento/router.py",
+      "line": 172,
+      "recommendation": "Capturar excepciones específicas y registrar el error."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "CALIDAD",
+      "message": "except: captura todas las excepciones sin especificarlas.",
+      "file": "app/modules/rendimiento/router.py",
+      "line": 234,
+      "recommendation": "Capturar excepciones específicas y registrar el error."
+    },
+    {
+      "severity": "LOW",
+      "category": "CALIDAD",
+      "message": "except Exception detectado.",
+      "file": "app/modules/rendimiento/router.py",
+      "line": 282,
+      "recommendation": "Evitar capturas demasiado amplias cuando sea posible."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "CALIDAD",
+      "message": "except: captura todas las excepciones sin especificarlas.",
+      "file": "app/modules/rendimiento/router.py",
+      "line": 299,
+      "recommendation": "Capturar excepciones específicas y registrar el error."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "CALIDAD",
+      "message": "except: captura todas las excepciones sin especificarlas.",
+      "file": "app/modules/rendimiento/router.py",
+      "line": 317,
+      "recommendation": "Capturar excepciones específicas y registrar el error."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 49,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 50,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 51,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 52,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 53,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 54,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 55,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 56,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 57,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 58,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 59,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 60,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 61,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 62,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py",
+      "line": 63,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py",
+      "line": 33,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py",
+      "line": 35,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py",
+      "line": 36,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py",
+      "line": 38,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py",
+      "line": 40,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py",
+      "line": 42,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "BASE DE DATOS",
+      "message": "Posible SQL escrito manualmente.",
+      "file": "alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py",
+      "line": 44,
+      "recommendation": "Verificar parametrización y evitar concatenación de valores proporcionados por usuarios."
+    },
+    {
+      "severity": "CRITICAL",
+      "category": "SEGURIDAD",
+      "message": "Posible secreto hardcodeado (PASSWORD).",
+      "file": "tests/test_rbac.py",
+      "line": 53,
+      "recommendation": "Mover secretos a variables de entorno o gestor de secretos."
+    },
+    {
+      "severity": "HIGH",
+      "category": "SEGURIDAD",
+      "message": "Posible secreto hardcodeado.",
+      "file": "tests/test_rbac.py",
+      "line": 53,
+      "recommendation": "Revisar la configuración antes de desplegar a producción."
+    },
+    {
+      "severity": "HIGH",
+      "category": "FASTAPI",
+      "message": "Se detectaron posibles endpoints duplicados estáticamente: 4.",
+      "file": "",
+      "line": null,
+      "recommendation": "Revisar routers incluidos múltiples veces o rutas declaradas duplicadamente."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "FASTAPI",
+      "message": "No fue posible importar app.main: No module named 'fastapi'",
+      "file": "",
+      "line": null,
+      "recommendation": "Verificar dependencias, PYTHONPATH, configuración y efectos secundarios durante el import."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "CALIDAD",
+      "message": "Archivo excesivamente grande: 2649 líneas.",
+      "file": "app/inspect_project.py",
+      "line": null,
+      "recommendation": "Evaluar separación por responsabilidad y extracción de servicios/componentes."
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "ARQUITECTURA",
+      "message": "10 routers importan modelos directamente.",
+      "file": "",
+      "line": null,
+      "recommendation": "Preferir que el router delegue la lógica de negocio al service layer cuando corresponda."
+    },
+    {
+      "severity": "LOW",
+      "category": "ARQUITECTURA",
+      "message": "Existen archivos con el mismo nombre en diferentes directorios.",
+      "file": "",
+      "line": null,
+      "recommendation": "Revisar si representan dominios distintos o si existe duplicación conceptual."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: app.models -> app.models",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: app.models -> app.models.ventas -> app.models",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: app.models -> app.models.produccion -> app.models",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: app.core.deps -> app.core.deps",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: app.services.ventas -> app.services.ventas",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.env -> alembic.versions.0aa114401beb_produccion_7_fases_qr_limite -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.env",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.env -> alembic.versions.0aa114401beb_produccion_7_fases_qr_limite -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.env",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.env -> alembic.versions.0aa114401beb_produccion_7_fases_qr_limite -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.env",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.9c2ab41f0e77_fk_artesano_batch",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.60288cb5be04_configuracion_sede_6_ambitos -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.60288cb5be04_configuracion_sede_6_ambitos",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.7b058dc99ab3_frontoffice_turnos_caja -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.7b058dc99ab3_frontoffice_turnos_caja",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.c076bc9cb82e_localizacion_peru_docs_identidad",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.f5030ae14a8e_baseline_erp_ampliado -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.f5030ae14a8e_baseline_erp_ampliado",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.df3f2939eea3_comercial_unificado_pipeline -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.df3f2939eea3_comercial_unificado_pipeline",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    },
+    {
+      "severity": "HIGH",
+      "category": "ARQUITECTURA",
+      "message": "Posible dependencia circular: alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad -> alembic.versions.43e95b0f14bc_modulo_aislado_cierre_jornada_taller -> alembic.versions.9c2ab41f0e77_fk_artesano_batch -> alembic.versions.3f8c2d91a6e4_fk_caja_turno_batch -> alembic.versions.66330a0d74a9_taller_prod_ficha_pruebas_calidad",
+      "file": "",
+      "line": null,
+      "recommendation": "Extraer contratos/interfaces compartidos, reorganizar módulos o invertir la dependencia."
+    }
+  ],
+  "summary": {
+    "critical": 1,
+    "high": 63,
+    "medium": 38,
+    "low": 79,
+    "risk_score": 682
+  }
+}

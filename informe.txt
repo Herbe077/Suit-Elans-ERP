@@ -1,0 +1,2082 @@
+SUIT ELANS ERP — INFORME DE AUDITORÍA ESTÁTICA
+================================================================================
+Fecha de generación: 2026-09-03 15:59:31
+Proyecto: /home/herbias/Projects/Suit-Elans-ERP
+
+Este documento fue generado automáticamente.
+No modifica el código ni la base de datos.
+
+================================================================================
+1. ÁRBOL DEL PROYECTO
+================================================================================
+
+Suit-Elans-ERP/
+├── alembic
+│   ├── versions
+│   │   ├── 0aa114401beb_produccion_7_fases_qr_limite.py
+│   │   ├── 3d8d4e59c8ac_finanzas_pcge_partida_doble.py
+│   │   ├── 3f8c2d91a6e4_fk_caja_turno_batch.py
+│   │   ├── 43e95b0f14bc_modulo_aislado_cierre_jornada_taller.py
+│   │   ├── 4f1a2b3c4d5e_pcge_elemento_analitica.py
+│   │   ├── 5a6b7c8d9e0f_gastos_operativos_detalle.py
+│   │   ├── 60288cb5be04_configuracion_sede_6_ambitos.py
+│   │   ├── 66330a0d74a9_taller_prod_ficha_pruebas_calidad.py
+│   │   ├── 6b7c8d9e0f1a_coherencia_erp.py
+│   │   ├── 7b058dc99ab3_frontoffice_turnos_caja.py
+│   │   ├── 7d1e9a02c4b5_fk_cita_prenda_batch.py
+│   │   ├── 9c2ab41f0e77_fk_artesano_batch.py
+│   │   ├── c076bc9cb82e_localizacion_peru_docs_identidad.py
+│   │   ├── df3f2939eea3_comercial_unificado_pipeline.py
+│   │   └── f5030ae14a8e_baseline_erp_ampliado.py
+│   ├── env.py
+│   └── script.py.mako
+├── app
+│   ├── api
+│   │   ├── __init__.py
+│   │   └── v1.py
+│   ├── core
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   ├── constants.py
+│   │   ├── database.py
+│   │   ├── deps.py
+│   │   ├── rbac.py
+│   │   └── security.py
+│   ├── models
+│   │   ├── __init__.py
+│   │   ├── appointment.py
+│   │   ├── billing.py
+│   │   ├── catalog.py
+│   │   ├── client.py
+│   │   ├── company.py
+│   │   ├── config.py
+│   │   ├── crm.py
+│   │   ├── finanzas.py
+│   │   ├── inventario.py
+│   │   ├── inventory.py
+│   │   ├── measurement.py
+│   │   ├── order.py
+│   │   ├── produccion.py
+│   │   ├── purchasing.py
+│   │   ├── taller.py
+│   │   ├── user.py
+│   │   └── ventas.py
+│   ├── modules
+│   │   ├── finanzas
+│   │   │   └── verificacion.py
+│   │   ├── rendimiento
+│   │   │   ├── __init__.py
+│   │   │   ├── models.py
+│   │   │   └── router.py
+│   │   └── __init__.py
+│   ├── routers
+│   │   ├── __init__.py
+│   │   ├── admin.py
+│   │   ├── auth.py
+│   │   ├── comercial.py
+│   │   ├── dashboard.py
+│   │   ├── finanzas.py
+│   │   ├── inventario.py
+│   │   ├── legacy.py
+│   │   ├── produccion.py
+│   │   ├── rendimiento.py
+│   │   ├── reportes.py
+│   │   ├── taller_cierre.py
+│   │   └── ventas.py
+│   ├── schemas
+│   │   ├── __init__.py
+│   │   └── api.py
+│   ├── services
+│   │   ├── __init__.py
+│   │   ├── billing.py
+│   │   ├── cash.py
+│   │   ├── config.py
+│   │   ├── crm.py
+│   │   ├── finanzas.py
+│   │   ├── inventory.py
+│   │   ├── orders.py
+│   │   ├── peru.py
+│   │   ├── purchasing.py
+│   │   ├── reports.py
+│   │   ├── sam.py
+│   │   ├── taller.py
+│   │   ├── taller_cierre.py
+│   │   └── ventas.py
+│   ├── static
+│   │   ├── css
+│   │   ├── icons
+│   │   ├── js
+│   │   ├── uploads
+│   │   │   └── fit
+│   │   ├── manifest.json
+│   │   └── service-worker.js
+│   ├── templates
+│   │   ├── admin
+│   │   │   ├── configuracion.html
+│   │   │   └── usuarios.html
+│   │   ├── comercial
+│   │   │   ├── base_comercial.html
+│   │   │   ├── citas.html
+│   │   │   ├── cliente_detalle.html
+│   │   │   ├── cliente_empresa.html
+│   │   │   ├── clientes.html
+│   │   │   ├── cotizacion.html
+│   │   │   └── crm.html
+│   │   ├── components
+│   │   │   ├── badge.html
+│   │   │   ├── modal.html
+│   │   │   ├── navbar.html
+│   │   │   ├── page_header.html
+│   │   │   ├── sidebar.html
+│   │   │   ├── stats_card.html
+│   │   │   └── topbar.html
+│   │   ├── dashboard
+│   │   │   └── panel.html
+│   │   ├── finanzas
+│   │   │   ├── balance.html
+│   │   │   ├── base_finanzas.html
+│   │   │   ├── cuentas_por_cobrar.html
+│   │   │   ├── cuentas_por_pagar.html
+│   │   │   ├── diario.html
+│   │   │   ├── flujo_caja.html
+│   │   │   ├── gastos.html
+│   │   │   ├── mayor.html
+│   │   │   ├── periodos.html
+│   │   │   ├── plan_contable.html
+│   │   │   ├── rentabilidad.html
+│   │   │   └── reportes_contables.html
+│   │   ├── inventario
+│   │   │   ├── almacen.html
+│   │   │   ├── almacen_kardex.html
+│   │   │   ├── base_inventario.html
+│   │   │   ├── catalogo.html
+│   │   │   ├── compras.html
+│   │   │   ├── compras_listado.html
+│   │   │   ├── oc.html
+│   │   │   └── orden_compra_form.html
+│   │   ├── partials
+│   │   ├── produccion
+│   │   │   ├── _board.html
+│   │   │   ├── _card.html
+│   │   │   ├── _column.html
+│   │   │   ├── _movecols.html
+│   │   │   ├── base_produccion.html
+│   │   │   ├── control_calidad.html
+│   │   │   ├── ficha_tecnica.html
+│   │   │   ├── kanban.html
+│   │   │   ├── prueba_entalle_modal.html
+│   │   │   └── pruebas.html
+│   │   ├── rendimiento
+│   │   │   ├── base_rendimiento.html
+│   │   │   ├── calculadora_destajo.html
+│   │   │   ├── registro_diario.html
+│   │   │   └── tarifario.html
+│   │   ├── taller
+│   │   │   ├── cierre.html
+│   │   │   ├── ficha_detalle.html
+│   │   │   ├── fichas.html
+│   │   │   └── reporte_pagos.html
+│   │   ├── ventas
+│   │   │   ├── caja.html
+│   │   │   ├── caja_arqueo.html
+│   │   │   ├── comprobantes.html
+│   │   │   ├── facturacion.html
+│   │   │   ├── ordenes.html
+│   │   │   ├── ordenes_listado.html
+│   │   │   └── pos.html
+│   │   ├── base.html
+│   │   └── login.html
+│   ├── __init__.py
+│   ├── inspect_project.py
+│   ├── main.py
+│   └── reporte.txt
+├── tests
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_api.py
+│   ├── test_comercial.py
+│   ├── test_erp_coherencia.py
+│   ├── test_ficha_eliminar.py
+│   ├── test_finanzas_asientos.py
+│   ├── test_finanzas_cif.py
+│   ├── test_finanzas_completo.py
+│   ├── test_finanzas_contabilidad.py
+│   ├── test_finanzas_costos.py
+│   ├── test_finanzas_cuentas.py
+│   ├── test_finanzas_estados_financieros.py
+│   ├── test_finanzas_gastos.py
+│   ├── test_finanzas_integracion.py
+│   ├── test_finanzas_mod.py
+│   ├── test_finanzas_periodos.py
+│   ├── test_flujo_comercial.py
+│   ├── test_health.py
+│   ├── test_medidas_autollenado.py
+│   ├── test_pedidos.py
+│   ├── test_peru.py
+│   ├── test_rbac.py
+│   ├── test_taller_cierre.py
+│   ├── test_taller_prod.py
+│   ├── test_usuarios_admin.py
+│   └── test_ventas_front.py
+├── .env.example
+├── .gitignore
+├── alembic.ini
+├── auditar_proyecto.py
+├── auditoria_proyecto.json
+├── auditoria_proyecto.txt
+├── docker-compose.yml
+├── Dockerfile
+├── informe.txt
+├── README.md
+├── reporte_prueba_integral.md
+├── requirements.txt
+├── seed.py
+├── seed_demo_integral.py
+├── seed_pcge.py
+└── suitelans.db
+
+================================================================================
+2. ESTADÍSTICAS DEL PROYECTO
+================================================================================
+
+Directorio raíz: /home/herbias/Projects/Suit-Elans-ERP
+Archivos totales: 192
+Archivos Python: 112
+Líneas Python aproximadas: 15430
+
+Archivos por extensión:
+  .db: 1
+  .example: 1
+  .html: 64
+  .ini: 1
+  .js: 1
+  .json: 2
+  .mako: 1
+  .md: 2
+  .py: 112
+  .txt: 4
+  .yml: 1
+  [sin extensión]: 2
+
+================================================================================
+3. ANÁLISIS DE ARCHIVOS PYTHON
+================================================================================
+
+
+--- alembic/env.py ---
+Líneas: 27
+Funciones/métodos detectados: 2
+
+--- alembic/versions/0aa114401beb_produccion_7_fases_qr_limite.py ---
+Líneas: 57
+Funciones/métodos detectados: 2
+
+--- alembic/versions/3d8d4e59c8ac_finanzas_pcge_partida_doble.py ---
+Líneas: 171
+Funciones/métodos detectados: 3
+
+--- alembic/versions/3f8c2d91a6e4_fk_caja_turno_batch.py ---
+Líneas: 24
+Funciones/métodos detectados: 2
+
+--- alembic/versions/43e95b0f14bc_modulo_aislado_cierre_jornada_taller.py ---
+Líneas: 65
+Funciones/métodos detectados: 2
+
+--- alembic/versions/4f1a2b3c4d5e_pcge_elemento_analitica.py ---
+Líneas: 56
+Funciones/métodos detectados: 3
+
+--- alembic/versions/5a6b7c8d9e0f_gastos_operativos_detalle.py ---
+Líneas: 58
+Funciones/métodos detectados: 3
+
+--- alembic/versions/60288cb5be04_configuracion_sede_6_ambitos.py ---
+Líneas: 33
+Funciones/métodos detectados: 2
+
+--- alembic/versions/66330a0d74a9_taller_prod_ficha_pruebas_calidad.py ---
+Líneas: 62
+Funciones/métodos detectados: 2
+
+--- alembic/versions/6b7c8d9e0f1a_coherencia_erp.py ---
+Líneas: 69
+Funciones/métodos detectados: 3
+
+--- alembic/versions/7b058dc99ab3_frontoffice_turnos_caja.py ---
+Líneas: 52
+Funciones/métodos detectados: 2
+
+--- alembic/versions/7d1e9a02c4b5_fk_cita_prenda_batch.py ---
+Líneas: 24
+Funciones/métodos detectados: 2
+
+--- alembic/versions/9c2ab41f0e77_fk_artesano_batch.py ---
+Líneas: 28
+Funciones/métodos detectados: 2
+
+--- alembic/versions/c076bc9cb82e_localizacion_peru_docs_identidad.py ---
+Líneas: 37
+Funciones/métodos detectados: 2
+
+--- alembic/versions/df3f2939eea3_comercial_unificado_pipeline.py ---
+Líneas: 78
+Funciones/métodos detectados: 2
+
+--- alembic/versions/f5030ae14a8e_baseline_erp_ampliado.py ---
+Líneas: 29
+Funciones/métodos detectados: 2
+
+--- app/__init__.py ---
+Líneas: 0
+
+--- app/api/__init__.py ---
+Líneas: 0
+
+--- app/api/v1.py ---
+Líneas: 259
+Rutas FastAPI detectadas:
+  - token -> router.post('/auth/token', response_model=TokenOut)
+  - webhooks -> router.get('/webhooks')
+  - list_leads -> router.get('/leads', response_model=list[LeadOut])
+  - create_lead -> router.post('/leads', response_model=LeadOut, status_code=201)
+  - get_lead -> router.get('/leads/{lid}', response_model=LeadOut)
+  - patch_lead -> router.patch('/leads/{lid}', response_model=LeadOut)
+  - create_quotation -> router.post('/quotations', response_model=QuotationOut, status_code=201)
+  - get_quotation -> router.get('/quotations/{qid}', response_model=QuotationOut)
+  - add_line -> router.post('/quotations/{qid}/lines', response_model=QuotationOut)
+  - convert -> router.post('/quotations/{qid}/convert', response_model=OrderOut)
+  - list_companies -> router.get('/companies', response_model=list[CompanyOut])
+  - create_company -> router.post('/companies', response_model=CompanyOut, status_code=201)
+  - add_contact -> router.post('/companies/{cid}/contacts', status_code=201)
+  - list_products -> router.get('/products')
+  - create_product -> router.post('/products', status_code=201)
+  - add_variant -> router.post('/products/{pid}/variants', response_model=VariantOut, status_code=201)
+  - adjust_stock -> router.post('/stock/adjust')
+  - low_stock -> router.get('/products/low-stock')
+  - list_orders -> router.get('/orders', response_model=list[OrderOut])
+  - get_order -> router.get('/orders/{oid}', response_model=OrderOut)
+  - list_appointments -> router.get('/appointments')
+  - create_invoice -> router.post('/invoices', response_model=InvoiceOut, status_code=201)
+  - get_invoice -> router.get('/invoices/{iid}', response_model=InvoiceOut)
+Funciones/métodos detectados: 24
+
+--- app/core/__init__.py ---
+Líneas: 0
+
+--- app/core/config.py ---
+Líneas: 40
+Modelos detectados:
+  - Settings (BaseSettings)
+Clases:
+  - Settings
+Funciones/métodos detectados: 3
+
+--- app/core/constants.py ---
+Líneas: 227
+
+--- app/core/database.py ---
+Líneas: 21
+Modelos detectados:
+  - Base (DeclarativeBase)
+Clases:
+  - Base
+Funciones/métodos detectados: 1
+
+--- app/core/deps.py ---
+Líneas: 92
+Funciones/métodos detectados: 6
+
+--- app/core/rbac.py ---
+Líneas: 79
+Funciones/métodos detectados: 1
+
+--- app/core/security.py ---
+Líneas: 33
+Funciones/métodos detectados: 4
+
+--- app/inspect_project.py ---
+Líneas: 2649
+Modelos detectados:
+  - Finding
+  - PythonFileInfo
+  - TemplateInfo
+Clases:
+  - Finding
+  - PythonFileInfo
+  - TemplateInfo
+Funciones/métodos detectados: 34
+
+--- app/main.py ---
+Líneas: 89
+Rutas FastAPI detectadas:
+  - health -> app.get('/health')
+  - manifest -> app.get('/manifest.json', include_in_schema=False)
+Funciones/métodos detectados: 4
+
+--- app/models/__init__.py ---
+Líneas: 31
+
+--- app/models/appointment.py ---
+Líneas: 20
+Modelos detectados:
+  - Appointment (Base)
+Clases:
+  - Appointment
+
+--- app/models/billing.py ---
+Líneas: 65
+Modelos detectados:
+  - CashMovement (Base)
+  - CajaTurno (Base)
+  - Invoice (Base)
+Clases:
+  - CashMovement
+  - CajaTurno
+  - Invoice
+Funciones/métodos detectados: 2
+
+--- app/models/catalog.py ---
+Líneas: 37
+Modelos detectados:
+  - Collection (Base)
+  - Product (Base)
+  - ProductVariant (Base)
+Clases:
+  - Collection
+  - Product
+  - ProductVariant
+
+--- app/models/client.py ---
+Líneas: 33
+Modelos detectados:
+  - Client (Base)
+Clases:
+  - Client
+Funciones/métodos detectados: 2
+
+--- app/models/company.py ---
+Líneas: 49
+Modelos detectados:
+  - Company (Base)
+  - Contact (Base)
+  - PriceList (Base)
+Clases:
+  - Company
+  - Contact
+  - PriceList
+Funciones/métodos detectados: 1
+
+--- app/models/config.py ---
+Líneas: 22
+Modelos detectados:
+  - Configuracion (Base)
+Clases:
+  - Configuracion
+
+--- app/models/crm.py ---
+Líneas: 78
+Modelos detectados:
+  - Lead (Base)
+  - Interaccion (Base)
+  - Quotation (Base)
+  - QuotationLine (Base)
+Clases:
+  - Lead
+  - Interaccion
+  - Quotation
+  - QuotationLine
+Funciones/métodos detectados: 1
+
+--- app/models/finanzas.py ---
+Líneas: 151
+Modelos detectados:
+  - CuentaPorCobrar (Base)
+  - CuentaPorPagar (Base)
+  - MovimientoFinanciero (Base)
+  - CuentaContable (Base)
+  - PeriodoContable (Base)
+  - CentroCosto (Base)
+  - AsientoContable (Base)
+  - LineaAsientoContable (Base)
+  - GastoRegistrado (Base)
+Clases:
+  - CuentaPorCobrar
+  - CuentaPorPagar
+  - MovimientoFinanciero
+  - CuentaContable
+  - PeriodoContable
+  - CentroCosto
+  - AsientoContable
+  - LineaAsientoContable
+  - GastoRegistrado
+
+--- app/models/inventario.py ---
+Líneas: 101
+Modelos detectados:
+  - ProductoInsumo (Base)
+  - MovimientoKardex (Base)
+  - OrdenCompra (Base)
+  - DetalleOrdenCompra (Base)
+Clases:
+  - ProductoInsumo
+  - MovimientoKardex
+  - OrdenCompra
+  - DetalleOrdenCompra
+Funciones/métodos detectados: 4
+
+--- app/models/inventory.py ---
+Líneas: 95
+Modelos detectados:
+  - Fabric (Base)
+  - Supply (Base)
+  - StockMovement (Base)
+Clases:
+  - Fabric
+  - Supply
+  - StockMovement
+Funciones/métodos detectados: 5
+
+--- app/models/measurement.py ---
+Líneas: 40
+Modelos detectados:
+  - Measurement (Base)
+Clases:
+  - Measurement
+
+--- app/models/order.py ---
+Líneas: 126
+Modelos detectados:
+  - Order (Base)
+  - Garment (Base)
+  - Operation (Base)
+  - WorkLog (Base)
+  - Payment (Base)
+  - PruebaEntalle (Base)
+  - ControlCalidad (Base)
+Clases:
+  - Order
+  - Garment
+  - Operation
+  - WorkLog
+  - Payment
+  - PruebaEntalle
+  - ControlCalidad
+Funciones/métodos detectados: 1
+
+--- app/models/produccion.py ---
+Líneas: 102
+Modelos detectados:
+  - OrdenProduccion (Base)
+  - FichaMedidas (Base)
+  - PruebaEntalle (Base)
+  - ControlCalidad (Base)
+Clases:
+  - OrdenProduccion
+  - FichaMedidas
+  - PruebaEntalle
+  - ControlCalidad
+
+--- app/models/purchasing.py ---
+Líneas: 51
+Modelos detectados:
+  - Supplier (Base)
+  - PurchaseOrder (Base)
+  - PurchaseLine (Base)
+Clases:
+  - Supplier
+  - PurchaseOrder
+  - PurchaseLine
+Funciones/métodos detectados: 2
+
+--- app/models/taller.py ---
+Líneas: 44
+Modelos detectados:
+  - TallerTarea (Base)
+  - TallerCierreJornada (Base)
+  - TallerCierreDetalle (Base)
+Clases:
+  - TallerTarea
+  - TallerCierreJornada
+  - TallerCierreDetalle
+
+--- app/models/user.py ---
+Líneas: 15
+Modelos detectados:
+  - User (Base)
+Clases:
+  - User
+
+--- app/models/ventas.py ---
+Líneas: 104
+Modelos detectados:
+  - OrdenVenta (Base)
+  - PagoOrden (Base)
+  - ComprobanteVenta (Base)
+  - CajaTurno (Base)
+Clases:
+  - OrdenVenta
+  - PagoOrden
+  - ComprobanteVenta
+  - CajaTurno
+Funciones/métodos detectados: 3
+
+--- app/modules/__init__.py ---
+Líneas: 0
+
+--- app/modules/finanzas/verificacion.py ---
+Líneas: 145
+Funciones/métodos detectados: 1
+
+--- app/modules/rendimiento/__init__.py ---
+Líneas: 0
+
+--- app/modules/rendimiento/models.py ---
+Líneas: 51
+Modelos detectados:
+  - CatalogoOperacion (Base)
+  - RegistroJornada (Base)
+  - DetalleJornada (Base)
+Clases:
+  - CatalogoOperacion
+  - RegistroJornada
+  - DetalleJornada
+Funciones/métodos detectados: 1
+
+--- app/modules/rendimiento/router.py ---
+Líneas: 342
+Rutas FastAPI detectadas:
+  - root -> router.get('', response_class=HTMLResponse)
+  - registro_get -> router.get('/registro', response_class=HTMLResponse)
+  - registro_post -> router.post('/registro', response_class=HTMLResponse)
+  - calculadora -> router.get('/calculadora', response_class=HTMLResponse)
+  - export_liquidacion -> router.get('/calculadora/export')
+  - aprobar_registro -> router.post('/calculadora/aprobar')
+  - liquidar_registro -> router.post('/calculadora/liquidar')
+  - tarifario_get -> router.get('/tarifario', response_class=HTMLResponse)
+  - tarifario_post -> router.post('/tarifario', response_class=HTMLResponse)
+  - tarifario_update -> router.post('/tarifario/{cid}', response_class=HTMLResponse)
+  - tarifario_update -> router.put('/tarifario/{cid}', response_class=HTMLResponse)
+  - tarifario_toggle -> router.get('/tarifario/{cid}/toggle', response_class=HTMLResponse)
+Funciones/métodos detectados: 14
+
+--- app/routers/__init__.py ---
+Líneas: 0
+
+--- app/routers/admin.py ---
+Líneas: 144
+Rutas FastAPI detectadas:
+  - usuarios -> router.get('/usuarios', response_class=HTMLResponse)
+  - eliminar_usuario -> router.post('/usuarios/{uid}/eliminar')
+  - toggle_usuario -> router.post('/usuarios/{uid}/toggle')
+  - crear_usuario -> router.post('/usuarios')
+  - crear_op -> router.post('/operaciones')
+  - configuracion -> router.get('/configuracion', response_class=HTMLResponse)
+  - guardar_config -> router.post('/configuracion')
+Funciones/métodos detectados: 9
+
+--- app/routers/auth.py ---
+Líneas: 52
+Rutas FastAPI detectadas:
+  - login_page -> router.get('/login', response_class=HTMLResponse)
+  - login -> router.post('/login')
+  - logout -> router.get('/logout')
+Funciones/métodos detectados: 3
+
+--- app/routers/comercial.py ---
+Líneas: 463
+Rutas FastAPI detectadas:
+  - clientes -> router.get('/clientes', response_class=HTMLResponse)
+  - crear_persona -> router.post('/clientes/persona')
+  - crear_persona_rapido -> router.post('/clientes/persona-rapido')
+  - crear_empresa -> router.post('/clientes/empresa')
+  - ficha_empresa -> router.get('/clientes/empresa/{cid}', response_class=HTMLResponse)
+  - add_contacto -> router.post('/clientes/empresa/{cid}/contactos')
+  - cliente_detalle -> router.get('/clientes/detalle', response_class=HTMLResponse)
+  - add_interaccion -> router.post('/interacciones')
+  - buscar -> router.get('/buscar')
+  - agenda -> router.get('/citas', response_class=HTMLResponse)
+  - crear_cita -> router.post('/citas')
+  - estado_cita -> router.post('/citas/{cid}/estado')
+  - cotizar_cita -> router.post('/citas/{cid}/cotizar')
+  - panel -> router.get('/crm', response_class=HTMLResponse)
+  - crear_lead -> router.post('/crm/leads')
+  - estado_lead -> router.post('/crm/leads/{lid}/estado')
+  - interaccion_lead -> router.post('/crm/leads/{lid}/interaccion')
+  - crear_cotizacion -> router.post('/crm/cotizaciones')
+  - ver_cotizacion -> router.get('/crm/cotizaciones/{qid}', response_class=HTMLResponse)
+  - add_linea -> router.post('/crm/cotizaciones/{qid}/lineas')
+  - estado_cot -> router.post('/crm/cotizaciones/{qid}/estado')
+  - convertir -> router.post('/crm/cotizaciones/{qid}/convertir')
+Funciones/métodos detectados: 25
+
+--- app/routers/dashboard.py ---
+Líneas: 53
+Rutas FastAPI detectadas:
+  - dashboard -> router.get('/', response_class=HTMLResponse)
+  - dashboard -> router.get('/dashboard', response_class=HTMLResponse)
+Funciones/métodos detectados: 1
+
+--- app/routers/finanzas.py ---
+Líneas: 610
+Rutas FastAPI detectadas:
+  - root -> router.get('', response_class=HTMLResponse)
+  - root -> router.get('/', response_class=HTMLResponse)
+  - plan_contable -> router.get('/plan-contable', response_class=HTMLResponse)
+  - plan_crear -> router.post('/plan-contable', response_class=HTMLResponse)
+  - periodos -> router.get('/periodos', response_class=HTMLResponse)
+  - periodo_crear -> router.post('/periodos', response_class=HTMLResponse)
+  - periodo_cerrar -> router.post('/periodos/{pid}/cerrar', response_class=HTMLResponse)
+  - periodo_reabrir -> router.post('/periodos/{pid}/reabrir', response_class=HTMLResponse)
+  - diario -> router.get('/diario', response_class=HTMLResponse)
+  - mayor -> router.get('/mayor', response_class=HTMLResponse)
+  - balance -> router.get('/balance', response_class=HTMLResponse)
+  - estados_financieros -> router.get('/estados-financieros', response_class=HTMLResponse)
+  - cxc -> router.get('/cuentas-por-cobrar', response_class=HTMLResponse)
+  - cxc_abono -> router.post('/cuentas-por-cobrar/abono', response_class=HTMLResponse)
+  - cxc_conciliar -> router.post('/cuentas-por-cobrar/conciliar', response_class=HTMLResponse)
+  - cxp -> router.get('/cuentas-por-pagar', response_class=HTMLResponse)
+  - cxp_crear -> router.post('/cuentas-por-pagar', response_class=HTMLResponse)
+  - cxp_pagar -> router.post('/cuentas-por-pagar/{cid}/pagar', response_class=HTMLResponse)
+  - gastos_list -> router.get('/gastos', response_class=HTMLResponse)
+  - gastos_crear -> router.post('/gastos', response_class=HTMLResponse)
+  - gastos_pagar -> router.post('/gastos/{gid}/pagar', response_class=HTMLResponse)
+  - flujo_caja -> router.get('/flujo-caja', response_class=HTMLResponse)
+  - rentabilidad -> router.get('/rentabilidad', response_class=HTMLResponse)
+  - reportes -> router.get('/reportes-contables', response_class=HTMLResponse)
+  - export_ventas -> router.get('/reportes-contables/ventas.csv')
+  - export_compras -> router.get('/reportes-contables/compras.csv')
+  - igv_resumen -> router.get('/reportes-contables/igv', response_class=HTMLResponse)
+  - depreciar -> router.post('/depreciacion', response_class=HTMLResponse)
+  - periodo_cierre_resultados -> router.post('/periodos/{pid}/cierre-resultados', response_class=HTMLResponse)
+Funciones/métodos detectados: 33
+
+--- app/routers/inventario.py ---
+Líneas: 700
+Rutas FastAPI detectadas:
+  - catalogo -> router.get('/catalogo', response_class=HTMLResponse)
+  - crear_coleccion -> router.post('/catalogo/colecciones')
+  - crear_producto -> router.post('/catalogo/productos')
+  - crear_variante -> router.post('/catalogo/productos/{pid}/variantes')
+  - ajustar_stock -> router.post('/catalogo/stock')
+  - crear_insumo -> router.post('/catalogo/insumo')
+  - almacen -> router.get('/almacen', response_class=HTMLResponse)
+  - almacen_kardex -> router.get('/almacen/kardex', response_class=HTMLResponse)
+  - alta_tela -> router.post('/almacen/tela')
+  - alta_avio -> router.post('/almacen/avio')
+  - movimiento -> router.post('/almacen/movimiento')
+  - kardex_mov -> router.post('/almacen/kardex')
+  - compras -> router.get('/compras', response_class=HTMLResponse)
+  - compras_listado -> router.get('/compras/listado', response_class=HTMLResponse)
+  - crear_proveedor -> router.post('/compras/proveedores')
+  - crear_oc -> router.post('/compras/oc')
+  - crear_orden_compra -> router.post('/compras/orden')
+  - ver_oc -> router.get('/compras/oc/{pid}', response_class=HTMLResponse)
+  - ver_orden_compra -> router.get('/compras/orden/{oid}', response_class=HTMLResponse)
+  - add_linea -> router.post('/compras/oc/{pid}/lineas')
+  - add_detalle -> router.post('/compras/orden/{oid}/detalle')
+  - recibir -> router.post('/compras/linea/{lid}/recibir')
+  - recibir_orden -> router.post('/compras/orden/{oid}/recibir')
+  - cambiar_estado -> router.post('/compras/orden/{oid}/estado')
+  - cambiar_estado_legacy -> router.post('/compras/oc/{pid}/estado')
+Funciones/métodos detectados: 26
+
+--- app/routers/legacy.py ---
+Líneas: 74
+Rutas FastAPI detectadas:
+  - r_empresa -> router.get('/empresas/{cid}', include_in_schema=False)
+  - r_ficha -> router.get('/sastre/clientes/{cid}', include_in_schema=False)
+  - r_ficha2 -> router.get('/taller/fichas/{cid}', include_in_schema=False)
+  - r_ficha_prod -> router.get('/taller/orden/{gid}/ficha', include_in_schema=False)
+  - r_oc -> router.get('/compras/oc/{pid}', include_in_schema=False)
+  - r_cot -> router.get('/crm/cotizaciones/{qid}', include_in_schema=False)
+  - legacy_health -> router.get('/legacy-health', include_in_schema=False)
+Funciones/métodos detectados: 9
+
+--- app/routers/produccion.py ---
+Líneas: 747
+Rutas FastAPI detectadas:
+  - kanban_root -> router.get('', response_class=HTMLResponse)
+  - kanban -> router.get('/kanban', response_class=HTMLResponse)
+  - mover_htmx -> router.patch('/orden/{gid}/estado', response_class=HTMLResponse)
+  - mover_post -> router.post('/orden/{gid}/estado', response_class=HTMLResponse)
+  - mover_post -> router.put('/orden/{gid}/estado', response_class=HTMLResponse)
+  - ficha -> router.get('/ficha/{gid}', response_class=HTMLResponse)
+  - actualizar_ficha -> router.post('/ficha/{gid}', response_class=HTMLResponse)
+  - guardar_diseno -> router.post('/prenda/{gid}/diseno')
+  - asignar -> router.post('/prenda/{gid}/asignar')
+  - fichas -> router.get('/fichas', response_class=HTMLResponse)
+  - crear_ficha -> router.post('/fichas')
+  - ficha_detalle -> router.get('/fichas/{cid}', response_class=HTMLResponse)
+  - guardar_medidas -> router.post('/fichas/{cid}/medidas')
+  - crear_pedido -> router.post('/fichas/{cid}/pedidos')
+  - agendar_cita -> router.post('/fichas/{cid}/citas')
+  - cancelar_pedido -> router.post('/fichas/{cid}/pedidos/{oid}/cancelar')
+  - eliminar_cliente -> router.post('/fichas/{cid}/eliminar')
+  - pruebas -> router.get('/pruebas', response_class=HTMLResponse)
+  - registrar_prueba -> router.post('/prueba-entalle')
+  - registrar_prueba -> router.post('/pruebas/registrar')
+  - calidad -> router.get('/calidad', response_class=HTMLResponse)
+  - calidad_una -> router.get('/calidad/{gid}', response_class=HTMLResponse)
+  - aprobar -> router.post('/orden/{gid}/control-calidad')
+  - aprobar -> router.post('/calidad/{gid}')
+  - cambiar_estado -> router.post('/prendas/{gid}/estado')
+  - fichar -> router.post('/fichar')
+Funciones/métodos detectados: 29
+
+--- app/routers/rendimiento.py ---
+Líneas: 2
+
+--- app/routers/reportes.py ---
+Líneas: 62
+Rutas FastAPI detectadas:
+  - pdf_medidas -> router.get('/medidas/{mid}.pdf')
+  - pdf_pedido -> router.get('/pedido/{oid}.pdf')
+  - pdf_cotizacion -> router.get('/cotizacion/{qid}.pdf')
+Funciones/métodos detectados: 4
+
+--- app/routers/taller_cierre.py ---
+Líneas: 96
+Rutas FastAPI detectadas:
+  - form_cierre -> router.get('/cierre-jornada', response_class=HTMLResponse)
+  - guardar_cierre -> router.post('/cierre-jornada')
+  - reporte -> router.get('/reporte-pagos', response_class=HTMLResponse)
+Funciones/métodos detectados: 3
+
+--- app/routers/ventas.py ---
+Líneas: 460
+Rutas FastAPI detectadas:
+  - pos -> router.get('/pos', response_class=HTMLResponse)
+  - vender -> router.post('/pos/vender')
+  - ordenes -> router.get('/ordenes', response_class=HTMLResponse)
+  - crear_orden -> router.post('/ordenes')
+  - entregar -> router.post('/ordenes/{oid}/entregar')
+  - cobro -> router.post('/cobro')
+  - caja -> router.get('/caja', response_class=HTMLResponse)
+  - abrir -> router.post('/caja/abrir')
+  - cerrar -> router.post('/caja/cerrar')
+  - movimiento -> router.post('/caja/movimiento')
+  - cobrar -> router.post('/caja/cobrar')
+  - facturacion -> router.get('/facturacion', response_class=HTMLResponse)
+  - comprobantes -> router.get('/comprobantes', response_class=HTMLResponse)
+  - emitir -> router.post('/facturacion/emitir')
+  - crear_comprobante -> router.post('/comprobantes', response_class=HTMLResponse)
+  - emitir_alias -> router.post('/comprobantes/emitir')
+  - anular -> router.post('/facturacion/{iid}/anular')
+  - pdf -> router.get('/facturacion/{iid}.pdf')
+Funciones/métodos detectados: 23
+
+--- app/schemas/__init__.py ---
+Líneas: 123
+Modelos detectados:
+  - UserCreate (BaseModel)
+  - UserOut (BaseModel)
+  - ClientIn (BaseModel)
+  - MeasurementIn (BaseModel)
+  - FabricIn (BaseModel)
+  - SupplyIn (BaseModel)
+  - MovementIn (BaseModel)
+  - OrderIn (BaseModel)
+  - GarmentIn (BaseModel)
+  - WorkLogIn (BaseModel)
+  - AppointmentIn (BaseModel)
+  - PaymentIn (BaseModel)
+Clases:
+  - UserCreate
+  - UserOut
+  - ClientIn
+  - MeasurementIn
+  - FabricIn
+  - SupplyIn
+  - MovementIn
+  - OrderIn
+  - GarmentIn
+  - WorkLogIn
+  - AppointmentIn
+  - PaymentIn
+
+--- app/schemas/api.py ---
+Líneas: 164
+Modelos detectados:
+  - TokenOut (BaseModel)
+  - LeadIn (BaseModel)
+  - LeadPatch (BaseModel)
+  - QuotationLineIn (BaseModel)
+  - QuotationIn (BaseModel)
+  - QuotationOut (BaseModel)
+  - CompanyIn (BaseModel)
+  - ContactIn (BaseModel)
+  - ProductIn (BaseModel)
+  - VariantIn (BaseModel)
+  - StockAdjustIn (BaseModel)
+  - AppointmentApiIn (BaseModel)
+  - OrderOut (BaseModel)
+  - InvoiceIn (BaseModel)
+  - InvoiceOut (BaseModel)
+Clases:
+  - TokenOut
+  - LeadIn
+  - LeadOut
+  - LeadPatch
+  - QuotationLineIn
+  - QuotationIn
+  - QuotationOut
+  - CompanyIn
+  - CompanyOut
+  - ContactIn
+  - ProductIn
+  - VariantIn
+  - VariantOut
+  - StockAdjustIn
+  - AppointmentApiIn
+  - OrderOut
+  - InvoiceIn
+  - InvoiceOut
+Funciones/métodos detectados: 1
+
+--- app/services/__init__.py ---
+Líneas: 0
+
+--- app/services/billing.py ---
+Líneas: 45
+Funciones/métodos detectados: 4
+
+--- app/services/cash.py ---
+Líneas: 37
+Funciones/métodos detectados: 2
+
+--- app/services/config.py ---
+Líneas: 27
+Funciones/métodos detectados: 3
+
+--- app/services/crm.py ---
+Líneas: 68
+Funciones/métodos detectados: 3
+
+--- app/services/finanzas.py ---
+Líneas: 609
+Funciones/métodos detectados: 28
+
+--- app/services/inventory.py ---
+Líneas: 195
+Funciones/métodos detectados: 10
+
+--- app/services/orders.py ---
+Líneas: 20
+Funciones/métodos detectados: 2
+
+--- app/services/peru.py ---
+Líneas: 40
+Funciones/métodos detectados: 4
+
+--- app/services/purchasing.py ---
+Líneas: 77
+Funciones/métodos detectados: 4
+
+--- app/services/reports.py ---
+Líneas: 108
+Funciones/métodos detectados: 5
+
+--- app/services/sam.py ---
+Líneas: 22
+Funciones/métodos detectados: 4
+
+--- app/services/taller.py ---
+Líneas: 232
+Funciones/métodos detectados: 14
+
+--- app/services/taller_cierre.py ---
+Líneas: 167
+Funciones/métodos detectados: 9
+
+--- app/services/ventas.py ---
+Líneas: 243
+Funciones/métodos detectados: 11
+
+--- auditar_proyecto.py ---
+Líneas: 837
+Funciones/métodos detectados: 23
+
+--- seed.py ---
+Líneas: 90
+Funciones/métodos detectados: 1
+
+--- seed_demo_integral.py ---
+Líneas: 188
+Funciones/métodos detectados: 3
+
+--- seed_pcge.py ---
+Líneas: 36
+Funciones/métodos detectados: 1
+
+--- tests/__init__.py ---
+Líneas: 0
+
+--- tests/conftest.py ---
+Líneas: 48
+Funciones/métodos detectados: 3
+
+--- tests/test_api.py ---
+Líneas: 62
+Funciones/métodos detectados: 5
+
+--- tests/test_comercial.py ---
+Líneas: 110
+Funciones/métodos detectados: 5
+
+--- tests/test_erp_coherencia.py ---
+Líneas: 200
+Funciones/métodos detectados: 8
+
+--- tests/test_ficha_eliminar.py ---
+Líneas: 165
+Funciones/métodos detectados: 7
+
+--- tests/test_finanzas_asientos.py ---
+Líneas: 89
+Funciones/métodos detectados: 2
+
+--- tests/test_finanzas_cif.py ---
+Líneas: 41
+Funciones/métodos detectados: 2
+
+--- tests/test_finanzas_completo.py ---
+Líneas: 148
+Funciones/métodos detectados: 1
+
+--- tests/test_finanzas_contabilidad.py ---
+Líneas: 42
+Funciones/métodos detectados: 2
+
+--- tests/test_finanzas_costos.py ---
+Líneas: 74
+Funciones/métodos detectados: 1
+
+--- tests/test_finanzas_cuentas.py ---
+Líneas: 64
+Funciones/métodos detectados: 2
+
+--- tests/test_finanzas_estados_financieros.py ---
+Líneas: 109
+Funciones/métodos detectados: 4
+
+--- tests/test_finanzas_gastos.py ---
+Líneas: 96
+Funciones/métodos detectados: 3
+
+--- tests/test_finanzas_integracion.py ---
+Líneas: 101
+Funciones/métodos detectados: 1
+
+--- tests/test_finanzas_mod.py ---
+Líneas: 80
+Funciones/métodos detectados: 2
+
+--- tests/test_finanzas_periodos.py ---
+Líneas: 60
+Funciones/métodos detectados: 1
+
+--- tests/test_flujo_comercial.py ---
+Líneas: 98
+Funciones/métodos detectados: 3
+
+--- tests/test_health.py ---
+Líneas: 9
+Funciones/métodos detectados: 1
+
+--- tests/test_medidas_autollenado.py ---
+Líneas: 80
+Funciones/métodos detectados: 4
+
+--- tests/test_pedidos.py ---
+Líneas: 49
+Funciones/métodos detectados: 3
+
+--- tests/test_peru.py ---
+Líneas: 100
+Funciones/métodos detectados: 10
+
+--- tests/test_rbac.py ---
+Líneas: 122
+Funciones/métodos detectados: 6
+
+--- tests/test_taller_cierre.py ---
+Líneas: 170
+Funciones/métodos detectados: 10
+
+--- tests/test_taller_prod.py ---
+Líneas: 204
+Funciones/métodos detectados: 7
+
+--- tests/test_usuarios_admin.py ---
+Líneas: 94
+Funciones/métodos detectados: 5
+
+--- tests/test_ventas_front.py ---
+Líneas: 163
+Funciones/métodos detectados: 6
+
+================================================================================
+4. MODELOS SQLALCHEMY Y TABLAS
+================================================================================
+
+
+--- app/models/appointment.py ---
+Tablas:
+  - appointments
+Foreign Keys:
+  - clients.id
+  - orders.id
+  - garments.id
+  - users.id
+
+--- app/models/billing.py ---
+Tablas:
+  - cash_movements
+  - caja_turnos
+  - invoices
+Foreign Keys:
+  - orders.id
+  - purchase_orders.id
+  - caja_turnos.id
+  - users.id
+  - users.id
+  - orders.id
+  - clients.id
+  - companies.id
+  - users.id
+
+--- app/models/catalog.py ---
+Tablas:
+  - collections
+  - products
+  - product_variants
+Foreign Keys:
+  - collections.id
+  - products.id
+
+--- app/models/client.py ---
+Tablas:
+  - clients
+
+--- app/models/company.py ---
+Tablas:
+  - companies
+  - contacts
+  - price_lists
+Foreign Keys:
+  - companies.id
+
+--- app/models/config.py ---
+Tablas:
+  - configuracion
+
+--- app/models/crm.py ---
+Tablas:
+  - leads
+  - interacciones
+  - quotations
+  - quotation_lines
+Foreign Keys:
+  - users.id
+  - leads.id
+  - clients.id
+  - companies.id
+  - users.id
+  - leads.id
+  - clients.id
+  - companies.id
+  - users.id
+  - quotations.id
+  - product_variants.id
+
+--- app/models/finanzas.py ---
+Tablas:
+  - cuentas_por_cobrar
+  - cuentas_por_pagar
+  - movimientos_financieros
+  - cuentas_contables
+  - periodos_contables
+  - centros_costo
+  - asientos_contables
+  - lineas_asiento
+  - gastos_registrados
+Foreign Keys:
+  - orders.id
+  - orders.id
+  - clients.id
+  - companies.id
+  - suppliers.id
+  - purchase_orders.id
+  - ordenes_compra.id
+  - users.id
+  - cuentas_contables.id
+  - periodos_contables.id
+  - asientos_contables.id
+  - cuentas_contables.id
+  - centros_costo.id
+  - centros_costo.id
+  - suppliers.id
+  - centros_costo.id
+  - cuentas_contables.id
+
+--- app/models/inventario.py ---
+Tablas:
+  - productos_insumo
+  - movimientos_kardex
+  - ordenes_compra
+  - detalles_orden_compra
+Foreign Keys:
+  - suppliers.id
+  - productos_insumo.id
+  - orders.id
+  - users.id
+  - suppliers.id
+  - ordenes_compra.id
+  - productos_insumo.id
+
+--- app/models/inventory.py ---
+Tablas:
+  - fabrics
+  - supplies
+  - stock_movements
+Foreign Keys:
+  - suppliers.id
+  - users.id
+
+--- app/models/measurement.py ---
+Tablas:
+  - measurements
+Foreign Keys:
+  - clients.id
+  - users.id
+
+--- app/models/order.py ---
+Tablas:
+  - orders
+  - garments
+  - operations
+  - work_logs
+  - payments
+  - pruebas_entalle
+  - controles_calidad
+Foreign Keys:
+  - clients.id
+  - companies.id
+  - leads.id
+  - quotations.id
+  - price_lists.id
+  - users.id
+  - orders.id
+  - fabrics.id
+  - measurements.id
+  - users.id
+  - garments.id
+  - operations.id
+  - users.id
+  - orders.id
+  - users.id
+  - garments.id
+  - garments.id
+  - users.id
+
+--- app/models/produccion.py ---
+Tablas:
+  - orden_produccion
+  - fichas_medidas
+  - prueba_entalle_produccion
+  - control_calidad_produccion
+Foreign Keys:
+  - orders.id
+  - users.id
+  - clients.id
+  - orden_produccion.id
+  - garments.id
+  - orden_produccion.id
+  - garments.id
+  - orden_produccion.id
+  - garments.id
+  - users.id
+
+--- app/models/purchasing.py ---
+Tablas:
+  - suppliers
+  - purchase_orders
+  - purchase_lines
+Foreign Keys:
+  - suppliers.id
+  - users.id
+  - purchase_orders.id
+
+--- app/models/taller.py ---
+Tablas:
+  - taller_tareas
+  - taller_cierres_jornada
+  - taller_cierre_detalle
+Foreign Keys:
+  - users.id
+  - taller_cierres_jornada.id
+  - taller_tareas.id
+
+--- app/models/user.py ---
+Tablas:
+  - users
+
+--- app/models/ventas.py ---
+Tablas:
+  - caja_turnos
+  - ordenes_venta
+  - pagos_orden
+  - comprobantes_venta
+Foreign Keys:
+  - users.id
+  - clients.id
+  - companies.id
+  - orders.id
+  - users.id
+  - ordenes_venta.id
+  - payments.id
+  - caja_turnos.id
+  - orders.id
+  - ordenes_venta.id
+  - invoices.id
+  - orders.id
+
+--- app/modules/rendimiento/models.py ---
+Tablas:
+  - rendimiento_catalogo
+  - rendimiento_registros
+  - rendimiento_detalles
+Foreign Keys:
+  - users.id
+  - rendimiento_registros.id
+  - garments.id
+  - orden_produccion.id
+  - orders.id
+  - rendimiento_catalogo.id
+
+================================================================================
+5. AUDITORÍA ESPECÍFICA DE FINANZAS
+================================================================================
+
+Archivos relacionados con Finanzas:
+  - README.md | términos: igv, mod
+  - alembic/env.py | términos: mod
+  - alembic/versions/3d8d4e59c8ac_finanzas_pcge_partida_doble.py | términos: asiento, contable, costo, cuenta, debe, finanza, haber
+  - alembic/versions/43e95b0f14bc_modulo_aislado_cierre_jornada_taller.py | términos: mod
+  - alembic/versions/4f1a2b3c4d5e_pcge_elemento_analitica.py | términos: contable, cuenta
+  - alembic/versions/5a6b7c8d9e0f_gastos_operativos_detalle.py | términos: igv
+  - alembic/versions/6b7c8d9e0f1a_coherencia_erp.py | términos: igv, mod
+  - app/api/v1.py | términos: igv, mod
+  - app/core/config.py | términos: mod
+  - app/core/constants.py | términos: finanza, igv
+  - app/core/deps.py | términos: finanza, mod
+  - app/core/rbac.py | términos: balance, contabilidad, cxc, cxp, diario, finanza, mayor, mod, rentabilidad
+  - app/inspect_project.py | términos: cif, cuenta, mayor, mod
+  - app/main.py | términos: finanza, mod
+  - app/models/__init__.py | términos: asiento, contable, costo, cuenta, finanza, mod
+  - app/models/billing.py | términos: igv
+  - app/models/config.py | términos: igv
+  - app/models/finanzas.py | términos: asiento, cif, contabilidad, contable, costo, cuenta, debe, finanza, haber, igv, mod, mpd
+  - app/models/inventario.py | términos: costo, igv, mod
+  - app/models/inventory.py | términos: costo
+  - app/models/produccion.py | términos: mod
+  - app/models/purchasing.py | términos: costo, igv
+  - app/models/ventas.py | términos: mod
+  - app/modules/finanzas/verificacion.py | términos: asiento, balance, cif, contabilidad, contable, costo, cuenta, debe, deveng, diario, finanza, haber, mayor, mod, mpd, resultado
+  - app/modules/rendimiento/models.py | términos: diario, mod
+  - app/modules/rendimiento/router.py | términos: cif, cuenta, diario, finanza, mod
+  - app/reporte.txt | términos: cif, contable, cuenta, cxc, cxp, diario, finanza, igv, mayor, mod, rentabilidad
+  - app/routers/admin.py | términos: mod
+  - app/routers/auth.py | términos: mod
+  - app/routers/comercial.py | términos: mod
+  - app/routers/dashboard.py | términos: mod
+  - app/routers/finanzas.py | términos: asiento, balance, contabilidad, contable, costo, cuenta, cxc, cxp, debe, deveng, diario, finanza, haber, igv, mayor, mod, rentabilidad, resultado
+  - app/routers/inventario.py | términos: costo, cuenta, finanza, mod
+  - app/routers/produccion.py | términos: mod
+  - app/routers/rendimiento.py | términos: mod
+  - app/routers/reportes.py | términos: mod
+  - app/routers/taller_cierre.py | términos: mod
+  - app/routers/ventas.py | términos: balance, igv, mod
+  - app/schemas/__init__.py | términos: costo, mod
+  - app/schemas/api.py | términos: igv, mod
+  - app/services/billing.py | términos: igv, mod
+  - app/services/cash.py | términos: balance, cuenta, debe, mod
+  - app/services/config.py | términos: mod
+  - app/services/crm.py | términos: mod
+  - app/services/finanzas.py | términos: asiento, balance, cif, contable, costo, cuenta, debe, deveng, finanza, haber, igv, mayor, mod, mpd, resultado
+  - app/services/inventory.py | términos: costo, debe, mod
+  - app/services/orders.py | términos: mod
+  - app/services/purchasing.py | términos: igv, mod
+  - app/services/reports.py | términos: igv
+  - app/services/sam.py | términos: costo
+  - app/services/taller.py | términos: debe, mod
+  - app/services/taller_cierre.py | términos: diario, mod
+  - app/services/ventas.py | términos: cuenta, debe, mod
+  - app/templates/admin/configuracion.html | términos: igv
+  - app/templates/admin/usuarios.html | términos: debe, finanza
+  - app/templates/base.html | términos: cuenta, finanza
+  - app/templates/comercial/citas.html | términos: mod
+  - app/templates/comercial/clientes.html | términos: resultado
+  - app/templates/components/modal.html | términos: mod
+  - app/templates/components/sidebar.html | términos: contabilidad, contable, cuenta, diario, finanza, mayor, mod, rentabilidad
+  - app/templates/dashboard/panel.html | términos: cuenta, cxc, finanza, rentabilidad
+  - app/templates/finanzas/balance.html | términos: balance, costo, cuenta, debe, finanza, haber, resultado
+  - app/templates/finanzas/base_finanzas.html | términos: balance, contable, cuenta, cxc, cxp, diario, finanza, mayor, rentabilidad
+  - app/templates/finanzas/cuentas_por_cobrar.html | términos: cuenta, finanza
+  - app/templates/finanzas/cuentas_por_pagar.html | términos: cuenta, finanza
+  - app/templates/finanzas/diario.html | términos: asiento, cif, diario, finanza, mod
+  - app/templates/finanzas/flujo_caja.html | términos: costo, cuenta, finanza
+  - app/templates/finanzas/gastos.html | términos: asiento, costo, cuenta, debe, finanza, haber, igv
+  - app/templates/finanzas/mayor.html | términos: asiento, contable, costo, cuenta, debe, finanza, haber, mayor
+  - app/templates/finanzas/periodos.html | términos: contable, finanza
+  - app/templates/finanzas/plan_contable.html | términos: contable, cuenta, finanza
+  - app/templates/finanzas/rentabilidad.html | términos: costo, finanza, rentabilidad
+  - app/templates/finanzas/reportes_contables.html | términos: balance, contabilidad, contable, finanza, igv
+  - app/templates/inventario/catalogo.html | términos: costo
+  - app/templates/inventario/compras.html | términos: cuenta, finanza
+  - app/templates/inventario/compras_listado.html | términos: cuenta
+  - app/templates/inventario/oc.html | términos: costo
+  - app/templates/inventario/orden_compra_form.html | términos: cuenta, finanza
+  - app/templates/produccion/ficha_tecnica.html | términos: cif, mod
+  - app/templates/produccion/prueba_entalle_modal.html | términos: mod
+  - app/templates/rendimiento/base_rendimiento.html | términos: diario
+  - app/templates/rendimiento/calculadora_destajo.html | términos: finanza
+  - app/templates/rendimiento/registro_diario.html | términos: diario
+  - app/templates/taller/ficha_detalle.html | términos: mod
+  - app/templates/taller/fichas.html | términos: resultado
+  - app/templates/taller/reporte_pagos.html | términos: diario
+  - app/templates/ventas/caja_arqueo.html | términos: cuenta
+  - app/templates/ventas/comprobantes.html | términos: igv
+  - app/templates/ventas/facturacion.html | términos: igv
+  - app/templates/ventas/pos.html | términos: mod, resultado
+  - auditar_proyecto.py | términos: asiento, balance, cif, contabilidad, contable, costo, cuenta, cxc, cxp, debe, deveng, diario, finanza, haber, igv, mayor, mod, mpd, rentabilidad, resultado
+  - auditoria_proyecto.txt | términos: cif, contable, cuenta, cxc, cxp, diario, finanza, igv, mayor, mod, rentabilidad
+  - informe.txt | términos: asiento, balance, cif, contabilidad, contable, costo, cuenta, cxc, cxp, debe, deveng, diario, finanza, haber, igv, mayor, mod, mpd, rentabilidad, resultado
+  - reporte_prueba_integral.md | términos: asiento, balance, cuenta, cxc, cxp, debe, deveng, diario, finanza, haber, igv, mayor, mod, rentabilidad, resultado
+  - seed.py | términos: costo, finanza, mod
+  - seed_demo_integral.py | términos: asiento, contable, costo, finanza, igv, mod
+  - seed_pcge.py | términos: contable, cuenta, finanza, mod
+  - tests/conftest.py | términos: mod
+  - tests/test_comercial.py | términos: mod
+  - tests/test_erp_coherencia.py | términos: asiento, balance, contable, costo, cuenta, cxc, debe, deveng, finanza, haber, igv, mod, resultado
+  - tests/test_ficha_eliminar.py | términos: mod
+  - tests/test_finanzas_asientos.py | términos: asiento, contable, cuenta, debe, finanza, haber, mod
+  - tests/test_finanzas_cif.py | términos: cif, costo, debe, finanza, mod
+  - tests/test_finanzas_completo.py | términos: asiento, balance, cif, contable, costo, cuenta, cxc, debe, deveng, finanza, haber, igv, mod, mpd, resultado
+  - tests/test_finanzas_contabilidad.py | términos: asiento, balance, contable, cuenta, debe, finanza, haber, mayor
+  - tests/test_finanzas_costos.py | términos: asiento, cif, costo, cuenta, debe, deveng, finanza, haber, mod, mpd, resultado
+  - tests/test_finanzas_cuentas.py | términos: asiento, balance, cuenta, debe, finanza, haber
+  - tests/test_finanzas_estados_financieros.py | términos: asiento, balance, contable, costo, cuenta, debe, diario, finanza, haber, igv, mayor, mod, resultado
+  - tests/test_finanzas_gastos.py | términos: asiento, balance, contable, costo, cuenta, debe, finanza, haber, igv, mod, resultado
+  - tests/test_finanzas_integracion.py | términos: asiento, balance, cif, contable, costo, cuenta, cxc, debe, deveng, finanza, haber, igv, mayor, mod, mpd, resultado
+  - tests/test_finanzas_mod.py | términos: asiento, cuenta, cxp, debe, deveng, finanza, haber, mod
+  - tests/test_finanzas_periodos.py | términos: asiento, contable, cuenta, debe, finanza, haber, mod
+  - tests/test_flujo_comercial.py | términos: costo, mod
+  - tests/test_medidas_autollenado.py | términos: mod
+  - tests/test_pedidos.py | términos: debe, mod
+  - tests/test_peru.py | términos: mod
+  - tests/test_rbac.py | términos: debe, mod
+  - tests/test_taller_cierre.py | términos: mod
+  - tests/test_taller_prod.py | términos: mod
+  - tests/test_usuarios_admin.py | términos: mod
+  - tests/test_ventas_front.py | términos: mod
+
+Archivos esperados/relevantes:
+  [OK] app/models/finanzas.py
+  [OK] app/services/finanzas.py
+  [OK] app/routers/finanzas.py
+  [OK] app/templates/finanzas
+
+================================================================================
+6. AUDITORÍA DE RENDIMIENTO Y ACOPLAMIENTO
+================================================================================
+
+Contenido de app/modules/rendimiento/:
+  - app/modules/rendimiento/__init__.py
+  - app/modules/rendimiento/__pycache__/__init__.cpython-313.pyc
+  - app/modules/rendimiento/__pycache__/models.cpython-313.pyc
+  - app/modules/rendimiento/__pycache__/router.cpython-313.pyc
+  - app/modules/rendimiento/models.py
+  - app/modules/rendimiento/router.py
+
+Referencias a rendimiento encontradas fuera del módulo:
+  - auditoria_proyecto.txt
+  - auditar_proyecto.py
+  - informe.txt
+  - seed_demo_integral.py
+  - reporte_prueba_integral.md
+  - app/main.py
+  - app/reporte.txt
+  - tests/test_finanzas_costos.py
+  - tests/test_finanzas_mod.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - app/core/rbac.py
+  - app/models/__init__.py
+  - app/routers/finanzas.py
+  - app/routers/rendimiento.py
+  - app/services/finanzas.py
+  - app/templates/base.html
+  - app/modules/finanzas/verificacion.py
+  - app/templates/components/sidebar.html
+  - app/templates/dashboard/panel.html
+  - app/templates/rendimiento/base_rendimiento.html
+  - app/templates/rendimiento/registro_diario.html
+  - app/templates/rendimiento/calculadora_destajo.html
+  - app/templates/rendimiento/tarifario.html
+
+IMPORTANTE: este análisis es estático.
+No determina por sí solo si el acoplamiento es correcto.
+
+================================================================================
+7. DEPENDENCIAS ENTRE MÓDULOS
+================================================================================
+
+
+app/main.py
+  -> app.modules.rendimiento.router
+
+app/models/__init__.py
+  -> app.models.billing
+  -> app.models.finanzas
+  -> app.models.inventario
+  -> app.models.inventory
+  -> app.models.produccion
+  -> app.models.purchasing
+  -> app.models.taller
+  -> app.models.ventas
+  -> app.modules.rendimiento.models
+
+app/models/ventas.py
+  -> app.models.billing
+
+app/modules/finanzas/verificacion.py
+  -> app.models.finanzas
+
+app/modules/rendimiento/router.py
+  -> app.models.finanzas
+  -> app.models.produccion
+  -> app.models.purchasing
+  -> app.modules.rendimiento.models
+
+app/routers/admin.py
+  -> app.models.billing
+  -> app.models.inventory
+  -> app.models.purchasing
+  -> app.models.taller
+
+app/routers/dashboard.py
+  -> app.models.inventory
+
+app/routers/finanzas.py
+  -> app.models.billing
+  -> app.models.finanzas
+  -> app.models.inventario
+  -> app.models.inventory
+  -> app.models.purchasing
+  -> app.services.finanzas
+  -> app.services.purchasing
+  -> app.services.ventas
+
+app/routers/inventario.py
+  -> app.models.billing
+  -> app.models.inventario
+  -> app.models.inventory
+  -> app.models.purchasing
+  -> app.services.inventory
+
+app/routers/produccion.py
+  -> app.models.billing
+  -> app.models.inventory
+  -> app.models.produccion
+  -> app.services.taller
+
+app/routers/rendimiento.py
+  -> app.modules.rendimiento.router
+
+app/routers/taller_cierre.py
+  -> app.models.taller
+
+app/routers/ventas.py
+  -> app.models.billing
+  -> app.models.inventario
+  -> app.models.inventory
+  -> app.models.purchasing
+  -> app.models.ventas
+  -> app.services.inventory
+  -> app.services.taller
+
+app/services/billing.py
+  -> app.models.billing
+
+app/services/cash.py
+  -> app.models.billing
+  -> app.models.purchasing
+
+app/services/crm.py
+  -> app.services.taller
+
+app/services/finanzas.py
+  -> app.models.finanzas
+
+app/services/inventory.py
+  -> app.models.inventario
+  -> app.models.inventory
+
+app/services/purchasing.py
+  -> app.models.inventario
+  -> app.models.purchasing
+  -> app.services.inventory
+
+app/services/taller.py
+  -> app.models.inventario
+  -> app.models.inventory
+  -> app.services.inventory
+
+app/services/taller_cierre.py
+  -> app.models.taller
+
+app/services/ventas.py
+  -> app.models.billing
+  -> app.models.inventario
+  -> app.models.inventory
+  -> app.models.ventas
+  -> app.services.inventory
+
+seed.py
+  -> app.models.finanzas
+  -> app.models.inventory
+  -> app.models.purchasing
+
+seed_demo_integral.py
+  -> app.models.billing
+  -> app.models.finanzas
+  -> app.models.inventory
+  -> app.models.produccion
+  -> app.models.purchasing
+  -> app.modules.rendimiento.models
+  -> app.services.purchasing
+  -> app.services.ventas
+
+seed_pcge.py
+  -> app.models.finanzas
+  -> app.services.finanzas
+
+tests/test_erp_coherencia.py
+  -> app.models.billing
+  -> app.models.finanzas
+  -> app.models.inventario
+  -> app.models.inventory
+  -> app.models.purchasing
+  -> app.models.ventas
+  -> app.routers.finanzas
+  -> app.services.purchasing
+  -> app.services.ventas
+
+tests/test_finanzas_asientos.py
+  -> app.models.finanzas
+
+tests/test_finanzas_cif.py
+  -> app.models.finanzas
+
+tests/test_finanzas_completo.py
+  -> app.models.finanzas
+
+tests/test_finanzas_costos.py
+  -> app.models.finanzas
+  -> app.services.finanzas
+
+tests/test_finanzas_estados_financieros.py
+  -> app.models.finanzas
+
+tests/test_finanzas_gastos.py
+  -> app.models.finanzas
+
+tests/test_finanzas_integracion.py
+  -> app.models.finanzas
+
+tests/test_finanzas_periodos.py
+  -> app.models.finanzas
+
+tests/test_flujo_comercial.py
+  -> app.models.billing
+  -> app.models.inventory
+  -> app.models.purchasing
+
+tests/test_taller_cierre.py
+  -> app.models.taller
+
+tests/test_taller_prod.py
+  -> app.services.taller
+
+tests/test_ventas_front.py
+  -> app.models.billing
+  -> app.models.inventory
+
+================================================================================
+8. ALEMBIC / MIGRACIONES
+================================================================================
+
+Migraciones encontradas: 15
+
+- 0aa114401beb_produccion_7_fases_qr_limite.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- 3d8d4e59c8ac_finanzas_pcge_partida_doble.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+  [FINANZAS] La migración contiene referencias financieras.
+
+- 3f8c2d91a6e4_fk_caja_turno_batch.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- 43e95b0f14bc_modulo_aislado_cierre_jornada_taller.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- 4f1a2b3c4d5e_pcge_elemento_analitica.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- 5a6b7c8d9e0f_gastos_operativos_detalle.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- 60288cb5be04_configuracion_sede_6_ambitos.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- 66330a0d74a9_taller_prod_ficha_pruebas_calidad.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- 6b7c8d9e0f1a_coherencia_erp.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- 7b058dc99ab3_frontoffice_turnos_caja.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- 7d1e9a02c4b5_fk_cita_prenda_batch.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- 9c2ab41f0e77_fk_artesano_batch.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- c076bc9cb82e_localizacion_peru_docs_identidad.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- df3f2939eea3_comercial_unificado_pipeline.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+- f5030ae14a8e_baseline_erp_ampliado.py
+  revision: [NO DETECTADA]
+  down_revision: [NO DETECTADA]
+
+================================================================================
+9. TESTS
+================================================================================
+
+Archivos de tests: 25
+- tests/test_api.py | temas: venta
+- tests/test_comercial.py | temas: compra, mod, venta
+- tests/test_erp_coherencia.py | temas: asiento, balance, compra, contab, costo, finanza, mod, rendimiento, venta
+- tests/test_ficha_eliminar.py | temas: mod, venta
+- tests/test_finanzas_asientos.py | temas: asiento, contab, finanza, mod, venta
+- tests/test_finanzas_cif.py | temas: cif, costo, finanza, mod
+- tests/test_finanzas_completo.py | temas: asiento, balance, cif, contab, costo, finanza, mod, mpd, rendimiento, venta
+- tests/test_finanzas_contabilidad.py | temas: asiento, balance, contab, finanza, venta
+- tests/test_finanzas_costos.py | temas: asiento, cif, compra, costo, finanza, mod, mpd, rendimiento, venta
+- tests/test_finanzas_cuentas.py | temas: asiento, balance, finanza
+- tests/test_finanzas_estados_financieros.py | temas: asiento, balance, contab, costo, finanza, mod, venta
+- tests/test_finanzas_gastos.py | temas: asiento, balance, compra, contab, costo, finanza, mod
+- tests/test_finanzas_integracion.py | temas: asiento, balance, cif, compra, contab, costo, finanza, mod, mpd, rendimiento, venta
+- tests/test_finanzas_mod.py | temas: asiento, contab, finanza, mod, rendimiento
+- tests/test_finanzas_periodos.py | temas: asiento, contab, finanza, mod, venta
+- tests/test_flujo_comercial.py | temas: compra, costo, mod, venta
+- tests/test_health.py
+- tests/test_medidas_autollenado.py | temas: mod
+- tests/test_pedidos.py | temas: mod
+- tests/test_peru.py | temas: mod
+- tests/test_rbac.py | temas: compra, mod, venta
+- tests/test_taller_cierre.py | temas: mod, venta
+- tests/test_taller_prod.py | temas: mod, venta
+- tests/test_usuarios_admin.py | temas: mod, venta
+- tests/test_ventas_front.py | temas: mod, venta
+
+================================================================================
+10. DETECCIÓN DE ESTRUCTURAS CONTABLES
+================================================================================
+
+
+AsientoContable:
+  - auditar_proyecto.py
+  - informe.txt
+  - seed_demo_integral.py
+  - tests/test_finanzas_estados_financieros.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - tests/test_finanzas_gastos.py
+  - tests/test_erp_coherencia.py
+  - app/models/__init__.py
+  - app/models/finanzas.py
+  - app/routers/finanzas.py
+  - app/services/finanzas.py
+  - app/modules/finanzas/verificacion.py
+
+LineaAsiento:
+  - auditar_proyecto.py
+  - informe.txt
+
+CuentaContable:
+  - auditar_proyecto.py
+  - informe.txt
+  - seed_pcge.py
+  - tests/test_finanzas_asientos.py
+  - tests/test_finanzas_periodos.py
+  - app/models/__init__.py
+  - app/models/finanzas.py
+  - app/routers/finanzas.py
+  - app/services/finanzas.py
+
+PeriodoContable:
+  - auditar_proyecto.py
+  - informe.txt
+  - tests/test_finanzas_asientos.py
+  - tests/test_finanzas_periodos.py
+  - app/models/__init__.py
+  - app/models/finanzas.py
+  - app/routers/finanzas.py
+  - app/services/finanzas.py
+
+CentroCosto:
+  - seed.py
+  - auditar_proyecto.py
+  - informe.txt
+  - seed_demo_integral.py
+  - tests/test_finanzas_costos.py
+  - tests/test_finanzas_cif.py
+  - tests/test_finanzas_estados_financieros.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - app/models/__init__.py
+  - app/models/finanzas.py
+  - app/routers/finanzas.py
+  - app/services/finanzas.py
+  - app/modules/finanzas/verificacion.py
+
+GastoOperativo:
+  - auditar_proyecto.py
+  - informe.txt
+
+Debe:
+  - auditar_proyecto.py
+  - informe.txt
+  - reporte_prueba_integral.md
+  - tests/test_rbac.py
+  - tests/test_pedidos.py
+  - tests/test_finanzas_asientos.py
+  - tests/test_finanzas_periodos.py
+  - tests/test_finanzas_cuentas.py
+  - tests/test_finanzas_contabilidad.py
+  - tests/test_finanzas_costos.py
+  - tests/test_finanzas_mod.py
+  - tests/test_finanzas_cif.py
+  - tests/test_finanzas_estados_financieros.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - tests/test_finanzas_gastos.py
+  - tests/test_erp_coherencia.py
+  - alembic/versions/3d8d4e59c8ac_finanzas_pcge_partida_doble.py
+  - app/models/finanzas.py
+  - app/routers/finanzas.py
+  - app/services/inventory.py
+  - app/services/cash.py
+  - app/services/taller.py
+  - app/services/finanzas.py
+  - app/modules/finanzas/verificacion.py
+  - app/templates/admin/usuarios.html
+  - app/templates/finanzas/mayor.html
+  - app/templates/finanzas/balance.html
+  - app/templates/finanzas/gastos.html
+
+Haber:
+  - auditar_proyecto.py
+  - informe.txt
+  - reporte_prueba_integral.md
+  - tests/test_finanzas_asientos.py
+  - tests/test_finanzas_periodos.py
+  - tests/test_finanzas_cuentas.py
+  - tests/test_finanzas_contabilidad.py
+  - tests/test_finanzas_costos.py
+  - tests/test_finanzas_mod.py
+  - tests/test_finanzas_estados_financieros.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - tests/test_finanzas_gastos.py
+  - tests/test_erp_coherencia.py
+  - alembic/versions/3d8d4e59c8ac_finanzas_pcge_partida_doble.py
+  - app/models/finanzas.py
+  - app/routers/finanzas.py
+  - app/services/finanzas.py
+  - app/modules/finanzas/verificacion.py
+  - app/templates/finanzas/mayor.html
+  - app/templates/finanzas/balance.html
+  - app/templates/finanzas/gastos.html
+
+IGV:
+  - README.md
+  - auditoria_proyecto.txt
+  - auditar_proyecto.py
+  - informe.txt
+  - seed_demo_integral.py
+  - reporte_prueba_integral.md
+  - app/reporte.txt
+  - tests/test_finanzas_estados_financieros.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - tests/test_finanzas_gastos.py
+  - tests/test_erp_coherencia.py
+  - alembic/versions/5a6b7c8d9e0f_gastos_operativos_detalle.py
+  - alembic/versions/6b7c8d9e0f1a_coherencia_erp.py
+  - app/models/purchasing.py
+  - app/models/billing.py
+  - app/models/inventario.py
+  - app/schemas/api.py
+  - app/routers/ventas.py
+  - app/routers/finanzas.py
+  - app/services/purchasing.py
+  - app/services/billing.py
+  - app/services/reports.py
+  - app/services/finanzas.py
+  - app/templates/admin/configuracion.html
+  - app/templates/ventas/facturacion.html
+  - app/templates/ventas/comprobantes.html
+  - app/templates/finanzas/reportes_contables.html
+  - app/templates/finanzas/gastos.html
+
+devengado:
+  - auditar_proyecto.py
+  - informe.txt
+  - tests/test_finanzas_costos.py
+  - tests/test_finanzas_mod.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - app/routers/finanzas.py
+  - app/services/finanzas.py
+  - app/modules/finanzas/verificacion.py
+
+CIF:
+  - auditar_proyecto.py
+  - informe.txt
+  - tests/test_finanzas_costos.py
+  - tests/test_finanzas_cif.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - app/models/finanzas.py
+  - app/services/finanzas.py
+  - app/modules/finanzas/verificacion.py
+  - app/templates/finanzas/diario.html
+
+MPD:
+  - auditar_proyecto.py
+  - informe.txt
+  - tests/test_finanzas_costos.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - app/models/finanzas.py
+  - app/services/finanzas.py
+  - app/modules/finanzas/verificacion.py
+
+MOD:
+  - auditar_proyecto.py
+  - informe.txt
+  - seed_demo_integral.py
+  - reporte_prueba_integral.md
+  - tests/test_finanzas_costos.py
+  - tests/test_finanzas_mod.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - tests/test_erp_coherencia.py
+  - alembic/versions/6b7c8d9e0f1a_coherencia_erp.py
+  - app/models/finanzas.py
+  - app/routers/finanzas.py
+  - app/services/finanzas.py
+  - app/modules/finanzas/verificacion.py
+  - app/templates/finanzas/diario.html
+
+costo de ventas:
+  - auditar_proyecto.py
+  - informe.txt
+  - tests/test_finanzas_costos.py
+  - tests/test_finanzas_estados_financieros.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - app/services/finanzas.py
+  - app/modules/finanzas/verificacion.py
+  - app/templates/finanzas/balance.html
+
+balance:
+  - auditar_proyecto.py
+  - informe.txt
+  - reporte_prueba_integral.md
+  - tests/test_finanzas_cuentas.py
+  - tests/test_finanzas_completo.py
+  - app/routers/ventas.py
+  - app/routers/finanzas.py
+  - app/services/cash.py
+  - app/modules/finanzas/verificacion.py
+  - app/templates/finanzas/base_finanzas.html
+  - app/templates/finanzas/reportes_contables.html
+  - app/templates/finanzas/balance.html
+
+estado de resultados:
+  - auditar_proyecto.py
+  - informe.txt
+  - tests/test_finanzas_costos.py
+  - tests/test_finanzas_estados_financieros.py
+  - tests/test_finanzas_integracion.py
+  - tests/test_finanzas_completo.py
+  - tests/test_finanzas_gastos.py
+  - app/routers/finanzas.py
+  - app/services/finanzas.py
+  - app/modules/finanzas/verificacion.py
+  - app/templates/finanzas/balance.html
+
+================================================================================
+11. ALERTAS HEURÍSTICAS
+================================================================================
+
+[MEDIA] centro_costo parece estar modelado como String. Verificar si debería existir entidad CentroCosto.
+[REVISAR] Existen imports directos hacia app.modules.rendimiento desde otros archivos:
+    - auditar_proyecto.py
+    - seed_demo_integral.py
+    - app/main.py
+    - tests/test_finanzas_mod.py
+    - tests/test_finanzas_completo.py
+    - app/models/__init__.py
+    - app/routers/rendimiento.py
+    - app/modules/finanzas/verificacion.py
+
+================================================================================
+12. RESUMEN EJECUTIVO
+================================================================================
+
+[OK] Modelo Finanzas
+[OK] Servicio Finanzas
+[OK] Router Finanzas
+[OK] Templates Finanzas
+[OK] Módulo Rendimiento
+[OK] Alembic
+[OK] Tests
+
+Este informe NO certifica la corrección contable.
+Su objetivo es proporcionar evidencia estructural para una auditoría posterior del código.
