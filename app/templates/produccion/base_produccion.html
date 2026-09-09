@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% from "components/sub_nav.html" import sub_nav with context %}
+{% block content %}
+{{ sub_nav([
+  {"icon": "🏬", "label": "Taller", "url": "/produccion/kanban"},
+  {"icon": "✂️", "label": "Fichas técnicas y medidas", "url": "/produccion/fichas"},
+  {"icon": "📏", "label": "Pruebas de entalle", "url": "/produccion/pruebas"},
+  {"icon": "✓", "label": "Control de calidad", "url": "/produccion/calidad"},
+]) }}
+{% block produccion %}{% endblock %}
+{% endblock %}

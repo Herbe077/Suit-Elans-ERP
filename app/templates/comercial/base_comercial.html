@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% from "components/sub_nav.html" import sub_nav with context %}
+{% block content %}
+{{ sub_nav([
+  {"icon": "🤝", "label": "Clientes", "url": "/comercial/clientes"},
+  {"icon": "📅", "label": "Citas", "url": "/comercial/citas"},
+  {"icon": "📇", "label": "CRM", "url": "/comercial/crm"},
+]) }}
+{% block comercial %}{% endblock %}
+{% endblock %}

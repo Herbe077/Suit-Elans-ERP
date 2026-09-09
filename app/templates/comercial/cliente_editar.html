@@ -1,0 +1,75 @@
+{% extends "comercial/base_comercial.html" %}
+{% block title %}Editar {% if tipo == 'empresa' %}empresa{% else %}cliente{% endif %} — Comercial{% endblock %}
+{% block comercial %}
+<a href="/comercial/clientes{% if tipo == 'empresa' %}?tab=empresas{% endif %}" class="text-sm text-slate-500">← Clientes</a>
+<h1 class="text-2xl font-bold mt-1 font-serif" style="color:#370003">✏️ Editar {% if tipo == 'empresa' %}empresa{% else %}cliente{% endif %}</h1>
+<div class="bg-white rounded-xl shadow p-4 mt-3 border-t-2 border-[#C5A880]">
+{% if tipo == 'empresa' %}
+  <form method="post" action="/comercial/clientes/empresa/{{ compania.id }}/editar" class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm items-end">
+    <label class="block md:col-span-2">Nombre comercial *
+      <input name="nombre_comercial" required value="{{ compania.nombre_comercial }}" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">RUC (flexible)
+      <input name="ruc" value="{{ compania.ruc or '' }}" placeholder="No bloquea el guardado" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Teléfono / WhatsApp
+      <input name="telefono" value="{{ compania.telefono or '' }}" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Email
+      <input name="email" type="email" value="{{ compania.email or '' }}" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Dirección
+      <input name="direccion" value="{{ compania.direccion or '' }}" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Distrito
+      <input name="distrito" value="{{ compania.distrito or '' }}" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Clasificación
+      <select name="clasificacion" class="border rounded px-3 py-1.5 w-full mt-0.5 bg-white">{% for cl in clasificaciones %}<option {% if compania.clasificacion==cl %}selected{% endif %}>{{ cl }}</option>{% endfor %}</select>
+    </label>
+    <label class="block">Desc. %
+      <input name="descuento_pct" type="number" step="0.5" min="0" max="100" value="{{ compania.descuento_pct or 0 }}" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <button class="col-span-2 md:col-span-3 bg-borgo text-white rounded-lg py-2 font-semibold">Guardar cambios</button>
+  </form>
+{% else %}
+  <form method="post" action="/comercial/clientes/persona/{{ cliente.id }}/editar" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm items-end">
+    <label class="block">Nombres *
+      <input name="nombre" required value="{{ cliente.nombre }}" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Apellidos / Razón *
+      <input name="apellidos" required value="{{ cliente.apellidos }}" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Tipo doc.
+      <select name="tipo_doc" class="border rounded px-3 py-2 w-full mt-0.5 bg-white">{% for t in ['DNI','RUC','CE','PASAPORTE'] %}<option {% if cliente.tipo_doc==t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+    </label>
+    <label class="block">N° documento (RUC flexible)
+      <input name="nro_doc" value="{{ cliente.nro_doc or '' }}" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Teléfono / WhatsApp
+      <input name="telefono" value="{{ cliente.telefono or '' }}" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Email
+      <input name="email" type="email" value="{{ cliente.email or '' }}" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Dirección
+      <input name="direccion" value="{{ cliente.direccion or '' }}" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Distrito
+      <input name="distrito" value="{{ cliente.distrito or '' }}" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Clasificación
+      <select name="clasificacion" class="border rounded px-3 py-2 w-full mt-0.5 bg-white">{% for cl in clasificaciones %}<option {% if cliente.clasificacion==cl %}selected{% endif %}>{{ cl }}</option>{% endfor %}</select>
+    </label>
+    <label class="block">Empresa B2B (colaborador de)
+      <select name="company_id" class="border rounded px-3 py-2 w-full mt-0.5 bg-white">
+        <option value="">— Ninguna —</option>
+        {% for e in empresas %}<option value="{{ e.id }}" {% if cliente.company_id==e.id %}selected{% endif %}>{{ e.nombre_comercial }}</option>{% endfor %}
+      </select>
+    </label>
+    {% if empresa %}<p class="col-span-2 md:col-span-4 text-xs text-slate-500">🏢 Actualmente vinculado a <b>{{ empresa.nombre_comercial }}</b> como colaborador/beneficiario.</p>{% endif %}
+    <button class="col-span-2 md:col-span-4 bg-borgo text-white rounded-lg py-2 font-semibold">Guardar cambios</button>
+  </form>
+{% endif %}
+</div>
+{% endblock %}

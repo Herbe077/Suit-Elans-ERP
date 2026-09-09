@@ -1,0 +1,4 @@
+{% for key, label in kanban %}
+{% set cards = cols[key] %}
+{% include "produccion/_column.html" %}
+{% endfor %}

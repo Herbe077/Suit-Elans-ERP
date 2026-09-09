@@ -1,0 +1,13 @@
+{# Submenú superior reutilizable — Sistema de diseño Suit Elans.
+   Uso: {% from "components/sub_nav.html" import sub_nav with context %}
+        {{ sub_nav([{"icon": "🛒", "label": "Punto de venta", "url": "/ventas/pos"}]) }}
+   `is_active` opcional: si se omite se evalúa con la URL actual. #}
+{% macro sub_nav(items) -%}
+{% set _p = (request.url.path if request is defined and request else "") %}
+<nav class="flex overflow-x-auto whitespace-nowrap scrollbar-none w-full bg-neutral-100/70 p-1.5 border-b border-neutral-200 gap-1.5 mb-4" role="tablist" aria-label="Submódulo">
+  {% for it in items %}
+  {% set _on = it.is_active if it.is_active is defined else _p.startswith(it.url) %}
+  <a href="{{ it.url }}" role="tab" aria-selected="{{ 'true' if _on else 'false' }}" class="px-3.5 py-1.5 text-xs sm:text-sm font-medium rounded-md flex items-center gap-1 {{ 'bg-[#3B0A11] text-white shadow-sm' if _on else 'text-neutral-600 hover:bg-neutral-200/60 transition-colors' }}">{{ it.icon }} {{ it.label }}</a>
+  {% endfor %}
+</nav>
+{%- endmacro %}

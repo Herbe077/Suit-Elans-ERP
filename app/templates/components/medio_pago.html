@@ -1,0 +1,19 @@
+{# Selector unificado Medio → Cuenta (PCGE).
+   Valores SIEMPRE en enum mayúsculas: EFECTIVO, TRANSFERENCIA, TARJETA, YAPE_PLIN.
+   El backend (medios_pago.normalizar_medio) acepta variantes legacy.
+   Uso completo:
+     {% from "components/medio_pago.html" import selector_medio_pago %}
+     {{ selector_medio_pago(name='medio', selected='TRANSFERENCIA') }}
+   Solo opciones (dentro de un <select> existente):
+     {% from "components/medio_pago.html" import opciones_medio_pago %}
+     <select name="medio"> ... {{ opciones_medio_pago(selected) }} ... </select> #}
+{% macro opciones_medio_pago(selected='') -%}
+{% for val, txt in [('EFECTIVO', 'Efectivo → Caja Operativa (1011)'), ('TRANSFERENCIA', 'Transferencia → Banco BCP (1041)'), ('TARJETA', 'Tarjeta → Banco BCP (1041)'), ('YAPE_PLIN', 'Yape / Plin → Banco BCP (1041)')] -%}
+<option value="{{ val }}" {% if (selected or '')|upper == val %}selected{% endif %}>{{ txt }}</option>
+{%- endfor %}
+{%- endmacro %}
+{% macro selector_medio_pago(name='medio', selected='', css='', label='Medio de pago', required=False) -%}
+<label class="block {{ css }}">{{ label }}
+  <select name="{{ name }}" {% if required %}required{% endif %} class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{{ opciones_medio_pago(selected) }}</select>
+</label>
+{%- endmacro %}

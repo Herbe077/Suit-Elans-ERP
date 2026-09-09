@@ -1,0 +1,78 @@
+{% extends "rendimiento/base_rendimiento.html" %}
+{% block title %}Calculadora Destajo{% endblock %}
+{% block rendimiento %}
+<h1 class="text-2xl font-bold mb-1 font-serif" style="color:#370003">🧮 Calculadora / Liquidación Destajo</h1>
+<p class="text-sm text-slate-500 mb-3">Filtros: Hoy | Semana Actual | Mes Actual | Rango personalizado — Total acumulado (Decimal)</p>
+<div class="flex gap-2 text-xs mb-3">
+  <a href="/rendimiento/calculadora?preset=hoy" class="px-3 py-1.5 rounded-lg font-bold {{ 'bg-borgo text-white' if preset=='hoy' else 'bg-white shadow hover:bg-amber-50' }}">Hoy</a>
+  <a href="/rendimiento/calculadora?preset=semana" class="px-3 py-1.5 rounded-lg font-bold {{ 'bg-borgo text-white' if preset=='semana' else 'bg-white shadow hover:bg-amber-50' }}">Esta semana</a>
+  <a href="/rendimiento/calculadora?preset=mes" class="px-3 py-1.5 rounded-lg font-bold {{ 'bg-borgo text-white' if preset=='mes' else 'bg-white shadow hover:bg-amber-50' }}">Este mes</a>
+</div>
+<form method="get" class="flex gap-2 text-xs mb-3 flex-wrap items-end bg-white rounded-xl shadow p-3">
+  <label>Preset<select name="preset" class="border rounded px-2 py-1"><option value="hoy" {% if preset=='hoy' %}selected{% endif %}>Hoy</option><option value="semana" {% if preset=='semana' %}selected{% endif %}>Semana Actual (Lun-Dom)</option><option value="mes" {% if preset=='mes' %}selected{% endif %}>Mes Actual</option><option value="personalizado" {% if preset=='personalizado' %}selected{% endif %}>Rango personalizado</option></select></label>
+  <label>Desde<input name="desde" type="date" value="{{ desde }}" class="border rounded px-2 py-1"></label>
+  <label>Hasta<input name="hasta" type="date" value="{{ hasta }}" class="border rounded px-2 py-1"></label>
+  <label>Operario<select name="operario" class="border rounded px-2 py-1"><option value="">Todos</option>{% for u in usuarios %}<option value="{{ u.id }}" {% if operario==u.id|string %}selected{% endif %}>{{ u.full_name }} ({{ u.role }})</option>{% endfor %}</select></label>
+  <label>Orden<select name="orden" class="border rounded px-2 py-1"><option value="">Todas</option>{% for g in prendas_opt %}<option value="{{ g.id }}" {% if orden==g.id|string %}selected{% endif %}>{{ orders_map.get(g.order_id).folio if orders_map.get(g.order_id) else '?' }} #{{ g.id }}</option>{% endfor %}</select></label>
+  <button class="text-white rounded px-3 py-1" style="background:#370003">Filtrar</button>
+  <a href="/rendimiento/calculadora/export?preset={{ preset }}&desde={{ desde }}&hasta={{ hasta }}&operario={{ operario }}" class="bg-[#C5A880] text-[#370003] rounded px-3 py-1 font-bold">⬇ Export Finanzas CSV</a>
+</form>
+<p class="text-xs text-slate-500 mb-2">Rango: {{ inicio }} → {{ fin }}</p>
+<div class="grid md:grid-cols-4 gap-3 mb-4">
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Total acumulado (S/)</p><p class="text-xl font-bold" style="color:#370003">S/ {{ "%.2f"|format(total_acumulado) }}</p><p class="text-xs text-slate-400">Decimal</p></div>
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Prendas intervenidas</p><p class="text-xl font-bold">{{ n_prendas }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Registros</p><p class="text-xl font-bold">{{ n_registros }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Horas/puntos</p><p class="text-xl font-bold">{{ total_acumulado }}</p></div>
+</div>
+
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold text-sm mb-2">Acumulado PENDIENTE por operario (tiempo real)</h2>
+    {% for r in por_operario %}
+      <details class="text-xs border-b py-1">
+        <summary class="flex justify-between cursor-pointer list-none"><span>{{ r.operario }} ({{ r.registros }} reg, {{ r.prendas }} prendas)</span><b>S/ {{ "%.2f"|format(r.total) }}</b></summary>
+        {% if r.total > 0 %}
+        <form method="post" action="/rendimiento/automatizar-gasto-rxh" class="mt-2 grid gap-1.5 bg-[#FAF8F5] rounded-lg p-2">
+          <input type="hidden" name="operario_id" value="{{ r.operario_id }}">
+          <input type="hidden" name="desde" value="{{ desde }}">
+          <input type="hidden" name="hasta" value="{{ hasta }}">
+          <label>N° Recibo por Honorarios *<input name="numero_comprobante" required placeholder="E001-123" class="w-full border rounded px-2 py-1"></label>
+          <label>DNI / RUC del sastre<input name="ruc_dni" value="{{ empleados_docs.get(r.operario_id, '') }}" placeholder="DNI 8 dígitos" maxlength="11" class="w-full border rounded px-2 py-1"></label>
+          <label class="flex gap-2 items-center"><input type="checkbox" name="con_retencion" value="1" checked class="accent-[#370003]">Retención 8% IR 4ta (Neto = Total − Retención)</label>
+          <button type="submit" class="bg-borgo text-white rounded-lg py-1.5 font-bold">🧾 Automatizar Provisión RxH (S/ {{ "%.2f"|format(r.total) }})</button>
+          <p class="text-slate-400">Sin IGV. No mueve caja: la deuda va a CxP (POR_PAGAR).</p>
+        </form>
+        {% else %}<p class="text-xs text-slate-400 mt-1">Sin saldo PENDIENTE por provisionar.</p>{% endif %}
+      </details>
+    {% else %}<p class="text-xs text-slate-400">Sin pendiente por provisionar.</p>{% endfor %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold text-sm mb-2">Desglose por actividad</h2>
+    {% for oid, agg in por_actividad.items() %}
+      <div class="flex justify-between text-xs border-b py-1"><span>{{ agg.cat.nombre_operacion if agg.cat else oid }} ×{{ agg.cantidad }}</span><b>S/ {{ "%.2f"|format(agg.total) }}</b></div>
+    {% else %}<p class="text-xs text-slate-400">Sin datos.</p>{% endfor %}
+  </div>
+</div>
+
+<div class="bg-white rounded-xl shadow p-4 mb-4">
+  <h2 class="font-bold text-sm mb-2">Detalle por orden de producción</h2>
+  {% for oid, agg in por_orden.items() %}
+    <div class="text-xs border-b py-1 flex justify-between"><span>Orden/Garment #{{ oid }} ({{ agg.ops|length }} ops)</span><b>S/ {{ "%.2f"|format(agg.total) }}</b></div>
+  {% else %}<p class="text-xs text-slate-400">Sin desglose por orden.</p>{% endfor %}
+</div>
+
+<div class="bg-white rounded-xl shadow p-4 overflow-x-auto">
+  <h2 class="font-bold text-sm mb-2">Registros ({{ registros|length }}) — PENDIENTE se provisiona con el botón único</h2>
+  <table class="w-full text-xs">
+    <thead class="text-slate-500"><tr><th class="text-left">ID</th><th>Fecha</th><th>Operario</th><th>Orden</th><th>Estado</th><th>Provisión</th></tr></thead>
+    <tbody>
+    {% for r in registros %}
+      <tr class="border-b">
+        <td class="font-mono">#{{ r.id }}</td><td>{{ r.fecha }}</td><td>{{ por_operario|selectattr('operario_id','equalto', r.operario_id)|first|default({}) }}</td><td>{{ r.observaciones or '' }}</td><td><span class="px-1.5 py-0.5 rounded text-xs {{ 'bg-amber-100' if (r.estado or 'PENDIENTE')=='PENDIENTE' else 'bg-emerald-100' if r.estado=='PROVISIONADO' else 'bg-slate-200' }}">{{ r.estado or 'PENDIENTE' }}</span></td>
+        <td>{% if r.estado=='PROVISIONADO' %}✔ PROVISIONADO{% else %}⏳ PENDIENTE{% endif %}</td>
+      </tr>
+    {% else %}<tr><td colspan="6" class="text-center p-2 text-slate-400">Sin registros en rango.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

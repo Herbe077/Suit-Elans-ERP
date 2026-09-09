@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% from "components/sub_nav.html" import sub_nav with context %}
+{% block content %}
+{{ sub_nav([
+  {"icon": "📋", "label": "Registro Diario", "url": "/rendimiento/registro"},
+  {"icon": "🧮", "label": "Calculadora Destajo", "url": "/rendimiento/calculadora"},
+  {"icon": "💲", "label": "Tarifario (44)", "url": "/rendimiento/tarifario"},
+]) }}
+{% block rendimiento %}{% endblock %}
+{% endblock %}

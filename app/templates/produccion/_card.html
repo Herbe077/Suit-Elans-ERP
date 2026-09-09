@@ -1,0 +1,20 @@
+<div class="bg-white rounded-xl shadow p-3 border-l-4 border-[#C5A880] w-full" id="{{ pfx|default('') }}card-{{ card.g.id }}" data-col="{{ card.col }}">
+  <div class="flex justify-between items-start gap-1">
+    <p class="font-bold text-sm">{{ card.folio }} — {{ card.g.tipo|capitalize }} #{{ card.g.id }}</p>
+    <span class="text-[11px] px-1.5 py-0.5 rounded-full whitespace-nowrap {{ card.color }}">{{ card.etiqueta }}</span>
+  </div>
+  <p class="text-xs font-medium mt-0.5">{{ card.cliente_full }}</p>
+  <div class="flex items-center gap-1 mt-1 text-xs text-slate-500">
+    {% if card.tela %}<span class="inline-block px-1.5 py-0.5 rounded bg-[#FAF8F5] border font-mono" style="border-color:#C5A880" title="Tela / insumo {{ card.tela.codigo }}">🧵 {{ card.tela.codigo }}</span>{% endif %}
+    {% if card.pausada %}<span class="bg-slate-800 text-white rounded px-1">⏸ pausada</span>{% endif %}
+  </div>
+  <div class="flex gap-1 mt-2">
+    {% if card.prev %}
+    <button hx-patch="/produccion/orden/{{ card.g.id }}/estado" hx-vals='{"estado": "{{ card.prev }}"}' hx-swap="none" hx-indicator="#board" class="kanban-btn text-xs bg-slate-200 rounded px-2 py-1.5" title="Mover atrás">←</button>
+    {% endif %}
+    <a href="/produccion/ficha/{{ card.g.id }}" class="text-xs bg-borgo text-white rounded px-2 py-1.5 flex-1 text-center font-semibold">Ficha técnica</a>
+    {% if card.next %}
+    <button hx-patch="/produccion/orden/{{ card.g.id }}/estado" hx-vals='{"estado": "{{ card.next }}"}' hx-swap="none" hx-indicator="#board" class="kanban-btn text-xs bg-[#C5A880] text-[#370003] font-bold rounded px-2 py-1.5" title="Avanzar">→</button>
+    {% endif %}
+  </div>
+</div>

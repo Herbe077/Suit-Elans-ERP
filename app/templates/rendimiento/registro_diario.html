@@ -1,0 +1,154 @@
+{% extends "rendimiento/base_rendimiento.html" %}
+{% block title %}Registro Diario — Rendimiento{% endblock %}
+{% block rendimiento %}
+<h1 class="text-2xl font-bold mb-1 font-serif" style="color:#370003">📋 Registro Diario de Tareo</h1>
+<p class="text-sm text-slate-500 mb-3">Operario: <b>{{ user.full_name }}</b> · Fecha {{ hoy }} · Secuencia completa de {{ catalogo|length }} operaciones en orden cronológico.</p>
+{% if request.query_params.get('ok') %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-3 text-sm">✓ Registro #{{ request.query_params.get('ok') }} guardado (Decimal). <a href="/rendimiento/calculadora" class="underline">Ver en calculadora →</a></div>{% endif %}
+{% if request.query_params.get('error') == 'sin_prenda' %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-3 text-sm">⚠️ Selecciona la <b>prenda</b> antes de guardar el tareo.</div>
+{% elif request.query_params.get('error') == 'etapa_prueba' %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-3 text-sm">⚠️ Esa prenda aún no supera la etapa <b>En Prueba</b> — el tareo solo admite prendas en En Confección, Acabados o Listo para Entrega.</div>
+{% elif request.query_params.get('error') %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-3 text-sm">⚠️ {{ request.query_params.get('error') }}</div>{% endif %}
+
+<div class="grid lg:grid-cols-3 gap-4">
+  <div class="bg-white rounded-xl shadow p-4 lg:col-span-2">
+    <h2 class="font-bold mb-2 text-sm">1) Prenda que superó En Prueba ({{ prendas|length }}) {% if todas %}<a href="/rendimiento/registro" class="font-normal text-xs underline" style="color:#C5A880">solo post-prueba</a>{% else %}<a href="/rendimiento/registro?todas=1" class="font-normal text-xs underline" style="color:#C5A880">ver todas</a>{% endif %}</h2>
+    <form method="post" class="text-sm" id="tareo-form">
+      <select name="orden_produccion_id" id="prenda-select" required class="w-full border rounded px-2 py-1.5 mb-1">
+        <option value="">— Selecciona la prenda —</option>
+        {% for g in prendas %}
+          {% set o = orders.get(g.order_id) %}
+          <option value="{{ g.id }}">{{ o.folio if o else '?' }} · {{ propietarios.get(g.order_id, '—') }}{% if empresas.get(g.order_id) %} ({{ empresas.get(g.order_id) }}){% endif %} · {{ o.concepto if o and o.concepto else g.tipo|capitalize }} · {{ etapas.get(g.estado_taller, g.estado_taller) }}{% if g.artesano_id==user.id %} ★{% endif %}</option>
+        {% endfor %}
+      </select>
+      <p id="memoria-aviso" class="text-xs text-slate-500 mb-3">Elige prenda para ver qué actividades ya fueron marcadas.</p>
+      <h2 class="font-bold mb-2 text-sm">2) Actividades en secuencia (1–{{ catalogo|length }})</h2>
+      <input id="tareo-buscar" type="text" placeholder="Buscar operación (ej: OP-09, mangas)..." class="w-full border rounded-lg px-3 py-2 text-sm mb-2">
+      <p id="tareo-conteo" class="text-xs text-slate-500 mb-2" aria-live="polite"></p>
+      <div id="tareo-grupos" class="grid gap-3 max-h-[60vh] overflow-y-auto border rounded p-2">
+        {% for grupo in grupos %}
+        <section data-etapa="{{ grupo.netapa }}">
+          <h3 class="font-bold text-sm px-1 py-1 text-slate-700">{{ grupo.icono }} {{ grupo.etapa }}</h3>
+          <div class="grid md:grid-cols-2 gap-2">
+            {% for item in grupo["items"] %}
+            <label class="tareo-card flex gap-3 items-start bg-white border-2 border-slate-200 rounded-xl px-3 py-3 cursor-pointer transition" data-code="{{ (item.op.codigo or '')|lower }}" data-nombre="{{ (item.op.nombre_operacion or '')|lower }}" data-tarifa="{{ item.op.tarifa_base or 0 }}">
+              <input type="checkbox" name="op_{{ item.op.id }}" value="on" class="tareo-check mt-1 w-6 h-6 shrink-0 accent-[#370003]">
+              <span class="flex-1 min-w-0">
+                <span class="flex items-center gap-1 flex-wrap">
+                  <span class="font-mono font-bold text-xs text-slate-500">{{ "%02d"|format(item.n) }}</span>
+                  <span class="font-mono text-xs text-slate-400">{{ item.op.codigo }}</span>
+                  <span class="text-[11px] font-bold px-1.5 py-0.5 rounded {{ item.badge }}">{{ item.icono }} E{{ item.netapa }}</span>
+                </span>
+                <span class="block font-semibold text-sm leading-snug">{{ item.op.nombre_operacion }}</span>
+                <span class="block text-xs text-slate-400">S/ {{ item.op.tarifa_base }}</span>
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+        </section>
+        {% endfor %}
+      </div>
+      <p id="tareo-seleccion" class="text-xs text-slate-500 mt-2" aria-live="polite">0 seleccionadas</p>
+      <label class="block mt-3 text-xs">Observaciones<textarea name="observaciones" placeholder="Notas del día" class="w-full border rounded px-2 py-1"></textarea></label>
+      <button class="mt-3 w-full text-white font-bold rounded-lg py-2" style="background:#370003">Confirmar y guardado del tareo diario</button>
+      <p class="text-xs text-slate-400 mt-1">Cálculos en <b>Decimal</b> · Tarifa histórica congelada · Cada actividad se marca una sola vez por prenda.</p>
+    </form>
+<script>
+(function(){
+  var sel = document.getElementById('prenda-select');
+  var aviso = document.getElementById('memoria-aviso');
+  var buscar = document.getElementById('tareo-buscar');
+  var conteo = document.getElementById('tareo-conteo');
+  var seleccionInfo = document.getElementById('tareo-seleccion');
+  var form = document.getElementById('tareo-form');
+  function cards(){ return Array.prototype.slice.call(document.querySelectorAll('.tareo-card')); }
+  function esMarcada(card){ return card.classList.contains('is-marcada'); }
+  function aplicarFiltros(){
+    var q = (buscar.value || '').trim().toLowerCase();
+    var vis = 0, total = 0;
+    cards().forEach(function(card){
+      total++;
+      var show = !q || card.dataset.code.indexOf(q) !== -1 || card.dataset.nombre.indexOf(q) !== -1;
+      card.style.display = show ? '' : 'none';
+      if (show) vis++;
+    });
+    document.querySelectorAll('[data-etapa]').forEach(function(sec){
+      var alguna = Array.prototype.some.call(sec.querySelectorAll('.tareo-card'), function(c){ return c.style.display !== 'none'; });
+      sec.style.display = alguna ? '' : 'none';
+    });
+    conteo.textContent = vis + ' de ' + total + ' operaciones visibles';
+  }
+  function actualizarSeleccion(){
+    var n = 0, suma = 0;
+    cards().forEach(function(card){
+      var chk = card.querySelector('.tareo-check');
+      var on = chk && chk.checked && !chk.disabled;
+      card.classList.toggle('sel-mia', !!on);
+      card.style.background = on ? '#FFFBEB' : '';
+      card.style.borderColor = on ? '#370003' : '';
+      if (on) { n++; suma += parseFloat(card.dataset.tarifa) || 0; }
+    });
+    seleccionInfo.textContent = n + ' seleccionada(s)' + (n ? ' · S/ ' + suma.toFixed(2) : '');
+  }
+  function pintar(marcadas){
+    var ids = {};
+    marcadas.forEach(function(m){ ids[m.operacion_id] = m; });
+    var n = 0;
+    document.querySelectorAll('#tareo-form .tareo-check').forEach(function(chk){
+      var opId = parseInt(chk.name.slice(3), 10);
+      var label = chk.closest('.tareo-card');
+      var badge = label ? label.querySelector('.marcada-badge') : null;
+      if (ids[opId]) {
+        n++;
+        chk.checked = false; chk.disabled = true;
+        if (label) { label.classList.add('is-marcada', 'bg-gray-100', 'opacity-80'); label.classList.remove('sel-mia'); label.style.background = ''; label.style.borderColor = ''; }
+        if (!badge && label) {
+          var s = document.createElement('span');
+          s.className = 'marcada-badge block text-xs font-bold text-slate-700 mt-1';
+          s.textContent = '✔ Realizado por: ' + (ids[opId].operario || 'registrado') + ' · ' + (ids[opId].fecha || '');
+          label.querySelector('span.flex-1').appendChild(s);
+        } else if (badge) {
+          badge.textContent = '✔ Realizado por: ' + (ids[opId].operario || 'registrado') + ' · ' + (ids[opId].fecha || '');
+        }
+      } else {
+        chk.disabled = false;
+        if (label) label.classList.remove('is-marcada', 'bg-gray-100', 'opacity-80');
+        if (badge) badge.remove();
+      }
+    });
+    aviso.textContent = marcadas.length
+      ? n + ' actividad(es) ya realizadas en esta prenda (bloqueadas, visibles en su posición).'
+      : 'Sin marcas previas en esta prenda: todo disponible.';
+    aplicarFiltros();
+    actualizarSeleccion();
+  }
+  async function refrescar(){
+    if (!sel.value) { pintar([]); aviso.textContent = 'Selecciona una prenda para ver sus marcas.'; return; }
+    aviso.textContent = 'Consultando marcas…';
+    try {
+      var r = await fetch('/rendimiento/registro/marcadas?garment_id=' + encodeURIComponent(sel.value));
+      var j = await r.json();
+      pintar(j.marcadas || []);
+    } catch(e) { aviso.textContent = 'No se pudo consultar la memoria.'; }
+  }
+  buscar.addEventListener('input', aplicarFiltros);
+  form.addEventListener('change', function(ev){
+    if (ev.target && ev.target.classList && ev.target.classList.contains('tareo-check')) actualizarSeleccion();
+  });
+  sel.addEventListener('change', refrescar);
+  aplicarFiltros();
+  actualizarSeleccion();
+})();
+</script>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4 h-fit lg:sticky lg:top-4">
+    <h2 class="font-bold mb-2 text-sm">Mis registros hoy ({{ mias|length }})</h2>
+    <div class="grid grid-cols-2 gap-2 mb-3 text-center">
+      <div class="bg-[#FAF8F5] rounded-lg p-2"><p class="text-xs text-slate-500">Operaciones</p><p class="text-xl font-bold font-mono">{{ mias_ops }}</p></div>
+      <div class="bg-[#FAF8F5] rounded-lg p-2"><p class="text-xs text-slate-500">Ganado hoy</p><p class="text-xl font-bold font-mono">S/ {{ "%.2f"|format(mias_subtotal or 0) }}</p></div>
+    </div>
+    {% for r in mias %}
+      <div class="text-xs border-b py-1"><span class="font-mono">#{{ r.id }}</span> · {{ r.fecha }} · {{ r.estado or 'PENDIENTE' }}<br><span class="text-slate-500">{{ r.observaciones or '' }}</span></div>
+    {% else %}<p class="text-xs text-slate-400">Sin registros hoy.</p>{% endfor %}
+    <a href="/rendimiento/calculadora?preset=semana" class="block text-center text-sm text-white font-bold rounded-lg py-2 mt-3" style="background:#370003">Ver mi destajo en Calculadora →</a>
+  </div>
+</div>
+{% endblock %}

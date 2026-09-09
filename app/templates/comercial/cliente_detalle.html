@@ -1,0 +1,130 @@
+{% extends "comercial/base_comercial.html" %}
+{% block title %}Ficha 360° — Comercial{% endblock %}
+{% block comercial %}
+<a href="/comercial/clientes" class="text-sm text-slate-500">← Clientes</a>
+{% if tipo == 'empresa' and compania %}
+<h1 class="text-2xl font-bold mt-1">🏢 {{ compania.nombre_comercial }}</h1>
+<p class="text-sm text-slate-500 mb-4">{{ compania.doc_label }} · {{ compania.telefono or '' }} · {{ compania.email or '' }} · {{ compania.distrito or '' }} · <b>{{ compania.clasificacion }}</b></p>
+<div class="grid md:grid-cols-2 gap-4">
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">👥 Contactos</h2>
+    {% for t in contactos %}<div class="text-xs border-b py-1"><b>{{ t.nombre }}</b> {{ t.cargo or '' }} {% if t.es_principal %}<span class="text-laton-dark">★</span>{% endif %}<br><span class="text-slate-500">{{ t.telefono or '' }} {{ t.email or '' }}</span></div>{% else %}<p class="text-xs text-slate-500">Sin contactos. <a class="underline" href="/comercial/clientes/empresa/{{ compania.id }}">Agregar →</a></p>{% endfor %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">🧑‍💼 Colaboradores / Beneficiarios <span class="font-normal text-slate-400">({{ colaboradores|length }})</span></h2>
+    <p class="text-xs text-slate-500 mb-2">Las prendas y fichas de medidas van a su nombre; la facturación queda a nombre de la empresa.</p>
+    {% for p in colaboradores %}
+    <div class="text-xs border-b py-1 flex justify-between items-center">
+      <span><b>{{ p.nombre }} {{ p.apellidos }}</b><br><span class="text-slate-500">{{ p.telefono or '' }} {{ p.distrito or '' }}</span></span>
+      <span class="flex gap-2 items-center">
+        <a class="underline text-laton-dark" href="/produccion/fichas/{{ p.id }}">Ficha →</a>
+        <form method="post" action="/comercial/clientes/empresa/{{ compania.id }}/colaboradores/{{ p.id }}/desvincular"><button class="text-red-700 underline">Quitar</button></form>
+      </span>
+    </div>
+    {% else %}<p class="text-xs text-slate-500 mb-2">Sin colaboradores.</p>{% endfor %}
+    <form method="post" action="/comercial/clientes/empresa/{{ compania.id }}/colaboradores" class="grid grid-cols-2 gap-1 text-xs mt-2">
+      <input name="nombre" required placeholder="Nombres *" class="border rounded px-2 py-1">
+      <input name="apellidos" placeholder="Apellidos" class="border rounded px-2 py-1">
+      <input name="telefono" placeholder="Teléfono" class="border rounded px-2 py-1">
+      <input name="distrito" placeholder="Distrito" class="border rounded px-2 py-1">
+      <button class="col-span-2 bg-borgo text-white rounded py-1">+ Registrar colaborador</button>
+    </form>
+    {% if personas_libres %}
+    <form method="post" action="/comercial/clientes/empresa/{{ compania.id }}/colaboradores/vincular" class="flex gap-1 text-xs mt-2">
+      <select name="client_id" class="border rounded px-2 py-1 flex-1">{% for p in personas_libres %}<option value="{{ p.id }}">{{ p.nombre }} {{ p.apellidos }} · {{ p.doc_label }}</option>{% endfor %}</select>
+      <button class="bg-[#C5A880] text-[#370003] font-bold rounded px-3">Vincular existente</button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">🧾 Historial de pedidos</h2>
+    {% for o in pedidos %}<div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ o.folio }} · {{ o.estado }}{% if o.concepto %} · {{ o.concepto }}{% endif %}</span><b>S/ {{ "%.2f"|format(o.total) }}</b></div>{% else %}<p class="text-xs text-slate-500">Sin pedidos.</p>{% endfor %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4 md:col-span-2">
+    <h2 class="font-bold mb-2 text-sm">💬 Interacciones</h2>
+    <form method="post" action="/comercial/interacciones" class="flex gap-1 text-xs mb-2">
+      <input type="hidden" name="tipo_ent" value="empresa"><input type="hidden" name="ent_id" value="{{ compania.id }}">
+      <input type="hidden" name="back" value="/comercial/clientes/detalle?tipo=empresa&id={{ compania.id }}">
+      <select name="tipo" class="border rounded px-2 py-1"><option value="llamada">Llamada</option><option value="whatsapp">WhatsApp</option><option value="nota">Nota</option><option value="visita">Visita</option></select>
+      <input name="texto" required placeholder="Registrar interacción…" class="border rounded px-2 py-1 flex-1">
+      <button class="bg-borgo text-white rounded px-3">OK</button>
+    </form>
+    {% for i in inter %}<div class="text-xs border-b py-1"><b>{{ i.tipo }}</b> · {{ i.created_at }}<br>{{ i.texto }}</div>{% else %}<p class="text-xs text-slate-500">Sin interacciones.</p>{% endfor %}
+  </div>
+</div>
+{% elif tipo == 'persona' and cliente %}
+<div class="flex items-center justify-between mt-1 flex-wrap gap-2">
+<h1 class="text-2xl font-bold mt-1">{{ cliente.nombre }} {{ cliente.apellidos }}</h1>
+<a href="/ventas/ordenes?cliente_id={{ cliente.id }}" class="text-xs bg-borgo text-white rounded-lg px-3 py-2 font-semibold">+ Nueva Venta / Cotización</a>
+</div>
+<p class="text-sm text-slate-500 mb-4">{{ cliente.doc_label }} · {{ cliente.telefono or '' }} · {{ cliente.email or '' }} · {{ cliente.distrito or '' }} · <b>{{ cliente.clasificacion }}</b></p>
+<div class="grid md:grid-cols-2 gap-4">
+  <div class="bg-white rounded-xl shadow p-4">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="font-bold text-sm">📏 Medidas actuales {% if ultima %}(v{{ ultima.version }} · {{ ultima.created_at }}){% endif %}</h2>
+      <button type="button" onclick="document.getElementById('dlg-medidas').showModal()" class="text-xs bg-borgo text-white rounded px-2 py-1 font-semibold">+ Registrar / Editar Medidas</button>
+    </div>
+    {% if ultima %}
+    <div class="grid grid-cols-3 gap-1 text-xs">
+      {% for k in ['pecho','cintura_saco','cadera','largo_manga','largo_saco','largo_pantalon','cuello','hombro'] %}
+      {% set v = ultima[k] %}<div class="border-b py-0.5 flex justify-between"><span class="text-slate-500">{{ k }}</span><b>{{ v if v is not none else '—' }}</b></div>
+      {% endfor %}
+    </div>
+    {% if ultima.postura %}<p class="text-xs text-slate-500 mt-1">🧍 {{ ultima.postura }}</p>{% endif %}
+    {% else %}<p class="text-xs text-slate-500">Sin medidas.</p>{% endif %}
+    <a href="/produccion/fichas/{{ cliente.id }}" class="text-xs underline text-laton-dark">Abrir ficha completa en Taller →</a>
+    <dialog id="dlg-medidas" class="rounded-xl shadow p-0 w-full max-w-2xl">
+      <form method="dialog" class="text-right px-4 pt-3"><button class="text-slate-400 underline text-xs">Cerrar ✕</button></form>
+      <form method="post" action="/comercial/clientes/{{ cliente.id }}/medidas" class="p-4 pt-1">
+        <h3 class="font-bold text-sm mb-1">📏 Registrar medidas — {{ cliente.nombre }} {{ cliente.apellidos }}</h3>
+        <p class="text-xs text-slate-500 mb-2">Se guarda como nueva versión sin salir del CRM.</p>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+          {% for f in ['cuello','hombro','sisa','pecho','cintura_saco','cadera','largo_manga','ancho_manga','largo_espalda','largo_saco','caida_hombro','cintura_pantalon','cadera_pantalon','tiro','muslo','rodilla','tobillo','largo_pantalon'] %}
+          {% set v = ultima[f] if ultima else none %}
+          <label class="block">{{ f.replace('_', ' ') }}<input name="{{ f }}" type="number" step="0.1" value="{{ v if v is not none else '' }}" class="w-full border rounded px-2 py-1 mt-0.5"></label>
+          {% endfor %}
+        </div>
+        {% set _post = (ultima.postura or '') if ultima else '' %}
+        <div class="grid grid-cols-3 gap-2 text-xs mt-2">
+          <label class="block">Hombro
+            <select name="postura_hombro" class="w-full border rounded px-2 py-1 mt-0.5 bg-white">{% for o in ['Normal','Caído izquierdo','Caído derecho','Alto izquierdo','Alto derecho'] %}<option {% if ('Hombro: ' ~ o) in _post or (_post == 'Normal' and o == 'Normal') %}selected{% endif %}>{{ o }}</option>{% endfor %}</select>
+          </label>
+          <label class="block">Espalda
+            <select name="postura_espalda" class="w-full border rounded px-2 py-1 mt-0.5 bg-white">{% for o in ['Normal','Encorvada','Erguida'] %}<option {% if ('Espalda: ' ~ o) in _post or (_post == 'Normal' and o == 'Normal') %}selected{% endif %}>{{ o }}</option>{% endfor %}</select>
+          </label>
+          <label class="block">Abdomen
+            <select name="postura_abdomen" class="w-full border rounded px-2 py-1 mt-0.5 bg-white">{% for o in ['Normal','Prominente','Plano'] %}<option {% if ('Abdomen: ' ~ o) in _post or (_post == 'Normal' and o == 'Normal') %}selected{% endif %}>{{ o }}</option>{% endfor %}</select>
+          </label>
+        </div>
+        <textarea name="observaciones" placeholder="Observaciones anatómicas" class="mt-2 w-full border rounded px-2 py-1 text-xs">{{ ultima.observaciones if ultima and ultima.observaciones else '' }}</textarea>
+        <button class="mt-2 w-full bg-borgo text-white rounded-lg py-2 font-semibold text-sm">Guardar como nueva versión</button>
+      </form>
+    </dialog>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">🧾 Historial de compras</h2>
+    {% for o in pedidos %}<div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ o.folio }} · {{ o.estado }} · {{ o.canal }}{% if o.concepto %} · {{ o.concepto }}{% endif %}</span><b>S/ {{ "%.2f"|format(o.total) }}</b></div>{% else %}<p class="text-xs text-slate-500">Sin pedidos.</p>{% endfor %}
+    <h2 class="font-bold mb-1 mt-3 text-sm">🧾 Cotizaciones</h2>
+    {% for q in cots %}<div class="text-xs border-b py-1 flex justify-between"><span class="font-mono">{{ q.folio }} · {{ q.estado }}</span><b>S/ {{ "%.2f"|format(q.total) }}</b></div>{% else %}<p class="text-xs text-slate-500">Sin cotizaciones.</p>{% endfor %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">📅 Citas</h2>
+    {% for a in citas %}<div class="text-xs border-b py-1">{{ a.inicio }} → {{ a.fin }} · {{ a.tipo }} · {{ a.estado }}</div>{% else %}<p class="text-xs text-slate-500">Sin citas.</p>{% endfor %}
+    <a href="/comercial/citas" class="text-xs underline text-laton-dark">Agendar →</a>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">💬 Interacciones</h2>
+    <form method="post" action="/comercial/interacciones" class="flex gap-1 text-xs mb-2">
+      <input type="hidden" name="tipo_ent" value="persona"><input type="hidden" name="ent_id" value="{{ cliente.id }}">
+      <input type="hidden" name="back" value="/comercial/clientes/detalle?tipo=persona&id={{ cliente.id }}">
+      <select name="tipo" class="border rounded px-2 py-1"><option value="llamada">Llamada</option><option value="whatsapp">WhatsApp</option><option value="nota">Nota</option><option value="visita">Visita</option></select>
+      <input name="texto" required placeholder="Registrar interacción…" class="border rounded px-2 py-1 flex-1">
+      <button class="bg-borgo text-white rounded px-3">OK</button>
+    </form>
+    {% for i in inter %}<div class="text-xs border-b py-1"><b>{{ i.tipo }}</b> · {{ i.created_at }}<br>{{ i.texto }}</div>{% else %}<p class="text-xs text-slate-500">Sin interacciones.</p>{% endfor %}
+  </div>
+</div>
+{% else %}
+<p class="text-slate-500">No encontrado. <a class="underline" href="/comercial/clientes">Volver</a></p>
+{% endif %}
+{% endblock %}

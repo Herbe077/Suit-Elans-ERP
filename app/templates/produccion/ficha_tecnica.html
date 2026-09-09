@@ -1,0 +1,114 @@
+{% extends "produccion/base_produccion.html" %}
+{% block title %}Ficha técnica {{ o.folio if o }} · {{ g.tipo }}{% endblock %}
+{% block produccion %}
+<a href="/produccion/kanban" class="text-sm text-slate-500">← Tablero</a>
+<div class="flex items-center gap-2 mt-1 flex-wrap">
+  <h1 class="text-2xl font-bold font-serif">{{ g.tipo|capitalize }} #{{ g.id }}</h1>
+  <span class="text-xs font-mono bg-white rounded px-2 py-0.5 shadow">{{ o.folio if o }}</span>
+  <span class="text-xs font-mono bg-borgo text-white rounded px-2 py-0.5" title="Código QR de trazabilidad">QR {{ qr }}</span>
+  <span class="text-xs px-2 py-0.5 rounded-full {{ ucolor }}">{{ etiqueta }}{% if dias is not none %} · {{ dias }}d{% endif %}</span>
+  <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-white">{{ g.estado_taller }}</span>
+</div>
+<p class="text-sm text-slate-600 mb-4">Cliente: <b>{{ c.nombre_completo if c else '—' }}</b> {{ c.doc_label if c and c.nro_doc else '' }} · Límite: {{ g.fecha_limite_entrega or (o.fecha_entrega if o else '—') }} · Artesano: <b>{{ artesano.full_name if artesano else 'sin asignar' }}</b>{% if c %} · <a href="/produccion/fichas/{{ c.id }}" class="text-xs underline text-laton-dark">Ver Perfil / Medidas de {{ c.nombre }}</a>{% endif %}</p>
+{% if ok == 'prueba' %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-4 text-sm">✓ Prueba registrada. {% if not con_notas %}Sin observaciones.{% else %}Con notas: ya puedes pasar a EN_CONFECCION.{% endif %}</div>{% endif %}
+{% if ok == 'calidad' %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-4 text-sm">✓ Calidad aprobada: lista para liquidar y entregar. Se avisó a Ventas.</div>{% endif %}
+
+<div class="grid md:grid-cols-2 gap-4">
+<div class="space-y-4">
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">🧾 Especificaciones heredadas de la venta <span class="font-normal text-slate-400">(solo lectura)</span></h2>
+    <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+      <dt class="text-slate-500">Tela</dt><dd class="font-semibold">{% if tela %}{{ tela.codigo }} · {{ tela.nombre }} {{ tela.color or '' }}{% else %}—{% endif %}</dd>
+      <dt class="text-slate-500">Concepto</dt><dd class="font-semibold">{{ o.concepto or '—' }}</dd>
+      <dt class="text-slate-500">Precio</dt><dd class="font-semibold">S/ {{ "%.2f"|format(g.precio or 0) }}</dd>
+      <dt class="text-slate-500">Entrega</dt><dd class="font-semibold">{{ g.fecha_limite_entrega or (o.fecha_entrega if o else '—') }}</dd>
+    </dl>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">✂️ Ajuste de cortador <span class="font-normal text-slate-400">(override de diseño)</span></h2>
+    <form method="post" action="/produccion/prenda/{{ g.id }}/diseno" class="grid grid-cols-2 gap-2 text-sm">
+      <label>Solapa<select name="solapa" class="w-full border rounded px-2 py-1">{% for s in solapas %}<option {% if diseno.get('solapa')==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+      <label>Bolsillos<select name="bolsillos" class="w-full border rounded px-2 py-1">{% for s in bolsillos %}<option {% if diseno.get('bolsillos')==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+      <label>Forro<select name="forro" class="w-full border rounded px-2 py-1">{% for s in forros %}<option {% if diseno.get('forro')==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+      <label>Respiraderos<select name="respiraderos" class="w-full border rounded px-2 py-1">{% for s in respiraderos %}<option {% if diseno.get('respiraderos')==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+      <label>N° botones<input name="botones" value="{{ diseno.get('botones','') }}" class="w-full border rounded px-2 py-1"></label>
+      <label>Notas<input name="notas_diseno" value="{{ diseno.get('notas_diseno','') }}" class="w-full border rounded px-2 py-1"></label>
+      <label class="col-span-2">Fecha límite de entrega<input name="fecha_limite" type="date" value="{{ g.fecha_limite_entrega or '' }}" class="w-full border rounded px-2 py-1"></label>
+      <button class="col-span-2 bg-borgo text-white rounded-lg py-1.5">Guardar diseño</button>
+    </form>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">👷 Responsable / artesano</h2>
+    <form method="post" action="/produccion/prenda/{{ g.id }}/asignar" class="flex gap-2 text-sm">
+      <select name="artesano_id" class="border rounded px-2 py-1 flex-1"><option value="">— Sin asignar —</option>{% for u in equipo %}<option value="{{ u.id }}" {% if g.artesano_id==u.id %}selected{% endif %}>{{ u.full_name }} ({{ u.role }})</option>{% endfor %}</select>
+      <button class="bg-slate-800 text-white rounded px-3">OK</button>
+    </form>
+    {% if tela %}<p class="text-xs text-slate-500 mt-2">Tela: <b>{{ tela.codigo }}</b> · {{ tela.nombre }} · {{ tela.color or '' }} <span class="inline-block w-3 h-3 rounded-full border align-middle" style="background:{{ tela.color or '#ccc' }}"></span></p>{% endif %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">📈 Avance por fase y destajo</h2>
+    <ol class="flex flex-wrap gap-1 text-[11px] mb-2">
+      {% for f in fases %}<li class="px-2 py-0.5 rounded-full font-semibold {% if f == fase_actual %}bg-borgo text-white{% elif fases.index(f) < fases.index(fase_actual) %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-500{% endif %}">{{ f }}</li>{% endfor %}
+    </ol>
+    <p class="text-xs text-slate-500">Tiempo real acumulado: <b>{{ g.sam_real }}′</b></p>
+    <p class="text-xs text-slate-500">Destajo acumulado: <b>S/ {{ "%.2f"|format(destajo_total or 0) }}</b> · <a href="/taller/cierre-jornada" class="underline text-laton-dark">Registrar destajo →</a></p>
+  </div>
+</div>
+
+<div class="space-y-4">
+  <div class="bg-white rounded-xl shadow p-4" x-data="{ tabMed: 'saco', formMed: false }">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="font-bold text-sm">📏 Medidas antropométricas{% if m %} · v{{ m.version }}{% endif %}</h2>
+      {% if c %}<button @click="formMed = !formMed" class="text-xs bg-borgo text-white rounded px-2 py-1 font-semibold">✏️ Registrar Medidas</button>{% endif %}
+    </div>
+    {% if m %}
+    <div class="flex gap-2 mb-2 text-xs">
+      <button type="button" @click="tabMed='saco'" :class="tabMed==='saco' ? 'bg-borgo text-white' : 'bg-slate-200'" class="rounded px-3 py-1">Saco</button>
+      <button type="button" @click="tabMed='pantalon'" :class="tabMed==='pantalon' ? 'bg-borgo text-white' : 'bg-slate-200'" class="rounded px-3 py-1">Pantalón</button>
+    </div>
+    <div x-show="tabMed==='saco'" class="grid grid-cols-3 gap-1 text-xs">
+      {% for k, label in med_saco %}
+      {% set v = m[k] %}<div class="border-b py-0.5 flex justify-between"><span class="text-slate-500">{{ label }}</span><b>{{ v if v is not none else '—' }}</b></div>
+      {% endfor %}
+    </div>
+    <div x-show="tabMed==='pantalon'" class="grid grid-cols-3 gap-1 text-xs">
+      {% for k, label in med_pantalon %}
+      {% set v = m[k] %}<div class="border-b py-0.5 flex justify-between"><span class="text-slate-500">{{ label }}</span><b>{{ v if v is not none else '—' }}</b></div>
+      {% endfor %}
+    </div>
+    <div class="mt-2 text-xs bg-amber-50 border border-amber-200 rounded p-2">
+      <p><b>Postura:</b> {{ m.postura or '—' }}</p>
+      <p><b>Alteraciones:</b> {{ m.observaciones or '—' }}</p>
+    </div>
+    {% else %}<p class="text-xs text-slate-500 mb-2">Sin medidas registradas para este cliente. Usa <b>✏️ Registrar Medidas</b> para capturar la primera toma sin salir de esta ficha.</p>{% endif %}
+    {% if c %}
+    <form x-show="formMed" method="post" action="/produccion/ficha/{{ g.id }}/medidas" class="grid grid-cols-2 gap-1 text-xs mt-2 border-t pt-2">
+      <select name="tipo_prenda" class="border rounded px-2 py-1 col-span-2"><option value="saco">Saco</option><option value="pantalon">Pantalón</option></select>
+      {% for k, label in med_saco %}<label class="block">{{ label }}<input name="{{ k }}" type="number" step="0.1" class="w-full border rounded px-2 py-1 mt-0.5"></label>{% endfor %}
+      {% for k, label in med_pantalon %}<label class="block">{{ label }}<input name="{{ k }}" type="number" step="0.1" class="w-full border rounded px-2 py-1 mt-0.5"></label>{% endfor %}
+      <input name="postura" placeholder="Postura" class="col-span-2 border rounded px-2 py-1">
+      <button class="col-span-2 bg-borgo text-white rounded-lg py-1.5 font-semibold">Guardar medidas (nueva versión)</button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4" x-data="{ modalPrueba: false }">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="font-bold text-sm">📏 Pruebas de entalle ({{ pruebas|length }})</h2>
+      <button @click="modalPrueba = true" class="text-xs bg-borgo text-white rounded px-2 py-1">+ Registrar prueba</button>
+    </div>
+    {% include "produccion/prueba_entalle_modal.html" %}
+    {% for p in pruebas %}
+    <div class="text-xs border-b py-1"><b>Prueba {{ p.numero_prueba }}</b> · {{ p.fecha }} {% if p.completada %}<span class="text-emerald-700">✓ sin observaciones</span>{% endif %}
+      {% if p.correcciones %}<ul class="ml-4 list-disc">{% for z, n in p.correcciones.items() %}<li><b>{{ z }}:</b> {{ n }}</li>{% endfor %}</ul>{% endif %}
+      {% if p.observaciones_ajuste %}<p class="text-slate-600">{{ p.observaciones_ajuste }}</p>{% endif %}
+    </div>
+    {% else %}<p class="text-xs text-slate-500">Sin pruebas. <a href="/produccion/pruebas" class="underline text-laton-dark">Registrar →</a></p>{% endfor %}
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold mb-2 text-sm">✔ Control de calidad</h2>
+    {% if qc %}<p class="text-xs text-emerald-700 font-bold">✓ Aprobado por {{ qc_por }} el {{ qc.fecha }}</p>{% if qc.observaciones %}<p class="text-xs">{{ qc.observaciones }}</p>{% endif %}
+    {% else %}<p class="text-xs text-slate-500">Pendiente. <a href="/produccion/calidad" class="underline text-laton-dark">Validar checklist →</a></p>{% endif %}
+  </div>
+</div>
+</div>
+{% endblock %}

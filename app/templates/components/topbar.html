@@ -1,0 +1,18 @@
+{# Topbar reutilizable — perfil, sede, notificaciones — usa paleta oficial #370003 #FAF8F5 #C5A880 #1F1112 #}
+<header class="bg-[#1F1112] text-white sticky top-0 z-30 shadow">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <a href="/dashboard" class="font-serif text-lg tracking-wide">SUIT <span class="text-[#C5A880]">ELANS</span></a>
+      <span class="hidden md:inline text-xs text-slate-400 border-l border-white/20 pl-3">Sede: {{ config_sede if config_sede is defined else 'Principal' }} · {{ user.full_name if user else '' }}</span>
+    </div>
+    <div class="flex items-center gap-2 text-sm">
+      {% if user %}
+        <span class="hidden sm:inline text-xs bg-[#370003] border border-[#C5A880]/30 rounded-full px-2 py-0.5">{{ user.full_name }} · {{ user.role }}</span>
+        <a href="/dashboard" class="hidden md:inline text-slate-300 hover:text-[#C5A880]">Panel</a>
+        <a href="/auth/logout" class="text-red-300 hover:text-white border border-white/20 rounded-full px-3 py-1">Salir</a>
+      {% else %}
+        <a href="/auth/login" class="bg-[#C5A880] text-[#370003] rounded-full px-3 py-1 font-bold">Entrar</a>
+      {% endif %}
+    </div>
+  </div>
+</header>

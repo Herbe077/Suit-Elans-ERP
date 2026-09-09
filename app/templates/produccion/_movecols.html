@@ -1,0 +1,11 @@
+{# Respuesta del PATCH: refresca columnas (desktop) y acordeón (móvil) vía OOB. #}
+{% for key, label in kanban if key in (col_src, col_dst) %}
+{% set cards = cols[key] %}
+{% set oob = true %}
+{% include "produccion/_column.html" %}
+{% endfor %}
+{% for key, label in kanban if key in (col_src, col_dst) %}
+{% set cards = cols[key] %}
+{% set oob = true %}
+{% include "produccion/_accmobile_inner.html" %}
+{% endfor %}

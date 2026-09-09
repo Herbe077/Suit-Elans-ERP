@@ -1,0 +1,150 @@
+{% extends "inventario/base_inventario.html" %}
+{% block title %}Orden {{ oc.folio or oc.id }}{% endblock %}
+{% block inventario %}
+<a href="/inventario/compras" class="text-sm text-slate-500">← Compras</a>
+{% if error %}<div class="bg-red-50 border border-red-300 text-red-700 text-xs rounded px-3 py-2 mt-2">{{ error }}</div>{% endif %}
+
+{# ——— Cabecera ——— #}
+<div class="flex flex-wrap items-center gap-2 mt-1">
+  <h1 class="text-2xl font-bold">{{ oc.folio or ('OC-' ~ oc.id) }}</h1>
+  <span class="px-2 py-0.5 rounded text-sm font-semibold {% if estado_canon=='DRAFT' %}bg-slate-200 text-slate-700{% elif estado_canon=='APPROVED' %}bg-sky-100 text-sky-800{% elif estado_canon=='PARTIALLY_RECEIVED' %}bg-amber-100 text-amber-800{% elif estado_canon=='RECEIVED' %}bg-emerald-100 text-emerald-800{% elif estado_canon=='BILLED' %}bg-borgo text-white{% elif estado_canon=='CANCELLED' %}bg-red-100 text-red-800{% else %}bg-slate-200{% endif %}">{{ estado_canon }}</span>
+  <span class="text-sm text-slate-500">{{ prov.nombre if prov }} · S/ {{ "%.2f"|format(oc.monto_total) }}</span>
+</div>
+<p class="text-xs text-slate-500 mt-1">Emisión: {{ oc.fecha_emision }} · Entrega esperada: {{ oc.fecha_entrega_esperada or '—' }}{% if oc.numero_factura %} · 🧾 {{ oc.numero_factura }} ({{ oc.fecha_factura or 's/f' }}){% endif %}</p>
+{% set _bt = ((oc.monto_total or 0) / 1.18) %}
+{% set _bt = (_bt * 100)|round / 100 %}
+<div class="grid grid-cols-3 gap-2 mt-2 text-xs max-w-xl">
+  <div class="bg-white rounded-lg shadow px-3 py-2"><p class="text-slate-500">Subtotal Neto (Base)</p><p class="font-bold font-mono">S/ {{ "%.2f"|format(_bt) }}</p></div>
+  <div class="bg-white rounded-lg shadow px-3 py-2"><p class="text-slate-500">IGV (18%)</p><p class="font-bold font-mono">S/ {{ "%.2f"|format((oc.monto_total or 0) - _bt) }}</p></div>
+  <div class="bg-white rounded-lg shadow px-3 py-2 border-t-2 border-[#C5A880]"><p class="text-slate-500">Total Inc. IGV</p><p class="font-bold font-mono">S/ {{ "%.2f"|format(oc.monto_total or 0) }}</p></div>
+</div>
+
+{# ——— Paso del flujo ——— #}
+{% set pasos = ['DRAFT', 'APPROVED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'BILLED'] %}
+{% set nombres = {'DRAFT': 'Borrador', 'APPROVED': 'Aprobada', 'PARTIALLY_RECEIVED': 'Recepción parcial', 'RECEIVED': 'Recibida', 'BILLED': 'Facturada'} %}
+{% if estado_canon != 'CANCELLED' %}
+<div class="flex items-center gap-1 mt-3 text-xs overflow-x-auto" aria-label="Flujo de la orden">
+  {% for p in pasos %}
+  {% set activo = (p == estado_canon) %}
+  {% set hecho = (pasos.index(p) < pasos.index(estado_canon)) if estado_canon in pasos else false %}
+  <span class="px-2.5 py-1 rounded-full whitespace-nowrap font-semibold {% if activo %}bg-borgo text-white{% elif hecho %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-400{% endif %}">{{ loop.index }} · {{ nombres[p] }}</span>
+  {% if not loop.last %}<span class="text-slate-300">→</span>{% endif %}
+  {% endfor %}
+</div>
+{% else %}
+<p class="mt-3 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">OC cancelada. La mercadería ya recibida se regulariza por merma/devolución.</p>
+{% endif %}
+
+{# ——— Tarjetas de acción ——— #}
+<div class="grid md:grid-cols-3 gap-3 mt-3">
+  {# Estado #}
+  <div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
+    <h2 class="font-bold mb-2 text-sm">Estado</h2>
+    <div class="flex flex-wrap gap-1 text-xs">
+      {% if estado_canon == 'DRAFT' %}
+      <form method="post" action="/inventario/compras/orden/{{ oc.id }}/aprobar"><button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold">Aprobar → APPROVED</button></form>
+      {% elif estado_canon in ('APPROVED', 'PARTIALLY_RECEIVED', 'RECEIVED') %}
+      <p class="text-xs text-slate-500">Avanza con <b>Recibir</b> (kardex) y <b>Facturar</b> (comprobante).</p>
+      {% elif estado_canon == 'BILLED' %}
+      <p class="text-xs text-slate-500">Ciclo completo: mercadería recibida y comprobante provisionado.</p>
+      {% endif %}
+      {% if estado_canon not in ('BILLED', 'CANCELLED') %}
+      <form method="post" action="/inventario/compras/orden/{{ oc.id }}/cancelar" onsubmit="return confirm('¿Cancelar OC? No revierte el kardex ya recibido.')"><button class="border border-red-300 text-red-700 rounded px-3 py-1.5">Cancelar</button></form>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Landed: habilitado desde APPROVED #}
+  <div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880] {% if estado_canon == 'DRAFT' or estado_canon in ('BILLED', 'CANCELLED') %}opacity-70{% endif %}">
+    <h2 class="font-bold mb-2 text-sm">Costos Landed <span class="font-normal text-slate-400" title="Flete, seguro y otros gastos de importación. Se prorratean por valor sobre el costo unitario antes de valorizar el ingreso a almacén.">ⓘ</span></h2>
+    {% if estado_canon == 'DRAFT' %}
+    <p class="text-xs text-slate-500 bg-marfil border border-[#C5A880]/40 rounded px-3 py-2">Disponible tras aprobar la orden.</p>
+    {% else %}
+    <form method="post" action="/inventario/compras/orden/{{ oc.id }}/landed" class="grid grid-cols-3 gap-2 text-xs">
+      <label class="block">Flete S/
+        <input name="landed_flete" type="number" step="0.01" min="0" value="{{ oc.landed_flete or 0 }}" class="border rounded px-2 py-1 w-full mt-0.5" {% if estado_canon in ('BILLED','CANCELLED') %}disabled{% endif %}>
+      </label>
+      <label class="block">Seguro S/
+        <input name="landed_seguro" type="number" step="0.01" min="0" value="{{ oc.landed_seguro or 0 }}" class="border rounded px-2 py-1 w-full mt-0.5" {% if estado_canon in ('BILLED','CANCELLED') %}disabled{% endif %}>
+      </label>
+      <label class="block">Otros S/
+        <input name="landed_otros" type="number" step="0.01" min="0" value="{{ oc.landed_otros or 0 }}" class="border rounded px-2 py-1 w-full mt-0.5" {% if estado_canon in ('BILLED','CANCELLED') %}disabled{% endif %}>
+      </label>
+      <button class="bg-borgo text-white rounded py-1.5 col-span-3 font-semibold" {% if estado_canon in ('BILLED','CANCELLED') %}disabled{% endif %}>Guardar landed (total S/ {{ "%.2f"|format(landed_total) }})</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {# Facturar: habilitado con mercadería recibida #}
+  <div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880] {% if estado_canon in ('DRAFT', 'APPROVED') %}opacity-70{% endif %}">
+    <h2 class="font-bold mb-2 text-sm">Facturar <span class="font-normal text-slate-400">→ BILLED</span></h2>
+    {% if estado_canon == 'BILLED' %}
+      {% for c in cxps %}<p class="text-xs">🧾 {{ c.numero_factura }} · Total S/ {{ "%.2f"|format(c.monto_total) }} · Saldo S/ {{ "%.2f"|format(c.saldo_pendiente) }} · {{ c.estado }}</p>{% endfor %}
+      <p class="text-xs text-slate-500 mt-1">Subtotal Neto S/ {{ "%.2f"|format(oc.subtotal) }} · IGV (18%) S/ {{ "%.2f"|format(oc.igv) }} · Total Inc. IGV S/ {{ "%.2f"|format(oc.monto_total) }}</p>
+    {% elif estado_canon in ('DRAFT', 'APPROVED') %}
+    <p class="text-xs text-slate-500 bg-marfil border border-[#C5A880]/40 rounded px-3 py-2">Requiere recepción de mercadería previa.</p>
+    {% else %}
+    <form method="post" action="/inventario/compras/orden/{{ oc.id }}/facturar" class="flex gap-1 text-xs">
+      <input name="numero_factura" required placeholder="F001-000123 *" class="border rounded px-2 py-1.5 flex-1" aria-label="Número de factura del proveedor">
+      <input name="fecha_factura" type="date" class="border rounded px-2 py-1.5" aria-label="Fecha de factura">
+      <button class="bg-emerald-700 text-white rounded px-3 font-semibold">Facturar</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{# ——— Detalle ——— #}
+<div class="bg-white rounded-xl shadow p-4 mt-3 border-t-2 border-[#C5A880]">
+  <h2 class="font-bold mb-2 text-sm">Detalle · costo final con Landed + CPP vigente</h2>
+  {% for d in detalles %}
+  {% set p = productos.get(d.producto_id) %}
+  <div class="text-xs border-b py-2 flex flex-wrap justify-between items-center gap-2">
+    <span>{{ p.nombre if p else ('Prod#' ~ d.producto_id) }} <span class="text-slate-400">{{ p.sku if p }}</span><br>
+      Sol: {{ d.cantidad_solicitada }} · Rec: {{ d.cantidad_recibida }} · <b>Pend: {{ d.pendiente }}</b> ·
+      Precio S/ {{ "%.2f"|format(d.precio_unitario) }} <span class="text-slate-400">(IGV incl. · Neto S/ {{ "%.2f"|format(d.precio_unitario / 1.18) }} sin IGV)</span>{% if d.descuento_unitario %} − Dto S/ {{ "%.2f"|format(d.descuento_unitario) }}{% endif %} + Landed/u S/ {{ "%.2f"|format(d.landed_unitario or 0) }} = <b>Final S/ {{ "%.2f"|format(d.costo_unitario_final or d.precio_unitario) }}</b> <span class="text-slate-400" title="Costo unitario neto (sin IGV) usado para valorizar el inventario en la Cuenta 2411">ⓘ neto → 2411</span>
+      {% if p %} · <span class="text-slate-500">CPP S/ {{ "%.2f"|format(p.costo_promedio or p.costo_unitario or 0) }} · Stock {{ p.stock_fisico }}</span>{% endif %}</span>
+    {% if d.pendiente > 0 and estado_canon in ('APPROVED', 'PARTIALLY_RECEIVED') %}
+    <form method="post" action="/inventario/compras/orden/{{ oc.id }}/recibir" class="flex gap-1 shrink-0" aria-label="Recibir en kardex">
+      <input type="hidden" name="producto_id" value="{{ d.producto_id }}">
+      <input name="cantidad" type="number" step="0.1" min="0.1" max="{{ d.pendiente }}" value="{{ d.pendiente }}" class="border rounded px-1 py-0.5 w-20" aria-label="Cantidad a recibir">
+      <button class="bg-emerald-700 text-white rounded px-2 font-semibold">Recibir en Kardex</button>
+    </form>
+    {% elif d.pendiente <= 0 %}<span class="text-emerald-700 font-bold shrink-0">✓ completa</span>
+    {% endif %}
+  </div>
+  {% else %}<p class="text-xs text-slate-400">Sin detalles. Agrega el primero abajo.</p>{% endfor %}
+
+  {% if estado_canon in ('DRAFT', 'APPROVED') %}
+  <h3 class="font-bold text-sm mt-4 mb-2">Agregar detalle</h3>
+  <form method="post" action="/inventario/compras/orden/{{ oc.id }}/detalle" class="flex flex-col sm:flex-row gap-2 text-xs sm:items-end">
+    <label class="block flex-1">Producto / Insumo
+      <select name="producto_id" required class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        {% for i in insumos %}<option value="{{ i.id }}">{{ i.nombre }}{% if i.sku %} — {{ i.sku }}{% endif %} ({{ i.unidad_medida or 'u.' }} · Stock {{ i.stock_fisico }})</option>{% endfor %}
+      </select>
+    </label>
+    <label class="block">Cantidad
+      <input name="cantidad_solicitada" type="number" step="0.1" min="0.1" value="1" required class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Precio Unitario S/ (IGV incl.)
+      <input name="precio_unitario" type="number" step="0.01" min="0" value="0" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <div class="flex gap-1">
+      <label class="block flex-1">Descuento S/
+        <input name="descuento_unitario" type="number" step="0.01" min="0" value="0" class="border rounded px-2 py-1.5 w-full mt-0.5">
+      </label>
+      <button class="bg-borgo text-white rounded px-3 font-semibold self-end py-1.5">+ Detalle</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+
+{# ——— Kardex valorizado ——— #}
+<div class="bg-white rounded-xl shadow p-4 mt-3 border-t-2 border-[#C5A880]">
+  <h2 class="font-bold mb-2 text-sm">Kardex valorizado <span class="font-normal text-slate-500">(S/ {{ "%.2f"|format(valorizado) }})</span></h2>
+  {% for k in kardex %}
+  <div class="text-xs border-b py-1">ENTRADA {{ k.cantidad }} u × S/ {{ "%.2f"|format(k.costo_unitario or 0) }} <span class="text-slate-400" title="Costo unitario neto (sin IGV) utilizado para la valorización de inventarios en la Cuenta 2411">(neto sin IGV → 2411)</span> = <b>S/ {{ "%.2f"|format(k.costo_total or 0) }}</b> · Saldo {{ k.saldo_fisico }} u (S/ {{ "%.2f"|format(k.saldo_valorizado or 0) }}) · <span class="text-slate-500">{{ k.doc_ref or '' }} · {{ k.fecha }}</span>{% if k.asiento_id %} · <span class="text-slate-500">asiento #{{ k.asiento_id }}</span>{% endif %}</div>
+  {% else %}<p class="text-xs text-slate-400">Sin recepciones: en DRAFT no se genera Kardex ni asientos.</p>{% endfor %}
+  {% for a in asientos %}<p class="text-xs mt-1">📒 {{ a.numero }} · {{ a.fecha }} · {{ a.glosa }} ({{ a.origen_tipo }})</p>{% endfor %}
+  <p class="text-xs text-slate-400 mt-2" title="Cada recepción genera: DEBE 241 (materias primas) / HABER 611 (variación de existencias). La facturación provisiona: DEBE 601 + 4011 (IGV) / HABER 421 (proveedores).">ⓘ Cada recepción genera asiento 241/611; la facturación, 601+4011/421.</p>
+</div>
+{% endblock %}

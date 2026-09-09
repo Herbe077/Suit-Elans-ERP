@@ -1,0 +1,22 @@
+{# Page header: título, breadcrumbs, acción principal — task-oriented #}
+{% macro page_header(title, subtitle="", breadcrumbs=[], action_href="", action_label="") -%}
+<div class="mb-4">
+  {% if breadcrumbs %}
+  <nav class="text-xs text-slate-500 mb-1 flex gap-1">
+    {% for crumb in breadcrumbs %}
+      {% if crumb.href %}<a href="{{ crumb.href }}" class="hover:text-[#370003]">{{ crumb.label }}</a>{% else %}<span>{{ crumb.label }}</span>{% endif %}
+      {% if not loop.last %}<span>/</span>{% endif %}
+    {% endfor %}
+  </nav>
+  {% endif %}
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <h1 class="text-2xl font-bold font-serif" style="color:#370003">{{ title }}</h1>
+      {% if subtitle %}<p class="text-sm text-slate-500">{{ subtitle }}</p>{% endif %}
+    </div>
+    {% if action_href and action_label %}
+      <a href="{{ action_href }}" class="bg-[#370003] text-white rounded-full px-4 py-2 text-sm font-bold shadow hover:bg-[#1F1112]">{{ action_label }}</a>
+    {% endif %}
+  </div>
+</div>
+{%- endmacro %}

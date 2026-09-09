@@ -1,0 +1,263 @@
+{% from "components/money.html" import soles %}
+{% extends "finanzas/base_finanzas.html" %}
+{% from "components/medio_pago.html" import opciones_medio_pago %}
+{% block title %}Gastos y Compras Operativas{% endblock %}
+{% block finanzas %}
+<h1 class="text-2xl font-bold mb-1 font-serif">🧾 Gastos y Compras Operativas</h1>
+<p class="text-sm text-slate-500 mb-3">Registra tus gastos del negocio. La cuenta contable se asigna sola según la categoría que elijas.</p>
+{% if error == 'pago' %}<div class="bg-amber-50 border border-amber-300 text-amber-900 rounded-xl p-3 mb-4 text-sm">⚠️ El gasto quedó <b>PENDIENTE</b> porque el pago al contado falló (revisa el monto/medio).</div>{% endif %}
+
+<div class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880] overflow-visible">
+  <h2 class="font-bold text-sm mb-2">Registrar nuevo gasto</h2>
+  <form method="post" action="/finanzas/gastos" data-retencion="{{ retencion_4ta_pct }}" class="grid grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-2 text-xs items-end">
+    <label class="block min-w-0">Fecha
+      <input name="fecha" type="date" value="{{ '' }}" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0">Categoría
+      <select name="categoria" id="g-cat" onchange="gastoCategoria()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate">
+        {% for cat in categorias %}<option value="{{ cat }}">{{ cat|replace('_', ' ')|title }}</option>{% endfor %}
+      </select>
+      <p id="g-cat-tip" class="hidden text-[11px] text-slate-500 mt-0.5">💡 Usar solo para herramientas y consumibles menores de taller (tizas, papel, aceite, repuestos). Para telas, avíos o botones inventariables, use el módulo de Inventario &gt; Compras.</p>
+    </label>
+    <label class="block min-w-0 col-span-2" id="f-glosa">Glosa / Descripción
+      <input name="glosa" placeholder="Ej. Sueldos julio, Recibo L. Prado…" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0" id="f-proveedor"><span id="lb-proveedor">Proveedor</span>
+      <select name="proveedor_id" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate">
+        <option value="">— Sin proveedor —</option>
+        {% for s in proveedores %}<option value="{{ s.id }}">{{ s.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="block min-w-0" id="f-ruc"><span id="lb-ruc">RUC</span>
+      <input name="ruc" placeholder="RUC/DNI" maxlength="11" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0" id="f-tipo">Tipo comprobante
+      <select name="tipo_comprobante" id="g-tipo" onchange="gastoModo()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option>FACTURA</option><option>BOLETA</option><option>RECIBO_HONORARIOS</option><option>OTROS</option>
+      </select>
+    </label>
+    <label class="block min-w-0" id="f-numero"><span id="lb-numero">N° Comprobante</span>
+      <input name="numero_comprobante" placeholder="F001-123" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0">Centro de costo
+      <select name="centro_costo_id" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white truncate">
+        <option value="">—</option>
+        {% for cc in centros %}<option value="{{ cc.id }}" data-codigo="{{ cc.codigo }}">{{ cc.codigo }} - {{ cc.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="block min-w-0">Vencimiento
+      <input name="fecha_vencimiento" type="date" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0">Actividad de flujo
+      <select name="actividad_flujo" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option value="">Automática</option><option value="OPERATIVO">Operativo</option>
+        <option value="INVERSION">Inversión</option><option value="FINANCIAMIENTO">Financiamiento</option>
+      </select>
+    </label>
+    <label class="block min-w-0">Monto Total S/ (IGV incl.)
+      <input id="g-total-in" name="monto_total" type="number" step="0.01" min="0.01" required placeholder="2360.00" oninput="gastoCalc()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <label class="block min-w-0" id="f-ret">Retención 8% IR S/
+      <input id="g-ret-in" name="retencion" type="number" step="0.01" min="0" value="0" oninput="gastoCalc()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+    </label>
+    <div class="block min-w-0">Desglose auto (Base + IGV)
+      <div id="g-split" class="border rounded px-2 py-1.5 mt-0.5 bg-[#FAF8F5] font-bold">S/ 0.00 + S/ 0.00</div>
+    </div>
+    <div class="block min-w-0">Monto Total S/
+      <div id="g-total" class="border rounded px-2 py-1.5 mt-0.5 bg-[#FAF8F5] font-bold">S/ 0.00</div>
+    </div>
+    <div class="block min-w-0">Cuenta contable
+      <div id="g-cuenta" class="border rounded px-2 py-1.5 mt-0.5 bg-[#FAF8F5] font-bold font-mono">—</div>
+    </div>
+    <label class="block min-w-0">Condición de pago
+      <select name="condicion_pago" id="g-cond" onchange="gastoCondicion()" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option value="CREDITO">Crédito / Por pagar</option>
+        <option value="CONTADO">Contado / Pagado hoy</option>
+      </select>
+    </label>
+    <label class="block min-w-0" id="f-medio" style="display:none">Medio de pago
+      <select name="medio_pago" class="relative z-0 border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        {{ opciones_medio_pago("TRANSFERENCIA") }}
+      </select>
+    </label>
+    <div class="self-end"><button class="bg-[#370003] text-white rounded px-4 py-1.5 font-bold w-full">Registrar gasto</button></div>
+  </form>
+</div>
+<script>
+var GASTO_SIN_IGV = ['PLANILLA_PERSONAL', 'HONORARIOS_TERCEROS'];
+var GASTO_CUENTA = {'ALQUILERES': '6311', 'HONORARIOS_TERCEROS': '6322',
+  'PLANILLA_PERSONAL': '6211', 'SERVICIOS_BASICOS': '6361',
+  'COMPRAS_AVIOS_SUMINISTROS': '6032', 'PUBLICIDAD_MARKETING': '6371',
+  'SUMINISTROS_Y_HERRAMIENTAS_TALLER': '6599',
+  'ACTIVO_FIJO': '3351', 'OTROS_GASTOS': '6599'};
+var GASTO_CENTRO = {'ALQUILERES': '941', 'HONORARIOS_TERCEROS': '941',
+  'PLANILLA_PERSONAL': '921', 'SERVICIOS_BASICOS': '941',
+  'COMPRAS_AVIOS_SUMINISTROS': '922', 'PUBLICIDAD_MARKETING': '952',
+  'SUMINISTROS_Y_HERRAMIENTAS_TALLER': '922',
+  'ACTIVO_FIJO': '941', 'OTROS_GASTOS': '941'};
+// Al cambiar de categoría se preselecciona el comprobante y la cuenta.
+function gastoCategoria() {
+  var cat = document.getElementById('g-cat').value;
+  var tipoSel = document.getElementById('g-tipo');
+  if (cat === 'HONORARIOS_TERCEROS') {
+    tipoSel.value = 'RECIBO_HONORARIOS';
+    tipoSel.disabled = true;
+  } else {
+    tipoSel.disabled = false;
+    if (cat === 'PLANILLA_PERSONAL') {
+      tipoSel.value = 'OTROS';
+    } else {
+      tipoSel.value = 'FACTURA';
+    }
+  }
+  // Tip informativo solo para suministros de taller.
+  var tipEl = document.getElementById('g-cat-tip');
+  if (tipEl) tipEl.classList.toggle('hidden', cat !== 'SUMINISTROS_Y_HERRAMIENTAS_TALLER');
+  // Pre-selecciona el centro de costo sugerido (editable por el usuario).
+  var centroSug = GASTO_CENTRO[cat];
+  if (centroSug) {
+    var selC = document.querySelector('select[name="centro_costo_id"]');
+    if (selC) {
+      for (var i = 0; i < selC.options.length; i++) {
+        if (selC.options[i].getAttribute('data-codigo') === centroSug) {
+          selC.value = selC.options[i].value;
+          break;
+        }
+      }
+    }
+  }
+  gastoModo();
+}
+function gastoModo() {
+  var cat = document.getElementById('g-cat').value;
+  var tipo = document.getElementById('g-tipo').value;
+  var esRxh = cat === 'HONORARIOS_TERCEROS' || cat === 'HONORARIOS_RXH' || tipo === 'RECIBO_HONORARIOS';
+  var sinIgv = GASTO_SIN_IGV.indexOf(cat) !== -1 || esRxh;
+  var esPlanilla = cat === 'PLANILLA_PERSONAL' || cat === 'PLANILLA';
+  function vis(id, mostrar) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = mostrar ? '' : 'none';
+  }
+  // RxH: muestra retención 8% y calcula neto (Total − Retención), sin IGV.
+  vis('f-ret', esRxh);
+  var retIn = document.getElementById('g-ret-in');
+  var t = parseFloat(document.getElementById('g-total-in').value) || 0;
+  var pctRxh = parseFloat(document.querySelector('form[action="/finanzas/gastos"]').dataset.retencion || '8');
+  if (esRxh && retIn && !(parseFloat(retIn.value) > 0)) {
+    retIn.value = (Math.round(t * pctRxh / 100 * 100) / 100).toFixed(2);
+  }
+  if (!esRxh && retIn) { retIn.value = '0'; }
+  // Planilla: solo Fecha, Glosa, Centro de costo y Monto.
+  vis('f-proveedor', !esPlanilla);
+  vis('f-ruc', !esPlanilla);
+  vis('f-tipo', !esPlanilla);
+  vis('f-numero', !esPlanilla);
+  var lbP = document.getElementById('lb-proveedor');
+  var lbR = document.getElementById('lb-ruc');
+  var lbN = document.getElementById('lb-numero');
+  if (esRxh) {
+    if (lbP) lbP.textContent = 'Nombre / DNI del Profesional';
+    if (lbR) lbR.textContent = 'DNI';
+    if (lbN) lbN.textContent = 'N° Recibo por Honorarios';
+  } else {
+    if (lbP) lbP.textContent = 'Proveedor';
+    if (lbR) lbR.textContent = 'RUC';
+    if (lbN) lbN.textContent = 'N° Comprobante';
+  }
+  var badge = document.getElementById('g-cuenta');
+  if (badge) badge.textContent = GASTO_CUENTA[cat] || '—';
+  gastoCalc(sinIgv);
+}
+function gastoCondicion() {
+  var contado = document.getElementById('g-cond').value === 'CONTADO';
+  var el = document.getElementById('f-medio');
+  if (el) el.style.display = contado ? '' : 'none';
+}
+function gastoCalc(sinIgv) {
+  var cat = document.getElementById('g-cat').value;
+  var tipo = document.getElementById('g-tipo').value;
+  var esRxh = cat === 'HONORARIOS_TERCEROS' || cat === 'HONORARIOS_RXH' || tipo === 'RECIBO_HONORARIOS';
+  if (sinIgv === undefined) {
+    sinIgv = GASTO_SIN_IGV.indexOf(cat) !== -1 || esRxh;
+  }
+  var t = parseFloat(document.getElementById('g-total-in').value) || 0;
+  var base = sinIgv ? t : Math.round((t / 1.18) * 100) / 100;
+  var igv = Math.round((t - base) * 100) / 100;
+  var ret = parseFloat(document.getElementById('g-ret-in').value) || 0;
+  var f = function (n) { return n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); };
+  document.getElementById('g-split').textContent = 'S/ ' + f(base) + ' + S/ ' + f(igv) + (sinIgv ? ' (sin IGV)' : '');
+  document.getElementById('g-total').textContent = 'S/ ' + f(t) + (esRxh ? ' · Neto S/ ' + f(t - ret) : '');
+}
+gastoModo();
+</script>
+
+<form method="get" class="flex gap-2 text-xs mb-3">
+  <select name="estado" class="border rounded px-2 py-1"><option value="">Todos</option><option value="PENDIENTE" {% if estado=='PENDIENTE' %}selected{% endif %}>PENDIENTE</option><option value="PAGADO" {% if estado=='PAGADO' %}selected{% endif %}>PAGADO</option></select>
+  <select name="categoria" class="border rounded px-2 py-1"><option value="">Todas categorías</option>{% for cat in categorias %}<option value="{{ cat }}" {% if categoria==cat %}selected{% endif %}>{{ cat }}</option>{% endfor %}</select>
+  <button class="bg-slate-800 text-white rounded px-3">Filtrar</button>
+</form>
+
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+  <table class="w-full text-xs">
+    <thead class="bg-slate-50 text-slate-500"><tr><th class="text-left p-2">ID</th><th>Fecha</th><th>Vencimiento</th><th>Proveedor/RUC</th><th>Comprobante</th><th>Categoría</th><th class="hidden md:table-cell">Cuenta</th><th class="text-right">Base</th><th class="text-right">IGV</th><th class="text-right">Ret.8%</th><th class="text-right">Total</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+    {% for g in gastos %}
+      <tr class="border-b hover:bg-amber-50">
+        <td class="p-2 font-mono">{{ g.id }}</td>
+        <td>{{ g.fecha_emision }}</td>
+        <td>{{ g.fecha_vencimiento or "—" }}</td>
+        <td>{{ prov_map.get(g.proveedor_id, '') }}{% if g.ruc_proveedor %} ({{ g.ruc_proveedor }}){% elif not g.proveedor_id %}—{% endif %}{% if g.glosa %}<br><span class="text-slate-400">{{ g.glosa }}</span>{% endif %}</td>
+        <td class="font-mono">{{ (g.tipo_comprobante or 'FACTURA') }} {{ g.numero_comprobante or '' }}</td>
+        <td><span class="px-1.5 py-0.5 rounded bg-slate-100">{{ (g.categoria or 'OTRO').replace('_', ' ')|title }}</span></td>
+        <td class="font-mono hidden md:table-cell">{{ cuentas_map.get(g.cuenta_id, g.cuenta_id or '—') }}</td>
+        <td class="text-right">{{ soles(g.monto_base or 0) }}</td>
+        <td class="text-right">{{ soles(g.monto_igv or 0) }}</td>
+        <td class="text-right">{{ soles(g.retencion or 0) }}</td>
+        <td class="text-right font-bold">{{ soles(g.monto_total or 0) }}</td>
+        <td>{% if g.estado=='PAGADO' %}<span class="text-emerald-700 font-bold">PAGADO</span>{% else %}<span class="text-amber-700 font-bold">PENDIENTE</span>{% endif %}</td>
+        <td>{% if g.estado!='PAGADO' %}<button type="button" onclick="abrirModalPago('gasto', {{ g.id }}, '{{ g.numero_comprobante or g.id }}', {{ (g.monto_total or 0) - (g.retencion or 0) }})" class="underline">Pagar</button>{% endif %}</td>
+      </tr>
+    {% else %}<tr><td colspan="12" class="text-center p-3 text-slate-400">Sin gastos registrados.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+<div id="modal-pago" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/60" onclick="cerrarModalPago()"></div>
+  <form method="post" action="/finanzas/tesoreria/pagar" class="relative bg-white rounded-xl shadow p-4 w-full max-w-sm text-sm">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="font-bold">💳 Pagar <span id="pago-ref" class="font-mono font-normal text-slate-500"></span></h2>
+      <button type="button" onclick="cerrarModalPago()" class="text-slate-400 border rounded-full w-7 h-7" aria-label="Cerrar">✕</button>
+    </div>
+    <input type="hidden" name="gasto_id" id="pago-gasto" value="">
+    <input type="hidden" name="cxp_id" id="pago-cxp" value="">
+    <input type="hidden" name="back" value="/finanzas/gastos">
+    <label class="block mb-2">Monto S/
+      <input name="monto" id="pago-monto" type="number" step="0.01" min="0.01" required class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block mb-2">Medio de pago
+      <select name="medio" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{{ opciones_medio_pago("TRANSFERENCIA") }}</select>
+    </label>
+    <label class="block mb-3">N° Operación / Voucher (opc.)
+      <input name="voucher" placeholder="Ej. OP-2026-001" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="flex items-start gap-2 mb-3 text-xs text-slate-600">
+      <input type="checkbox" name="permitir_sobregiro" value="1" class="mt-0.5">
+      <span>Autorizo sobregiro en <b>Banco 1041</b> si no hay saldo suficiente. La <b>Caja 1011</b> nunca permite saldo negativo.</span>
+    </label>
+    <button class="w-full bg-borgo text-white rounded-lg py-2 font-bold">Confirmar pago</button>
+  </form>
+</div>
+<script>
+function abrirModalPago(tipo, id, ref, saldo) {
+  document.getElementById('pago-gasto').value = tipo === 'gasto' ? id : '';
+  document.getElementById('pago-cxp').value = tipo === 'cxp' ? id : '';
+  document.getElementById('pago-ref').textContent = ref;
+  document.getElementById('pago-monto').value = saldo;
+  document.getElementById('pago-monto').max = saldo;
+  document.getElementById('modal-pago').classList.remove('hidden');
+}
+function cerrarModalPago() {
+  document.getElementById('modal-pago').classList.add('hidden');
+}
+</script>
+{% endblock %}

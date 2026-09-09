@@ -1,0 +1,71 @@
+{% extends "inventario/base_inventario.html" %}
+{% block title %}Reservas — Inventario{% endblock %}
+{% block inventario %}
+<h1 class="text-2xl font-bold mb-1 font-serif" style="color:#370003">🔖 Reservas Activas / Pendientes de Despacho</h1>
+<p class="text-sm text-slate-500 mb-3">Material apartado por Órdenes de Venta y Fichas Técnicas. Al aprobar se descuenta físico y reservado, se registra la salida en Kardex y su asiento contable a WIP (2311/2411 telas · 2311/2521 auxiliares).</p>
+{% if error %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ {{ error }}</div>{% endif %}
+{% if ok %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-4 text-sm">✔ {{ ok }}</div>{% endif %}
+
+<div class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880]">
+  <h2 class="font-bold mb-2">Pendientes de despacho ({{ activas|length }})</h2>
+  <div class="w-full overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+    <table class="w-full text-xs">
+      <thead class="text-slate-500"><tr>
+        <th class="text-left px-3 py-1 whitespace-nowrap">Insumo</th><th class="text-left px-3 py-1 whitespace-nowrap">Pedido</th>
+        <th class="text-center px-3 py-1 whitespace-nowrap">Reservado</th><th class="text-center px-3 py-1 whitespace-nowrap">Consumido</th>
+        <th class="text-center px-3 py-1 whitespace-nowrap">Pendiente</th><th class="text-center px-3 py-1 whitespace-nowrap">Físico</th>
+        <th class="text-right px-3 py-1 whitespace-nowrap">Costo CPP S/</th><th class="text-left px-3 py-1 whitespace-nowrap">Despachar a Taller</th>
+      </tr></thead>
+      <tbody class="font-mono tabular-nums">
+      {% for r in activas %}
+      <tr class="border-b hover:bg-marfil">
+        <td class="whitespace-nowrap px-3 py-1.5">{{ r.sku }} <span class="font-sans text-slate-500">· {{ r.producto }} ({{ r.categoria }})</span></td>
+        <td class="whitespace-nowrap px-3 py-1.5 font-bold">{{ r.folio }}</td>
+        <td class="text-center px-3 py-1.5">{{ "%.1f"|format(r.reservado) }}</td>
+        <td class="text-center px-3 py-1.5">{{ "%.1f"|format(r.consumido) }}</td>
+        <td class="text-center font-bold px-3 py-1.5">{{ "%.1f"|format(r.pendiente) }}</td>
+        <td class="text-center px-3 py-1.5">{{ "%.1f"|format(r.stock_fisico) }}</td>
+        <td class="text-right px-3 py-1.5">{{ "%.2f"|format(r.cpp or 0) }}</td>
+        <td class="px-3 py-1.5">
+          <button type="button" onclick="document.getElementById('dlg-{{ r.producto_id }}-{{ r.orden_venta_id }}').showModal()" title="Aprobar y Despachar Material" class="bg-emerald-700 text-white rounded px-3 py-1 font-semibold whitespace-nowrap font-sans">[ Despachar a Taller ]</button>
+          <dialog id="dlg-{{ r.producto_id }}-{{ r.orden_venta_id }}" class="rounded-xl shadow p-4 border-t-2 border-[#C5A880] font-sans">
+            <form method="dialog" class="text-right"><button class="text-slate-400 underline text-xs">Cerrar ✕</button></form>
+            <h3 class="font-bold mb-1 font-serif" style="color:#370003">Despachar a Taller</h3>
+            <p class="text-xs text-slate-500 mb-2">{{ r.sku }} · {{ r.producto }} ({{ r.categoria }}) → <b>{{ r.folio }}</b></p>
+            <dl class="text-xs grid grid-cols-2 gap-x-4 gap-y-1 mb-3 font-mono">
+              <dt class="text-slate-500">Reservado</dt><dd class="text-right">{{ "%.1f"|format(r.reservado) }}</dd>
+              <dt class="text-slate-500">Consumido</dt><dd class="text-right">{{ "%.1f"|format(r.consumido) }}</dd>
+              <dt class="text-slate-500 font-bold">Pendiente</dt><dd class="text-right font-bold">{{ "%.1f"|format(r.pendiente) }}</dd>
+              <dt class="text-slate-500">Stock físico</dt><dd class="text-right">{{ "%.1f"|format(r.stock_fisico) }}</dd>
+            </dl>
+            <form method="post" action="/inventario/reservas/despachar" class="flex gap-1 items-center" onsubmit="return confirm('¿Aprobar y despachar {{ r.sku }} para {{ r.folio }}? Descuenta físico y reservado, registra SALIDA_TALLER en Kardex.')">
+              <input type="hidden" name="producto_id" value="{{ r.producto_id }}">
+              <input type="hidden" name="orden_venta_id" value="{{ r.orden_venta_id }}">
+              <label class="text-xs">Cantidad
+                <input name="cantidad" type="number" step="0.1" min="0.1" max="{{ r.pendiente }}" value="{{ r.pendiente }}" required title="Cantidad a despachar (máx. pendiente). Descuenta stock físico y libera reservado; Kardex SALIDA_TALLER." class="border rounded px-2 py-1 w-24 block">
+              </label>
+              <button title="Aprobar y Despachar Material" class="bg-emerald-700 text-white rounded px-3 py-1 font-semibold whitespace-nowrap self-end">Confirmar despacho</button>
+            </form>
+            <p class="text-xs text-slate-400 mt-2">ⓘ Descuenta stock físico y libera reservado; registra SALIDA_TALLER en Kardex para {{ r.folio }}.</p>
+          </dialog>
+        </td>
+      </tr>
+      {% else %}<tr><td colspan="8" class="text-center text-slate-400 py-3">Sin reservas pendientes. Las reservas se generan al confirmar pedidos, vender en POS o crear fichas técnicas.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="text-xs text-slate-400 mt-2">ⓘ Pendiente = Reservado − Consumido + Devuelto (Kardex por pedido). Si registras una salida manual eligiendo el pedido en <a href="/inventario/almacen" class="underline" style="color:#370003">Almacén</a>, esa cantidad consume la reserva y no se descuenta dos veces.</p>
+</div>
+
+<div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
+  <h2 class="font-bold mb-2 text-sm">Historial — Despachadas ({{ historial|length }})</h2>
+  <div class="w-full overflow-x-auto text-xs max-h-64 overflow-y-auto">
+  {% for r in historial %}
+  <div class="border-b py-1.5 flex flex-wrap justify-between gap-1">
+    <span><b>{{ r.sku }}</b> · {{ r.folio }} · reservado {{ "%.1f"|format(r.reservado) }} / consumido {{ "%.1f"|format(r.consumido) }}</span>
+    <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">DESPACHADA</span>
+  </div>
+  {% else %}<p class="text-slate-400 py-1">Sin despachos registrados.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

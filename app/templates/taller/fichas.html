@@ -1,0 +1,40 @@
+{% extends "produccion/base_produccion.html" %}
+{% from "components/badge.html" import badge %}
+{% block title %}Fichas técnicas y medidas{% endblock %}
+{% block produccion %}
+<div class="flex items-center justify-between mb-1 flex-wrap gap-2">
+  <div>
+    <h1 class="text-2xl font-bold font-serif" style="color:#370003">✂️ Fichas técnicas y medidas</h1>
+    <p class="text-sm text-slate-500">Medidas del cliente vinculadas a sus prendas y al consumo de materia prima.</p>
+  </div>
+  <form method="get" class="flex gap-2 items-end">
+    <label class="block text-sm">Buscar
+      <input name="q" value="{{ q }}" placeholder="Nombre, documento…" class="border rounded-lg px-3 py-1.5 text-sm block mt-0.5">
+    </label>
+    <button class="bg-borgo text-white rounded-lg px-3 py-1.5 text-sm font-semibold self-end">Buscar</button>
+  </form>
+</div>
+<div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
+  <div class="overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="text-xs text-slate-500"><tr>
+      <th class="text-left py-1">Cliente</th><th class="text-left py-1">Documento</th>
+      <th class="text-left py-1">Teléfono</th><th class="text-left py-1">Distrito</th>
+      <th class="text-left py-1">Marca</th><th class="text-right py-1">Ficha</th>
+    </tr></thead>
+    <tbody>
+    {% for c in clientes %}
+    <tr class="border-b hover:bg-marfil" data-buscar="{{ (c.nombre ~ ' ' ~ c.apellidos)|lower }}">
+      <td class="py-2 font-medium">{{ c.nombre }} {{ c.apellidos }}</td>
+      <td class="text-xs">{{ c.doc_label }}</td>
+      <td class="text-xs">{{ c.telefono or '—' }}</td>
+      <td class="text-xs">{{ c.distrito or '—' }}</td>
+      <td>{% if c.vip %}{{ badge("VIP","warning") }}{% else %}<span class="text-slate-300">—</span>{% endif %}</td>
+      <td class="text-right"><a href="/produccion/fichas/{{ c.id }}" class="font-semibold underline" style="color:#370003">Abrir ficha →</a></td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="p-4 text-sm text-slate-500">Sin resultados.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

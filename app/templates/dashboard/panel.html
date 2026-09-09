@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "components/stats_card.html" import stats_card %}
+{% from "components/badge.html" import badge, empty_state %}
+{% from "components/page_header.html" import page_header %}
+{% block title %}Dashboard — Suit Elans{% endblock %}
+{% block content %}
+{{ page_header("Hola, " ~ user.full_name, "Centro operativo: ventas, producción, inventario y finanzas", [], "", "") }}
+
+{# KPIs unificados vía stats_card #}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+  {% if user.role|lower in ['admin','venta','ventas','comercial','cajero'] %}
+    {{ stats_card("Ventas del mes", "S/ %.2f"|format(ventas_mes), "", "success") }}
+  {% endif %}
+  {{ stats_card("Pedidos activos", pedidos_activos, "", "info") }}
+  {{ stats_card("Prendas en taller", prendas_taller, "", "info") }}
+  {% if user.role|lower in ['admin','venta','ventas','comercial','sastre','sastre-maestro','sastre-asistente','maestro_sastre'] %}
+    {{ stats_card("Citas hoy", citas_hoy, "", "default") }}
+  {% endif %}
+  {% if user.role|lower in ['admin','almacen','almacenero'] %}
+    {{ stats_card("Alertas stock", alertas_stock, "mínimo", "danger" if alertas_stock else "default") }}
+  {% endif %}
+  {% if user.role|lower in ['admin','venta','ventas','comercial','sastre-maestro'] %}
+    {{ stats_card("Leads abiertos", leads_abiertos, "", "default") }}
+    {{ stats_card("Por cobrar", "S/ %.2f"|format(por_cobrar), "pendiente", "warning") }}
+  {% endif %}
+</div>
+
+{# Acciones rápidas TASK-ORIENTED (reemplaza enlaces pasivos duplicados) #}
+<div class="se-card p-4 mb-6" style="border-color:#C5A880/20">
+  <h2 class="font-bold text-sm mb-3" style="color:#370003">⚡ Acciones rápidas</h2>
+  <div class="grid md:grid-cols-3 gap-3">
+    {% if user.role|lower in ['admin','venta','ventas','comercial','cajero','sastre-maestro'] %}
+      <a href="/ventas/pos" class="bg-[#370003] text-white rounded-xl p-4 shadow text-center text-sm font-bold hover:bg-[#1F1112]">🛒 Registrar Venta</a>
+      <a href="/ventas/caja" class="bg-white rounded-xl p-3 shadow text-center text-sm font-bold border hover:bg-[#FAF8F5]" style="border-color:#C5A880">💰 Cobrar Pedido</a>
+      <a href="/comercial/clientes" class="bg-white rounded-xl p-3 shadow text-center text-sm font-bold border hover:bg-[#FAF8F5]" style="border-color:#C5A880">🤝 Nuevo Cliente</a>
+    {% endif %}
+    {% if user.role|lower in ['admin','taller','operario_taller','sastre','sastre-maestro','sastre-asistente','maestro_sastre'] %}
+      <a href="/rendimiento/registro" class="bg-[#C5A880] text-[#1F1112] rounded-xl p-4 shadow text-center text-sm font-bold">⚡ Nuevo Tareo</a>
+      <a href="/produccion/pruebas" class="bg-white rounded-xl p-3 shadow text-center text-sm font-bold border" style="border-color:#C5A880">📏 Ver Pruebas de Hoy</a>
+      <a href="/produccion/kanban" class="bg-white rounded-xl p-3 shadow text-center text-sm font-bold border" style="border-color:#C5A880">🧵 Tablero Producción</a>
+      {% if user.role|lower in ['admin','taller','operario_taller','sastre-asistente'] %}
+      <a href="/taller/cierre-jornada" class="bg-white rounded-xl p-3 shadow text-center text-sm font-bold border" style="border-color:#C5A880">✅ Cierre de jornada</a>
+      {% endif %}
+    {% endif %}
+    {% if user.role|lower in ['admin','almacen','almacenero'] %}
+      <a href="/inventario/almacen" class="bg-[#370003] text-white rounded-xl p-3 shadow text-center text-sm font-bold">📦 Registrar Ingreso</a>
+      <a href="/inventario/compras" class="bg-white rounded-xl p-3 shadow text-center text-sm font-bold border" style="border-color:#C5A880">🧾 Nueva Compra</a>
+    {% endif %}
+    {% if user.role|lower in ['admin','gerente','contador','finanzas'] %}
+      <a href="/finanzas/cuentas-por-cobrar" class="bg-[#1F1112] text-white rounded-xl p-3 shadow text-center text-sm font-bold">💳 Ver CxC</a>
+      <a href="/finanzas/rentabilidad" class="bg-white rounded-xl p-3 shadow text-center text-sm font-bold border" style="border-color:#C5A880">📈 Rentabilidad</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid md:grid-cols-2 gap-4">
+  {% if user.role|lower in ['admin','venta','ventas','comercial','sastre','sastre-maestro','sastre-asistente','maestro_sastre'] %}
+  <div class="se-card p-4">
+    <div class="flex justify-between items-center mb-2">
+      <h2 class="font-bold">📅 Próximas citas</h2>
+      <a href="/comercial/citas" class="text-xs bg-[#FAF8F5] border rounded-full px-2 py-0.5" style="border-color:#C5A880">Ver agenda →</a>
+    </div>
+    {% for a in proximas %}
+      <div class="border-b py-2 text-sm flex justify-between items-center">
+        <span>{{ a.tipo }} · {{ a.inicio }}</span>{{ badge(a.estado, "info") }}
+      </div>
+    {% else %}
+      {{ empty_state("📅", "Sin citas programadas", "Agenda una cita para verla aquí", "/comercial/citas", "Nueva Cita") }}
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="se-card p-4">
+    <div class="flex justify-between items-center mb-2">
+      <h2 class="font-bold">🧾 Últimos pedidos</h2>
+      <a href="/ventas/ordenes" class="text-xs bg-[#FAF8F5] border rounded-full px-2 py-0.5" style="border-color:#C5A880">Ver órdenes →</a>
+    </div>
+    {% for o in pedidos %}
+      <div class="border-b py-2 text-sm flex justify-between items-center">
+        <span class="font-mono">{{ o.folio }}</span>
+        {% if o.estado == 'entregado' %}{{ badge("COMPLETADA","success") }}
+        {% elif o.estado == 'confirmado' %}{{ badge("VENTA_CONFIRMADA","warning") }}
+        {% elif o.estado == 'cotizado' %}{{ badge("COTIZACION","info") }}
+        {% else %}{{ badge(o.estado, "default") }}{% endif %}
+        <span class="font-bold">S/ {{ "%.2f"|format(o.total) }}</span>
+      </div>
+    {% else %}
+      {{ empty_state("🧾", "Sin pedidos aún", "Registra tu primera venta desde POS", "/ventas/pos", "Registrar Venta") }}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

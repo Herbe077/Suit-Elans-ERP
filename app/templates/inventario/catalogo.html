@@ -1,0 +1,216 @@
+{% extends "inventario/base_inventario.html" %}
+{% block title %}Catálogo — Insumos y Productos{% endblock %}
+{% block inventario %}
+<h1 class="text-2xl font-bold mb-1 font-serif">🧵 Catálogo</h1>
+<p class="text-sm text-slate-500 mb-3">Materia prima e insumos para el taller, y prendas terminadas para la venta.</p>
+{% if error %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ {{ error }}</div>{% endif %}
+{% if faltantes %}
+<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ {{ faltantes|length }} variante(s) con stock bajo.</div>
+{% endif %}
+
+{# Pestañas funcionales (AlpineJS, un solo scope): solo una sección visible #}
+<div x-data="{ tab: (location.hash === '#prendas-terminadas' ? 'pt' : 'mp') }">
+<div class="flex gap-2 mb-4 text-xs" role="tablist" aria-label="Secciones del catálogo">
+  <button role="tab" :aria-selected="tab === 'mp'" @click="tab = 'mp'; location.hash = '#materia-prima'" :class="tab === 'mp' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">A · Materia Prima / Insumos</button>
+  <button role="tab" :aria-selected="tab === 'pt'" @click="tab = 'pt'; location.hash = '#prendas-terminadas'" :class="tab === 'pt' ? 'bg-borgo text-white' : 'bg-white border'" class="px-3 py-1.5 rounded-full font-semibold">B · Prendas Terminadas / Productos</button>
+</div>
+
+{# ═══════════ A · MATERIA PRIMA / INSUMOS ═══════════ #}
+<section id="materia-prima" x-show="tab === 'mp'" class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880] scroll-mt-4">
+  <h2 class="font-bold mb-1">A · Materia Prima / Insumos <span class="font-normal text-slate-500 text-xs">({{ insumos|length }})</span></h2>
+  <p class="text-xs text-slate-500 mb-3">Telas, forros, avíos y empaques que consume el taller.</p>
+
+  <div class="flex flex-wrap gap-2 mb-3 text-xs items-center">
+    <a href="/inventario/catalogo" class="px-3 py-1 rounded-full border {{ 'bg-borgo text-white' if not categoria else 'bg-white' }}">Todas</a>
+    {% set _tabs = [('TELA_PRINCIPAL', 'Telas Principales'), ('FORROS', 'Forros'), ('ENTRETELAS_Y_ESTRUCTURA', 'Entretelas/Estructura'), ('AVIOS_Y_FORNITURAS', 'Avíos/Fornituras'), ('EMPAQUES_Y_PRESENTACION', 'Empaques')] %}
+    {% for _val, _lbl in _tabs %}<a href="/inventario/catalogo?categoria={{ _val }}" class="px-3 py-1 rounded-full border {{ 'bg-borgo text-white' if categoria == _val else 'bg-white' }}">{{ _lbl }}</a>{% endfor %}
+    <form method="get" class="flex gap-1 ml-auto items-end">
+      {% if categoria %}<input type="hidden" name="categoria" value="{{ categoria }}">{% endif %}
+      <label class="block">Buscar
+        <input name="q" value="{{ q or '' }}" placeholder="SKU / nombre" class="border rounded px-2 py-1.5 w-40 block mt-0.5" aria-label="Buscar por SKU o nombre">
+      </label>
+      <button class="bg-borgo text-white rounded px-3 py-1.5 self-end" aria-label="Buscar">🔍</button>
+    </form>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead class="text-slate-500"><tr>
+        <th class="text-left py-1">Código/SKU</th><th class="text-left py-1">Nombre</th><th class="py-1">Categoría</th>
+        <th class="text-left py-1">Composición</th><th class="text-left py-1">Color</th><th class="py-1">Ancho (cm)</th>
+        <th class="text-right py-1">Precio m/u</th><th class="py-1">Stock mín.</th><th class="py-1">Prov.</th><th class="text-center py-1">Stock</th><th class="text-right py-1">Editar</th>
+      </tr></thead>
+      <tbody>
+      {% for ins in insumos %}
+      <tr class="border-b hover:bg-marfil {% if ins.stock_disponible <= ins.stock_minimo or ins.stock_fisico <= ins.stock_minimo %}bg-red-50{% endif %}">
+        <td class="font-mono py-1.5">{{ ins.sku }}</td>
+        <td class="font-medium">{{ ins.nombre }}</td>
+        <td class="text-center"><span class="px-1.5 py-0.5 rounded bg-slate-100">{{ ins.categoria }}</span></td>
+        <td>{{ ins.composicion or '—' }}</td>
+        <td><span class="inline-block w-3 h-3 rounded-full border align-middle" style="background: {{ ins.color or '#eee' }}"></span> {{ ins.color or '—' }}</td>
+        <td class="text-center">{{ ins.ancho_cm or ins.ancho_m*100 if ins.ancho_m else '—' }}</td>
+        <td class="text-right">S/ {{ "%.2f"|format(ins.costo_unitario or ins.precio_metro or 0) }}</td>
+        <td class="text-center">{{ ins.stock_minimo }}</td>
+        <td class="text-center">{{ ins.proveedor_id or '—' }}</td>
+        <td class="text-center {% if ins.stock_bajo %}text-red-600 font-bold{% endif %}">{{ ins.stock_fisico }} / {{ ins.stock_disponible }} disp.</td>
+        <td class="text-right"><a href="/inventario/catalogo/insumo/{{ ins.id }}/editar" class="font-semibold underline" style="color:#370003">Editar</a></td>
+      </tr>
+      {% else %}<tr><td colspan="11" class="text-center text-slate-400 py-2">Sin insumos. Crea el primero abajo.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="font-bold text-sm mt-4 mb-2">Nuevo insumo</h3>
+  <form method="post" action="/inventario/catalogo/insumo" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs items-end">
+    <label class="block">Código / SKU *
+      <input name="sku" required placeholder="TE-001" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Nombre *
+      <input name="nombre" required placeholder="Tela Cardif Negro" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Categoría
+      <select name="categoria" id="ins-cat" onchange="insCategoria()" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+        <option value="TELA_PRINCIPAL">TELA_PRINCIPAL (Telas principales para confección)</option>
+        <option value="FORROS">FORROS (Forros interiores)</option>
+        <option value="ENTRETELAS_Y_ESTRUCTURA">ENTRETELAS_Y_ESTRUCTURA (Entretelas, hombreras, plastrón, fieltro)</option>
+        <option value="AVIOS_Y_FORNITURAS">AVIOS_Y_FORNITURAS (Botones, hilos, cierres)</option>
+        <option value="EMPAQUES_Y_PRESENTACION">EMPAQUES_Y_PRESENTACION (Fundas, ganchos, cajas, bolsas)</option>
+      </select>
+    </label>
+    <label class="block">Composición
+      <input name="composicion" id="ins-comp" placeholder="100% Lana" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Color
+      <input name="color" placeholder="Azul" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block" id="ins-ancho-lbl">Ancho de paño (cm)
+      <input name="ancho_cm" id="ins-ancho" type="number" step="1" min="0" placeholder="150cm (siempre en cm: 1.50m → 150)" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Unidad
+      <select name="unidad_medida" id="ins-uni" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="METROS">METROS</option><option value="UNIDADES">UNIDADES</option><option value="ROLLO">ROLLO</option><option value="BOBINAS">BOBINAS</option><option value="PAR">PAR</option><option value="CONOS">CONOS</option></select>
+    </label>
+    <label class="block">Costo unitario S/
+      <input name="costo_unitario" type="number" step="0.01" min="0" value="0" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Stock físico
+      <input name="stock_fisico" type="number" step="0.1" min="0" value="0" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Stock mínimo
+      <input name="stock_minimo" type="number" step="0.1" min="0" value="10" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Proveedor habitual
+      <select name="proveedor_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="">— Sin asignar —</option>{% for s in proveedores %}<option value="{{ s.id }}">{{ s.nombre }}</option>{% endfor %}</select>
+    </label>
+    <button class="bg-borgo text-white rounded py-1.5 font-semibold">+ Alta insumo</button>
+  </form>
+<script>
+function insCategoria() {
+  var cat = document.getElementById('ins-cat').value;
+  var ancho = document.getElementById('ins-ancho');
+  var anchoLbl = document.getElementById('ins-ancho-lbl');
+  var comp = document.getElementById('ins-comp');
+  var uni = document.getElementById('ins-uni');
+  var paño = (cat === 'TELA_PRINCIPAL' || cat === 'FORROS');
+  var avioEmp = (cat === 'AVIOS_Y_FORNITURAS' || cat === 'EMPAQUES_Y_PRESENTACION');
+  // Ancho: obligatorio en telas/forros, oculto en avíos/empaques, opcional en entretelas.
+  if (anchoLbl) anchoLbl.style.display = avioEmp ? 'none' : '';
+  if (ancho) { ancho.required = paño; if (avioEmp) ancho.value = ''; }
+  if (comp) comp.required = paño;
+  // Unidad sugerida por categoría (editable manualmente).
+  if (uni) uni.value = (cat === 'AVIOS_Y_FORNITURAS' || cat === 'EMPAQUES_Y_PRESENTACION') ? 'UNIDADES' : 'METROS';
+}
+document.addEventListener('DOMContentLoaded', insCategoria);
+</script>
+</section>
+
+{# ═══════════ B · PRENDAS TERMINADAS / PRODUCTOS ═══════════ #}
+<section id="prendas-terminadas" x-show="tab === 'pt'" class="scroll-mt-4">
+  <h2 class="font-bold mb-1">B · Prendas Terminadas / Productos <span class="font-normal text-slate-500 text-xs">comercializables</span></h2>
+  <p class="text-xs text-slate-500 mb-3">Colecciones, productos y variantes por talla/SKU para la venta.</p>
+  <div class="grid md:grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
+      <h3 class="font-bold mb-2 text-sm">Colecciones</h3>
+      <form method="post" action="/inventario/catalogo/colecciones" class="flex gap-1 text-xs mb-2 items-end">
+        <label class="block flex-1">Nombre
+          <input name="nombre" required placeholder="Otoño 2026" class="border rounded px-2 py-1.5 w-full mt-0.5">
+        </label>
+        <label class="block">Temp.
+          <input name="temporada" placeholder="AW26" class="border rounded px-2 py-1.5 w-20 mt-0.5">
+        </label>
+        <button class="bg-borgo text-white rounded px-3 py-1.5 self-end font-semibold" aria-label="Agregar colección">+</button>
+      </form>
+      {% for c in colecciones %}<div class="text-xs border-b py-1">{{ c.nombre }} <span class="text-slate-400">{{ c.temporada or '' }}</span></div>{% endfor %}
+      <h3 class="font-bold mb-2 mt-4 text-sm">Nuevo producto</h3>
+      <form method="post" action="/inventario/catalogo/productos" class="grid gap-2 text-xs items-end">
+        <label class="block">Código *
+          <input name="codigo" required placeholder="TRA-001" class="border rounded px-2 py-1.5 w-full mt-0.5">
+        </label>
+        <label class="block">Nombre *
+          <input name="nombre" required placeholder="Traje ejecutivo" class="border rounded px-2 py-1.5 w-full mt-0.5">
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="block">Línea
+            <select name="linea" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="comercial">Comercial</option><option value="medida">Medida</option></select>
+          </label>
+          <label class="block">Precio base S/
+            <input name="precio_base" type="number" step="0.01" min="0" value="0" class="border rounded px-2 py-1.5 w-full mt-0.5">
+          </label>
+        </div>
+        <label class="block">Colección
+          <select name="collection_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="">— Sin colección —</option>{% for c in colecciones %}<option value="{{ c.id }}">{{ c.nombre }}</option>{% endfor %}</select>
+        </label>
+        <button class="bg-borgo text-white rounded py-1.5 font-semibold">Crear producto</button>
+      </form>
+    </div>
+    <div class="md:col-span-2 bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
+      <h3 class="font-bold mb-2 text-sm">Productos y variantes (SKU)</h3>
+      {% for p in productos %}
+      <div class="border border-slate-200 rounded-lg p-2 mb-2">
+        <p class="text-sm font-bold">{{ p.codigo }} · {{ p.nombre }} <span class="text-xs font-normal text-slate-500">({{ p.linea }})</span> <a href="/inventario/catalogo/producto/{{ p.id }}/editar" class="text-xs font-semibold underline" style="color:#370003">Editar</a></p>
+        <div class="text-xs mt-1">
+          {% for v in variantes[p.id] %}
+          <span class="inline-block border rounded px-1.5 py-0.5 mr-1 mb-1 {% if v.stock <= v.stock_minimo %}bg-red-100 text-red-700 font-semibold{% endif %}">{{ v.talla }} · {{ v.sku }} · {{ v.stock }} · S/ {{ "%.2f"|format(v.precio) }}</span>
+          {% endfor %}
+        </div>
+        <form method="post" action="/inventario/catalogo/productos/{{ p.id }}/variantes" class="flex gap-1 text-xs mt-1 items-end">
+          <label class="block">Talla
+            <input name="talla" placeholder="M" class="border rounded px-2 py-1 w-16 block mt-0.5">
+          </label>
+          <label class="block flex-1">SKU *
+            <input name="sku" required placeholder="TRA-001-M" class="border rounded px-2 py-1 w-full block mt-0.5">
+          </label>
+          <label class="block">Stock
+            <input name="stock" type="number" step="1" min="0" value="0" class="border rounded px-2 py-1 w-16 block mt-0.5">
+          </label>
+          <label class="block">Precio S/ (Inc. IGV)
+            <input name="precio" type="number" step="0.01" min="0" value="0" class="border rounded px-2 py-1 w-20 block mt-0.5">
+          </label>
+          <label class="block">Costo S/
+            <input name="costo_unitario" type="number" step="0.01" min="0" value="0" title="Costo unitario del activo (PCGE Cta 23)" class="border rounded px-2 py-1 w-20 block mt-0.5">
+          </label>
+          <button class="bg-slate-200 rounded px-3 py-1 self-end font-semibold" aria-label="Agregar variante">+</button>
+        </form>
+      </div>
+      {% else %}<p class="text-xs text-slate-500">Sin productos.</p>{% endfor %}
+      <h3 class="font-bold text-sm mt-4 mb-2">Ajuste de stock por SKU</h3>
+      <form method="post" action="/inventario/catalogo/stock" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs items-end">
+        <label class="block md:col-span-2">Variante (SKU)
+          <select name="variant_id" required class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+            {% for p in productos %}{% for v in variantes[p.id] %}<option value="{{ v.id }}">{{ v.sku }} — {{ p.nombre }} ({{ v.talla }}) · Stock {{ v.stock }}</option>{% endfor %}{% endfor %}
+          </select>
+        </label>
+        <label class="block">Cantidad (+/−)
+          <input name="cantidad" type="number" step="1" required placeholder="+5 / −2" class="border rounded px-2 py-1.5 w-full mt-0.5">
+        </label>
+        <div class="flex gap-1">
+          <label class="block flex-1">Motivo * <span class="font-normal text-slate-400">(obligatorio, va al Kardex)</span>
+            <input name="motivo" required placeholder="Ej. conteo físico, devolución cliente…" class="border rounded px-2 py-1.5 w-full mt-0.5">
+          </label>
+          <button class="bg-borgo text-white rounded px-3 font-semibold self-end py-1.5">OK</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+</div>
+{% endblock %}

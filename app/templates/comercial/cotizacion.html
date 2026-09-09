@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Cotización {{ q.folio }}{% endblock %}
+{% block content %}
+<a href="/comercial/crm" class="text-sm text-slate-500">← CRM</a>
+<div class="flex items-center justify-between mt-1 mb-3">
+  <h1 class="text-2xl font-bold font-serif">{{ q.folio }} <span class="text-sm font-sans font-normal text-slate-500">{{ q.estado }}</span></h1>
+  <a href="/reportes/cotizacion/{{ q.id }}.pdf" target="_blank" class="text-sm text-laton-dark underline">PDF</a>
+</div>
+<div class="grid md:grid-cols-2 gap-4">
+<div class="bg-white rounded-xl shadow p-4">
+  <h2 class="font-bold mb-2 text-sm">Líneas</h2>
+  {% for l in lineas %}
+  <div class="text-xs border-b py-1 flex justify-between"><span>{{ l.cantidad }} x {{ l.concepto }} <span class="text-slate-400">({{ l.categoria }})</span></span><b>S/ {{ "%.2f"|format(l.importe) }}</b></div>
+  {% endfor %}
+  <p class="text-sm mt-2">Subtotal S/ {{ "%.2f"|format(q.subtotal) }} · Desc. {{ q.descuento_pct }}% · <b>Total S/ {{ "%.2f"|format(q.total) }}</b></p>
+  <p class="text-xs text-slate-400">Precios con IGV incluido (precio final).</p>
+  <form method="post" action="/comercial/crm/cotizaciones/{{ q.id }}/lineas" class="grid grid-cols-2 gap-1 text-xs mt-3">
+    <input name="concepto" required placeholder="Concepto *" class="border rounded px-2 py-1 col-span-2">
+    <select name="categoria" class="border rounded px-2 py-1"><option value="prenda_medida">Prenda medida</option><option value="prenda_comercial">Prenda comercial</option><option value="servicio">Servicio</option></select>
+    <select name="garment_tipo" class="border rounded px-2 py-1"><option value="">— Tipo —</option>{% for t in tipos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select>
+    <select name="variant_id" class="border rounded px-2 py-1"><option value="">— Variante —</option>{% for v in variantes %}<option value="{{ v.id }}">{{ v.sku }} ({{ v.stock }})</option>{% endfor %}</select>
+    <input name="cantidad" type="number" step="0.5" value="1" class="border rounded px-2 py-1">
+    <input name="precio_unitario" type="number" step="0.01" placeholder="P. unitario (IGV incl.)" class="border rounded px-2 py-1">
+    <button class="col-span-2 bg-borgo text-white rounded py-1">+ Línea</button>
+  </form>
+</div>
+<div class="bg-white rounded-xl shadow p-4">
+  <h2 class="font-bold mb-2 text-sm">Estado y conversión</h2>
+  <form method="post" action="/comercial/crm/cotizaciones/{{ q.id }}/estado" class="flex gap-1 text-sm mb-3">
+    <select name="estado" class="border rounded px-2 py-1 flex-1">{% for e in ['borrador','enviada','aprobada','rechazada','vencida'] %}<option {% if q.estado==e %}selected{% endif %}>{{ e }}</option>{% endfor %}</select>
+    <button class="bg-slate-200 rounded px-3">OK</button>
+  </form>
+  {% if q.estado != 'convertida' %}
+  <form method="post" action="/comercial/crm/cotizaciones/{{ q.id }}/convertir">
+    <button class="w-full bg-latón bg-[#C5A880] text-[#370003] font-bold rounded-lg py-2">Convertir en pedido →</button>
+  </form>
+  {% else %}<p class="text-sm text-emerald-700 font-bold">✓ Convertida en pedido</p>{% endif %}
+</div>
+</div>
+{% endblock %}

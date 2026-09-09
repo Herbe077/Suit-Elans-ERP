@@ -1,0 +1,71 @@
+{% extends "finanzas/base_finanzas.html" %}
+{% from "components/badge.html" import badge %}
+{% from "components/money.html" import soles %}
+{% block title %}Asiento de Apertura{% endblock %}
+{% block finanzas %}
+<h1 class="text-2xl font-bold mb-1 font-serif" style="color:#370003">🏁 Asiento de Apertura</h1>
+<p class="text-sm text-slate-500 mb-3">Saldos iniciales para arrancar el período contable. El asiento impacta el Libro Diario (AST-…), el Mayor y el Período de su fecha.</p>
+{% if error %}<div class="bg-red-50 border border-red-300 text-red-700 text-xs rounded px-3 py-2 mb-3">{{ error }}</div>{% endif %}
+<div class="grid md:grid-cols-2 gap-4">
+  <div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
+    <h2 class="font-bold text-sm mb-2">Registrar saldos iniciales</h2>
+    <form method="post" action="/finanzas/apertura" class="grid grid-cols-2 gap-2 text-xs items-end">
+      <label class="block col-span-2">Fecha de apertura
+        <input name="fecha" type="date" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">
+      </label>
+      <label class="block">Caja 1011 S/
+        <input id="ap-caja" name="caja" type="number" step="0.01" min="0" value="0" oninput="apCalc()" class="border rounded px-2 py-1.5 w-full mt-0.5">
+      </label>
+      <label class="block">Bancos 1041 S/
+        <input id="ap-banco" name="banco" type="number" step="0.01" min="0" value="0" oninput="apCalc()" class="border rounded px-2 py-1.5 w-full mt-0.5">
+      </label>
+      <label class="block">Inventario 2411 S/
+        <input id="ap-inv" name="inventario" type="number" step="0.01" min="0" value="0" oninput="apCalc()" class="border rounded px-2 py-1.5 w-full mt-0.5">
+      </label>
+      <label class="block">Activo Fijo 3351 S/ <span class="font-normal text-slate-400">(máquinas, muebles)</span>
+        <input id="ap-af" name="activofijo" type="number" step="0.01" min="0" value="0" oninput="apCalc()" class="border rounded px-2 py-1.5 w-full mt-0.5">
+      </label>
+      <label class="block">CxP Iniciales 4212 S/ <span class="font-normal text-slate-400">(pasivos)</span>
+        <input id="ap-cxp" name="cxp" type="number" step="0.01" min="0" value="0" oninput="apCalc()" class="border rounded px-2 py-1.5 w-full mt-0.5">
+      </label>
+      <label class="block">Capital Social 5011 S/ <span class="font-normal text-slate-400">(auto = Activo − Pasivo)</span>
+        <input id="ap-cap" name="capital" type="number" step="0.01" min="0.01" required placeholder="0.00" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-[#FAF8F5]">
+      </label>
+      <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold col-span-2">Registrar apertura (debe = haber)</button>
+    </form>
+    <div class="mt-3 border rounded-lg p-3 text-xs" style="border-color:#C5A880/40">
+      <p class="font-bold mb-1">Resumen del asiento <span class="font-normal text-slate-400">(partida doble)</span></p>
+      <p>Total Activo (Debe): <b id="ap-debe">S/ 0.00</b></p>
+      <p>Total Pasivo + Patrimonio (Haber): <b id="ap-haber">S/ 0.00</b></p>
+      <p class="mt-1">Estado: <span id="ap-badge" class="px-1.5 py-0.5 rounded font-semibold bg-red-100 text-red-700">DESCUADRADO</span></p>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4 border-t-2 border-[#C5A880]">
+    <h2 class="font-bold text-sm mb-2">Aperturas registradas</h2>
+    {% for f in filas %}
+    <div class="text-xs border-b py-1.5">
+      <p><span class="font-mono font-bold">{{ f.asiento.numero }}</span> · {{ f.asiento.fecha }} · Período <a href="/finanzas/periodos" class="underline" style="color:#370003">{{ f.asiento.fecha.strftime('%Y-%m') }}</a> · <a href="/finanzas/diario?origen=APERTURA" class="underline" style="color:#370003">ver en Diario →</a> · {{ badge("REGISTRADO","success") if f.cuadrado else badge("DESCUADRADO","danger") }}</p>
+      {% for l in f.lineas %}<p class="text-slate-500">{{ l.codigo }} — {{ l.nombre }} · Debe {{ soles(l.debe) }} · Haber {{ soles(l.haber) }}</p>{% endfor %}
+    </div>
+    {% else %}<p class="text-xs text-slate-400">Sin asiento de apertura. Registra los saldos iniciales para arrancar.</p>{% endfor %}
+  </div>
+</div>
+<script>
+function apNum(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function apFmt(x) { return 'S/ ' + x.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+function apCalc() {
+  var debe = apNum('ap-caja') + apNum('ap-banco') + apNum('ap-inv') + apNum('ap-af');
+  var cxp = apNum('ap-cxp');
+  var cap = document.getElementById('ap-cap');
+  cap.value = (Math.round((debe - cxp) * 100) / 100).toFixed(2);
+  var haber = cxp + (parseFloat(cap.value) || 0);
+  document.getElementById('ap-debe').textContent = apFmt(debe);
+  document.getElementById('ap-haber').textContent = apFmt(haber);
+  var ok = debe > 0 && Math.abs(debe - haber) < 0.005;
+  var b = document.getElementById('ap-badge');
+  b.textContent = ok ? 'CUADRADO' : 'DESCUADRADO';
+  b.className = 'px-1.5 py-0.5 rounded font-semibold ' + (ok ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700');
+}
+apCalc();
+</script>
+{% endblock %}

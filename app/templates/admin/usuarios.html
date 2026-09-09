@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "components/sub_nav.html" import sub_nav with context %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+{{ sub_nav([
+  {"icon": "👥", "label": "Usuarios y roles", "url": "/admin/usuarios"},
+  {"icon": "🏢", "label": "Configuración de sede", "url": "/admin/configuracion"},
+  {"icon": "🦺", "label": "Personal y Contratos", "url": "/admin/personal"},
+]) }}
+<h1 class="text-2xl font-bold mb-3">⚙️ Administración</h1>
+{% if ok == 'eliminado' %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-4 text-sm">✓ Usuario eliminado.</div>{% endif %}
+{% if error == 'propio' %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ No puedes eliminar tu propio usuario.</div>{% endif %}
+{% if error == 'ultimo' %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ No puedes eliminar al último administrador activo.</div>{% endif %}
+{% if error == 'vinculos' %}
+<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-4 text-sm">
+  <p class="font-bold">⚠️ No se puede eliminar: el usuario tiene historial:</p>
+  <ul class="list-disc ml-5 mt-1">{% for v in detalle %}<li>{{ v }}</li>{% endfor %}</ul>
+  <p class="mt-1">Si ya no debe ingresar, usa <b>Desactivar</b> en su fila (conserva el historial).</p>
+</div>
+{% endif %}
+<div class="grid md:grid-cols-2 gap-4">
+<div class="bg-white rounded-xl shadow p-4">
+  <h2 class="font-bold mb-2 text-sm">Usuarios y roles (RBAC)</h2>
+  <form method="post" action="/admin/usuarios" class="grid grid-cols-2 gap-1 text-xs mb-3">
+    <input name="email" type="email" required placeholder="Email" class="border rounded px-2 py-1">
+    <input name="full_name" required placeholder="Nombre" class="border rounded px-2 py-1">
+    <input name="password" required placeholder="Contraseña" class="border rounded px-2 py-1">
+    <select name="role" class="border rounded px-2 py-1">{% for r in roles|default(['ADMIN','VENTA','SASTRE-MAESTRO','SASTRE-ASISTENTE','ALMACEN','FINANZAS'], true) %}<option value="{{ r }}">{{ r }}</option>{% else %}<option value="ADMIN">ADMIN</option><option value="VENTA">VENTA</option><option value="SASTRE-MAESTRO">SASTRE-MAESTRO</option><option value="SASTRE-ASISTENTE">SASTRE-ASISTENTE</option><option value="ALMACEN">ALMACEN</option><option value="FINANZAS">FINANZAS</option>{% endfor %}</select>
+    <button class="col-span-2 bg-slate-900 text-white rounded py-1">Crear usuario</button>
+  </form>
+  {% for u in usuarios %}<div class="text-xs border-b py-1 flex justify-between items-center"><span>{{ u.email }} {% if u.id == user.id %}<span class="text-[#C5A880]">(tú)</span>{% endif %} {% if not u.is_active %}<span class="bg-slate-300 rounded px-1">inactivo</span>{% endif %}</span><span class="flex gap-2 items-center">{{ u.role }}
+  {% if u.id != user.id %}
+  <form method="post" action="/admin/usuarios/{{ u.id }}/toggle"><button class="underline">{{ 'Desactivar' if u.is_active else 'Activar' }}</button></form>
+  <form method="post" action="/admin/usuarios/{{ u.id }}/eliminar" onsubmit="return confirm('¿Eliminar al usuario {{ u.email }}? Solo si no tiene historial.')"><button class="text-red-700 underline">Eliminar</button></form>
+  {% endif %}</span></div>{% endfor %}
+</div>
+{% endblock %}

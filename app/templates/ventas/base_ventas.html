@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% from "components/sub_nav.html" import sub_nav with context %}
+{% block content %}
+{{ sub_nav([
+  {"icon": "🛒", "label": "Punto de venta", "url": "/ventas/pos"},
+  {"icon": "📋", "label": "Órdenes de venta", "url": "/ventas/ordenes"},
+  {"icon": "💵", "label": "Control de caja", "url": "/ventas/caja"},
+  {"icon": "🧾", "label": "Facturación", "url": "/ventas/facturacion"},
+]) }}
+{% block ventas %}{% endblock %}
+{% endblock %}

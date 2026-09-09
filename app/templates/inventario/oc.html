@@ -1,0 +1,63 @@
+{% extends "inventario/base_inventario.html" %}
+{% block title %}OC {{ po.folio }}{% endblock %}
+{% block inventario %}
+<a href="/inventario/compras" class="text-sm text-slate-500">← Compras</a>
+{% if error %}<div class="bg-red-50 border border-red-300 text-red-700 text-xs rounded px-3 py-2 mt-2">{{ error }}</div>{% endif %}
+<h1 class="text-2xl font-bold mt-1">{{ po.folio }} <span class="text-sm font-normal text-slate-500">{{ prov.nombre }} · {{ po.estado }}</span></h1>
+{% if oc_twin %}
+{% set canon = normalizar(oc_twin.estado) if normalizar is defined else oc_twin.estado %}
+<p class="text-xs mt-1">Ficha de compra: <a href="/inventario/compras/orden/{{ oc_twin.id }}" class="underline font-semibold" style="color:#370003">{{ oc_twin.folio or ('OC-' ~ oc_twin.id) }}</a> ·
+  <span class="px-1.5 py-0.5 rounded font-semibold {% if canon=='DRAFT' %}bg-slate-200 text-slate-700{% elif canon=='APPROVED' %}bg-sky-100 text-sky-800{% elif canon=='PARTIALLY_RECEIVED' %}bg-amber-100 text-amber-800{% elif canon=='RECEIVED' %}bg-emerald-100 text-emerald-800{% elif canon=='BILLED' %}bg-borgo text-white{% elif canon=='CANCELLED' %}bg-red-100 text-red-800{% else %}bg-slate-200{% endif %}">{{ canon }}</span>
+  — la recepción (Kardex valorizado) y la facturación con landed se operan desde la ficha de compra.</p>
+{% endif %}
+<div class="bg-white rounded-xl shadow p-4 mt-3">
+  <h2 class="font-bold mb-2 text-sm">Líneas</h2>
+  {% for l in lineas %}
+  <div class="text-xs border-b py-1.5 flex justify-between items-center">
+    <span>{{ l.descripcion }} <span class="text-slate-400">({{ l.item_tipo }}#{{ l.item_id }})</span><br>Pedidas: {{ l.cantidad }} · Recibidas: {{ l.cantidad_recibida }} · <b>Pendiente: {{ l.pendiente }}</b></span>
+    {% if l.pendiente > 0 %}
+    <form method="post" action="/inventario/compras/linea/{{ l.id }}/recibir" class="flex gap-1">
+      <input name="cantidad" type="number" step="0.1" max="{{ l.pendiente }}" value="{{ l.pendiente }}" class="border rounded px-1 py-0.5 w-20">
+      <button class="bg-borgo text-white rounded px-2">Recibir</button>
+    </form>
+    {% else %}<span class="text-emerald-700 font-bold">✓ completa</span>{% endif %}
+  </div>
+  {% endfor %}
+  <p class="text-sm mt-2"><b>Total S/ {{ "%.2f"|format(po.total) }}</b></p>
+  <h3 class="font-bold text-sm mt-3 mb-1">Agregar línea</h3>
+  <form method="post" action="/inventario/compras/oc/{{ po.id }}/lineas" class="flex flex-col sm:flex-row gap-2 text-xs sm:items-end" onsubmit="return ocSyncTipo(this)">
+    <label class="block flex-1">Insumo
+      <select name="item_id" id="oc-item" required class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white" onchange="ocSyncTipo(this.form)">
+        <optgroup label="Telas">
+          {% for t in telas %}<option value="{{ t.id }}" data-tipo="fabric" data-nombre="{{ t.nombre }}">{{ t.codigo }} — {{ t.nombre }} ({{ t.stock_metros }} m)</option>{% endfor %}
+        </optgroup>
+        <optgroup label="Avíos">
+          {% for a in avios %}<option value="{{ a.id }}" data-tipo="supply" data-nombre="{{ a.nombre }}">{{ a.codigo }} — {{ a.nombre }} ({{ a.stock }} {{ a.unidad }})</option>{% endfor %}
+        </optgroup>
+      </select>
+    </label>
+    <input type="hidden" name="item_tipo" id="oc-tipo" value="fabric">
+    <label class="block flex-1">Descripción
+      <input name="descripcion" id="oc-desc" placeholder="Se completa solo" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Cantidad
+      <input name="cantidad" type="number" step="0.1" min="0.1" value="1" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+<script>
+function ocSyncTipo(f) {
+  var s = f.querySelector('#oc-item'); if (!s || !s.selectedOptions.length) return true;
+  var o = s.selectedOptions[0];
+  f.querySelector('#oc-tipo').value = o.getAttribute('data-tipo') || 'fabric';
+  var d = f.querySelector('#oc-desc');
+  if (d && !d.value) d.value = o.getAttribute('data-nombre') || '';
+  return true;
+}
+if (document.getElementById('oc-item')) ocSyncTipo(document.getElementById('oc-item').form);
+</script>
+    <label class="block">Costo unitario S/
+      <input name="costo_unitario" type="number" step="0.01" min="0" value="0" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold self-end">+ Línea</button>
+  </form>
+</div>
+{% endblock %}

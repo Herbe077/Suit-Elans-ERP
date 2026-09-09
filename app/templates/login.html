@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#370003">
+<title>Acceso — Suit Elans</title>
+<link rel="stylesheet" href="/static/app.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{borgo:'#370003',marfil:'#FAF8F5',laton:'#C5A880',ink:'#1F1112'},fontFamily:{serif:['Georgia','Times New Roman','serif'],sans:['system-ui','-apple-system','Segoe UI','Roboto','Helvetica','Arial','sans-serif']}}}}</script>
+</head>
+<body class="min-h-screen bg-ink flex items-center justify-center p-4 relative overflow-hidden">
+<div class="absolute inset-0 opacity-20 pointer-events-none" style="background:radial-gradient(circle at 20% 20%,#C5A880 0,transparent 28%),radial-gradient(circle at 80% 80%,#52040a 0,transparent 35%)"></div>
+<form method="post" action="/auth/login" class="relative w-full max-w-md rounded-3xl bg-marfil p-8 sm:p-10 shadow-2xl border border-white/10">
+  <div class="text-center mb-8">
+    <p class="text-[11px] font-bold tracking-[.28em] text-slate-500 mb-2">ENTERPRISE MANAGEMENT SYSTEM</p>
+    <h1 class="font-serif text-3xl tracking-wide text-borgo">SUIT <span class="text-laton">ELANS</span></h1>
+    <p class="text-sm text-slate-500 mt-2">Sastrería, diseño, confección y gestión financiera</p>
+  </div>
+  {% if error %}<div role="alert" class="bg-red-50 border border-red-200 text-red-800 text-sm rounded-xl p-3 mb-5">{{ error }}</div>{% endif %}
+  <div class="space-y-4">
+    <label class="block text-sm font-semibold text-ink">Correo electrónico
+      <input name="username" type="email" autocomplete="username" required class="w-full px-3.5 py-3 mt-1.5 bg-white" placeholder="usuario@empresa.com">
+    </label>
+    <label class="block text-sm font-semibold text-ink">Contraseña
+      <input name="password" type="password" autocomplete="current-password" required class="w-full px-3.5 py-3 mt-1.5 bg-white">
+    </label>
+    <button type="submit" class="w-full bg-borgo text-white rounded-xl py-3 font-bold shadow-lg">Ingresar al sistema</button>
+  </div>
+  <p class="text-[11px] text-slate-400 mt-7 text-center">Acceso protegido · Sesión segura · Ambiente corporativo</p>
+</form>
+</body>
+</html>

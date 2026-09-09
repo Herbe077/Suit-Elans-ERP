@@ -1,0 +1,87 @@
+{% extends "comercial/base_comercial.html" %}
+{% from "components/badge.html" import badge %}
+{% block title %}Agenda — Comercial{% endblock %}
+{% block comercial %}
+<div class="flex items-center justify-between flex-wrap gap-2">
+  <h1 class="text-2xl font-bold font-serif">📅 Agenda operativa</h1>
+  <div class="flex gap-2 text-sm">
+    {% for v in ['lista','dia','semana','mes'] %}<a href="/comercial/citas?vista={{ v }}&fecha={{ fecha }}" class="px-3 py-1 rounded-full {{ 'bg-borgo text-white' if vista==v else 'bg-white' }} shadow">{{ v }}</a>{% endfor %}
+  </div>
+</div>
+{% if pendientes_hoy %}<div class="bg-amber-50 border border-amber-300 text-amber-900 rounded-xl p-3 my-3 text-sm">🔔 {{ pendientes_hoy }} cita(s) de hoy pendientes de confirmación.</div>{% endif %}
+
+<div x-data="{ open: false, q: '', res: [], async buscar() { if (this.q.length < 2) { this.res = []; return } const r = await fetch('/comercial/buscar?q=' + encodeURIComponent(this.q)); this.res = await r.json() } }">
+<div class="bg-white rounded-xl shadow p-4 mb-4">
+  <div class="flex items-center justify-between mb-2">
+    <h2 class="font-bold text-sm">Nueva cita</h2>
+    <button @click="open = !open" class="text-xs underline text-laton-dark">+ Cliente nuevo (sin recargar)</button>
+  </div>
+  <div x-show="open" class="border rounded-lg p-2 mb-2 grid grid-cols-2 md:grid-cols-4 gap-1 text-xs bg-marfil">
+    <input x-model="q" @input="buscar()" placeholder="Buscar existente…" class="border rounded px-2 py-1 col-span-2 md:col-span-4">
+    <template x-for="r in res" :key="r.tipo + r.id"><button type="button" class="text-left border-b py-0.5" x-text="r.nombre + ' · ' + (r.doc || '')"></button></template>
+    <input id="nc-nombre" placeholder="Nombre *" class="border rounded px-2 py-1">
+    <input id="nc-apellidos" placeholder="Apellidos" class="border rounded px-2 py-1">
+    <input id="nc-tel" placeholder="Teléfono" class="border rounded px-2 py-1">
+    <button type="button" @click="const b = {nombre: document.getElementById('nc-nombre').value, apellidos: document.getElementById('nc-apellidos').value, telefono: document.getElementById('nc-tel').value}; fetch('/comercial/clientes/persona-rapido', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(b)}).then(r => r.json()).then(j => { if (j.id) { const s = document.getElementById('nc-sel'); const o = document.createElement('option'); o.value = j.id; o.text = j.nombre; o.selected = true; s.appendChild(o); open = false } })" class="bg-borgo text-white rounded py-1">Crear y usar</button>
+  </div>
+  <form method="post" action="/comercial/citas" class="grid md:grid-cols-6 gap-2 text-sm items-end">
+    <label class="block md:col-span-2">Cliente
+      <select id="nc-sel" name="client_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for c in clientes %}<option value="{{ c.id }}">{{ c.nombre }} {{ c.apellidos }}</option>{% endfor %}</select>
+    </label>
+    <label class="block">Tipo
+      <select name="tipo" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white">{% for t in tipos %}<option>{{ t }}</option>{% endfor %}</select>
+    </label>
+    <label class="block">Prenda / Orden
+      <select name="garment_id" class="border rounded px-2 py-1.5 w-full mt-0.5 bg-white"><option value="">— Sin vincular —</option>{% for g in prendas %}<option value="{{ g.id }}">{{ folios.get(g.order_id, '?') }} · {{ g.tipo }} #{{ g.id }}</option>{% endfor %}</select>
+    </label>
+    <label class="block">Inicio
+      <input name="inicio" type="datetime-local" required class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Fin
+      <input name="fin" type="datetime-local" required class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+    <button class="bg-borgo text-white rounded px-3 py-1.5 font-semibold md:col-span-2">Agendar</button>
+    <label class="block md:col-span-6">Notas
+      <input name="notas" placeholder="Ej. prueba de entalle, traer zapatos…" class="border rounded px-2 py-1.5 w-full mt-0.5">
+    </label>
+  </form>
+</div>
+</div>
+
+{% if vista == 'mes' and cal %}
+<div class="bg-white rounded-xl shadow p-4 mb-4 overflow-x-auto">
+  <h2 class="font-bold mb-2 text-sm">Calendario {{ fecha[:7] }}</h2>
+  <table class="w-full text-xs min-w-[600px]">
+    <tr class="text-slate-500">{% for d in ['L','M','X','J','V','S','D'] %}<th class="p-1">{{ d }}</th>{% endfor %}</tr>
+    {% for sem in cal %}<tr>{% for cell in sem %}<td class="border p-1 align-top h-16 w-[14%] {% if not cell.dia %}bg-slate-50{% endif %}">
+      {% if cell.dia %}<b>{{ cell.dia }}</b>{% for a in cell.citas %}<div class="truncate {% if a.estado=='PROGRAMADA' %}text-amber-700 font-bold{% endif %}" title="{{ a.cliente }} · {{ a.tipo }} · {{ a.estado }}">{{ a.hora }} {{ a.cliente }}</div>{% endfor %}{% endif %}
+    </td>{% endfor %}</tr>{% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<div class="bg-white rounded-xl shadow p-4">
+  <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+    <h2 class="font-bold text-sm">Lista {% if vista != 'lista' %}({{ semana_ini }} → {{ semana_fin }}){% endif %}</h2>
+    <form method="get" class="flex gap-1 text-xs">
+      <input type="hidden" name="vista" value="{{ vista }}"><input type="hidden" name="fecha" value="{{ fecha }}">
+      <input type="date" name="fecha" value="{{ fecha }}" class="border rounded px-1 py-1" onchange="this.form.submit()">
+      <select name="estado" class="border rounded px-1 py-1" onchange="this.form.submit()"><option value="">Todos</option>{% for e in estados %}<option {% if estado==e %}selected{% endif %}>{{ e }}</option>{% endfor %}</select>
+    </form>
+  </div>
+  {% for a in citas %}
+  <div class="text-sm border-b py-2 flex items-center justify-between flex-wrap gap-1">
+    <div><a href="/comercial/clientes/detalle?tipo=persona&id={{ a.client_id }}" class="font-bold underline" style="color:#370003">{{ cmap[a.client_id].nombre }} {{ cmap[a.client_id].apellidos }}</a> · {{ badge(a.tipo, "info") }} {{ badge(a.estado, "success" if a.estado in ['CONFIRMADA','ASISTIO'] else "warning" if a.estado=='PROGRAMADA' else "danger" if a.estado in ['CANCELADA','NO_ASISTIO'] else "default") }}<br><span class="text-xs text-slate-500">{{ a.inicio }} → {{ a.fin }}{% if a.garment_id %} · prenda #{{ a.garment_id }}{% endif %}{% if a.notas %} · {{ a.notas }}{% endif %}</span></div>
+    <div class="flex gap-1 items-center">
+      {% if a.tipo == 'TOMA_MEDIDAS' and a.estado in ['PROGRAMADA', 'CONFIRMADA', 'ASISTIO'] %}
+      <form method="post" action="/comercial/citas/{{ a.id }}/cotizar"><button class="text-xs bg-[#C5A880] text-[#370003] font-bold rounded px-2 py-1">→ Cotizar</button></form>
+      {% endif %}
+      <form method="post" action="/comercial/citas/{{ a.id }}/estado" class="flex gap-1">
+        <select name="estado" class="text-xs border rounded px-1 py-1">{% for e in estados %}<option {% if a.estado==e %}selected{% endif %}>{{ e }}</option>{% endfor %}</select>
+        <button class="text-xs bg-slate-200 rounded px-2">OK</button>
+      </form>
+    </div>
+  </div>
+  {% else %}<p class="text-sm text-slate-500">Sin citas en este rango.</p>{% endfor %}
+</div>
+{% endblock %}

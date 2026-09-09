@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "components/sub_nav.html" import sub_nav with context %}
+{% block content %}
+{{ sub_nav([
+  {"icon": "💳", "label": "CxC", "url": "/finanzas/cuentas-por-cobrar"},
+  {"icon": "🏦", "label": "CxP", "url": "/finanzas/cuentas-por-pagar"},
+  {"icon": "🧾", "label": "Gastos", "url": "/finanzas/gastos"},
+  {"icon": "💹", "label": "Flujo", "url": "/finanzas/flujo-caja"},
+  {"icon": "📘", "label": "PCGE", "url": "/finanzas/plan-contable"},
+  {"icon": "📖", "label": "Diario", "url": "/finanzas/diario"},
+  {"icon": "📘", "label": "Mayor", "url": "/finanzas/mayor"},
+  {"icon": "⚖️", "label": "Balance", "url": "/finanzas/balance"},
+  {"icon": "🏁", "label": "Apertura", "url": "/finanzas/apertura"},
+  {"icon": "🗓️", "label": "Periodos", "url": "/finanzas/periodos"},
+  {"icon": "📈", "label": "Rentabilidad", "url": "/finanzas/rentabilidad"},
+  {"icon": "📑", "label": "Reportes", "url": "/finanzas/reportes-contables"},
+]) }}
+{% block finanzas %}{% endblock %}
+{% endblock %}

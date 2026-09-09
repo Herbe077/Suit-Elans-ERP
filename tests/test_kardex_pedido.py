@@ -1,0 +1,204 @@
+"""Kardex vinculado a pedido/ficha: consumo automático desde ficha y POS,
+y registro manual con referencia de pedido."""
+
+
+def _setup(client, auth_cookies):
+    from app.core.database import SessionLocal
+    from app.models.client import Client
+    from app.models.inventory import Fabric
+    db = SessionLocal()
+    fab = db.query(Fabric).filter(Fabric.codigo == "KX-PED-TELA").first()
+    if not fab:
+        fab = Fabric(codigo="KX-PED-TELA", nombre="Tela pedido test",
+                     stock_metros=20.0, precio_metro=50.0)
+        db.add(fab)
+        db.commit()
+    fid = fab.id
+    c = db.query(Client).filter(Client.nro_doc == "KX-PED-DNI").first()
+    if not c:
+        c = Client(nombre="Kardex", apellidos="Pedido", tipo_doc="DNI",
+                   nro_doc="KX-PED-DNI", clasificacion="Nuevo")
+        db.add(c)
+        db.commit()
+    cid = c.id
+    db.close()
+    return fid, cid
+
+
+def test_ficha_genera_salida_taller_vinculada(client, auth_cookies):
+    """Venta + anticipo → reserva y SALIDA_CONSUMO_TALLER en Kardex con order_id."""
+    fid, cid = _setup(client, auth_cookies)
+    from app.core.database import SessionLocal
+    from app.models.order import Garment, Order
+    db = SessionLocal()
+    o = Order(folio="SE-KX-VTA", client_id=cid, estado="cotizado",
+              total=1500.0, concepto="Terno kardex")
+    db.add(o)
+    db.flush()
+    db.add(Garment(order_id=o.id, tipo="saco", tela_id=fid, precio=1500.0))
+    db.commit()
+    oid = o.id
+    db.close()
+    client.post("/ventas/caja/abrir", data={"saldo_apertura": "0"},
+                cookies=auth_cookies)
+    r = client.post("/ventas/cobro",
+                    data={"order_id": str(oid), "monto": "1500",
+                          "metodo": "transferencia", "tipo": "ADELANTO",
+                          "back": "/ventas/ordenes"}, cookies=auth_cookies)
+    assert r.status_code in (200, 303)
+    from app.core.database import SessionLocal
+    from app.models.inventario import MovimientoKardex, ProductoInsumo
+    from app.models.order import Garment, Order
+    db = SessionLocal()
+    o = db.get(Order, oid)
+    assert o is not None
+    g = db.query(Garment).filter(Garment.order_id == o.id).first()
+    assert g is not None and g.tela_reservada is True
+    k = db.query(MovimientoKardex).filter(
+        MovimientoKardex.orden_venta_id == o.id,
+        MovimientoKardex.tipo_movimiento == "SALIDA_CONSUMO_TALLER").first()
+    assert k is not None and k.cantidad == 2.0  # consumo saco
+    prod = db.query(ProductoInsumo).filter(
+        ProductoInsumo.sku == "KX-PED-TELA").first()
+    assert prod is not None and prod.stock_reservado == 2.0
+    db.close()
+
+
+def test_kardex_manual_con_pedido_y_folio(client, auth_cookies):
+    """Registro manual de Kardex con Pedido/Ficha → guarda order_id y
+    el historial muestra el folio (SE-...)."""
+    _setup(client, auth_cookies)
+    from app.core.database import SessionLocal
+    from app.models.inventario import MovimientoKardex, ProductoInsumo
+    from app.models.order import Order
+    db = SessionLocal()
+    prod = db.query(ProductoInsumo).filter(
+        ProductoInsumo.sku == "KX-PED-TELA").first()
+    pid = prod.id
+    o = db.query(Order).filter(Order.concepto == "Terno kardex").first()
+    oid, folio = o.id, o.folio
+    db.close()
+    r = client.post("/inventario/almacen/kardex",
+                    data={"producto_id": str(pid), "tipo_movimiento": "SALIDA_CONSUMO_TALLER",
+                          "cantidad": "1", "orden_venta_id": str(oid),
+                          "observacion": "corte manual", "alcance": "mp"},
+                    cookies=auth_cookies)
+    assert r.status_code in (200, 303)
+    db = SessionLocal()
+    k = db.query(MovimientoKardex).filter(
+        MovimientoKardex.orden_venta_id == oid,
+        MovimientoKardex.observacion == "corte manual").first()
+    assert k is not None
+    db.close()
+    t = client.get("/inventario/almacen", cookies=auth_cookies).text
+    assert f"Pedido {folio}" in t  # folio SE-... como referencia del egreso
+    assert 'name="orden_venta_id"' in t  # selector Pedido/Ficha en el form
+
+
+def test_form_defaults_neutros_y_sin_producto_da_error(client, auth_cookies):
+    t = client.get("/inventario/almacen", cookies=auth_cookies).text
+    assert t.count("-- Opcional / Ninguno --") >= 3  # producto, variante, pedido
+    assert 'x-show="sub === \'mp\'"' in t and 'x-show="sub === \'pt\'"' in t
+    assert 'x-model="tipoMp"' in t and 'x-model="tipoPt"' in t
+    r = client.post("/inventario/almacen/kardex",
+                    data={"producto_id": "", "tipo_movimiento": "ENTRADA_COMPRA",
+                          "cantidad": "5", "alcance": "mp"},
+                    cookies=auth_cookies, follow_redirects=False)
+    assert r.status_code == 303 and "error=" in r.headers.get("location", "")
+
+
+def test_pos_genera_salida_taller_vinculada(client, auth_cookies):
+    """POS + tela → SALIDA_CONSUMO_TALLER en Kardex vinculada al pedido."""
+    fid, cid = _setup(client, auth_cookies)
+    r = client.post("/ventas/pos/vender",
+                    data={"client_id": str(cid), "concepto": "Saco POS kardex",
+                          "precio": "1200", "garment_tipo": "saco",
+                          "tela_id": str(fid), "monto_cobro": "0"},
+                    cookies=auth_cookies)
+    assert r.status_code in (200, 303)
+    from app.core.database import SessionLocal
+    from app.models.inventario import MovimientoKardex
+    from app.models.order import Order
+    db = SessionLocal()
+    o = db.query(Order).filter(Order.concepto == "Saco POS kardex").first()
+    assert o is not None
+    k = db.query(MovimientoKardex).filter(
+        MovimientoKardex.orden_venta_id == o.id,
+        MovimientoKardex.tipo_movimiento == "SALIDA_CONSUMO_TALLER").first()
+    assert k is not None and k.cantidad == 2.0
+    db.close()
+
+
+def _setup_variante():
+    from app.core.database import SessionLocal
+    from app.models.catalog import Product, ProductVariant
+    db = SessionLocal()
+    p = db.query(Product).filter(Product.codigo == "KX-PT-001").first()
+    if not p:
+        p = Product(codigo="KX-PT-001", nombre="Saco RTW Test")
+        db.add(p)
+        db.commit()
+        db.refresh(p)
+    v = db.query(ProductVariant).filter(ProductVariant.sku == "KX-PT-001-M").first()
+    if not v:
+        v = ProductVariant(product_id=p.id, talla="M", sku="KX-PT-001-M",
+                           stock=0.0, precio=500.0, costo_unitario=300.0)
+        db.add(v)
+        db.commit()
+        db.refresh(v)
+    vid = v.id
+    db.close()
+    return vid
+
+
+def test_kardex_or_variante_sin_producto(client, auth_cookies):
+    """Solo SKU diligenciado (incluso con alcance mp) → resuelve PT sin
+    exigir Producto/Insumo; sin ninguno → error."""
+    vid = _setup_variante()
+    r = client.post("/inventario/almacen/kardex",
+                    data={"producto_id": "", "variant_id": str(vid),
+                          "tipo_movimiento": "ENTRADA_PRODUCTO_TERMINADO",
+                          "cantidad": "5", "alcance": "mp"},
+                    cookies=auth_cookies, follow_redirects=False)
+    assert r.status_code == 303 and "error" not in r.headers.get("location", "")
+    from app.core.database import SessionLocal
+    from app.models.catalog import ProductVariant
+    db = SessionLocal()
+    assert db.get(ProductVariant, vid).stock == 5.0
+    db.close()
+    r = client.post("/inventario/almacen/kardex",
+                    data={"producto_id": "", "variant_id": "",
+                          "tipo_movimiento": "ENTRADA_COMPRA",
+                          "cantidad": "5", "alcance": "mp"},
+                    cookies=auth_cookies, follow_redirects=False)
+    assert r.status_code == 303 and "error=" in r.headers.get("location", "")
+
+
+def test_pestanas_pcge_y_pos_inmediato(client, auth_cookies):
+    """Etiquetas Cta 21/23 (FASE 1) y variante con stock visible al instante en POS."""
+    vid = _setup_variante()
+    t = client.get("/inventario/almacen", cookies=auth_cookies).text
+    assert "Productos en Proceso / Taller (Cta 21)" in t
+    assert "Productos Terminados / RTW (Cta 23)" in t
+    assert "Producto Terminado / SKU" in t and "Insumo / Tela" in t
+    assert 'name="costo_unitario"' in t and "data-costo" in t
+    tp = client.get("/ventas/pos", cookies=auth_cookies).text
+    assert "Saco RTW Test - M (Stock: 5) - S/" in tp
+
+
+def test_pt_ingreso_actualiza_costo_y_no_exige_insumo(client, auth_cookies):
+    """PT con solo SKU (sin insumo) + costo autocompletado en ingreso."""
+    vid = _setup_variante()
+    r = client.post("/inventario/almacen/kardex",
+                    data={"producto_id": "", "variant_id": str(vid),
+                          "tipo_movimiento": "ENTRADA_PRODUCTO_TERMINADO",
+                          "cantidad": "2", "costo_unitario": "80",
+                          "alcance": "pt"},
+                    cookies=auth_cookies, follow_redirects=False)
+    assert r.status_code == 303 and "error" not in r.headers.get("location", "")
+    from app.core.database import SessionLocal
+    from app.models.catalog import ProductVariant
+    db = SessionLocal()
+    v = db.get(ProductVariant, vid)
+    assert v.costo_unitario == 80.0
+    db.close()

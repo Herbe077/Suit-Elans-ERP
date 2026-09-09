@@ -1,0 +1,37 @@
+# ── Suit Elans ERP · gitignore ─────────────────────────────
+# Credenciales y entorno (NUNCA subir al repo)
+.env
+.env.local
+.env.*.local
+
+# Bases de datos locales y backups
+*.db
+*.db-*
+*.db.bak*
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# OS / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# Subidas y artefactos locales
+uploads/
+tmp/

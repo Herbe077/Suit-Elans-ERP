@@ -1,0 +1,144 @@
+{% extends "comercial/base_comercial.html" %}
+{% from "components/badge.html" import badge %}
+{% block title %}Clientes — Comercial{% endblock %}
+{% block comercial %}
+<div class="w-full max-w-full overflow-x-hidden">
+<h1 class="text-2xl font-bold mb-1 font-serif" style="color:#370003">🤝 Clientes</h1>
+<p class="text-sm text-slate-500 mb-3">Personas naturales y empresas B2B en una sola vista.</p>
+<div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+  <div class="flex gap-2 text-sm">
+    <a href="/comercial/clientes?tab=personas" class="px-3 py-1 rounded-full {{ 'bg-borgo text-white' if tab!='empresas' else 'bg-white' }} shadow">Personas</a>
+    <a href="/comercial/clientes?tab=empresas" class="px-3 py-1 rounded-full {{ 'bg-borgo text-white' if tab=='empresas' else 'bg-white' }} shadow">Empresas</a>
+  </div>
+  <form method="get" class="flex flex-col gap-2 sm:flex-row sm:items-end">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <label class="block text-sm">Clasificación
+      <select name="clasificacion" class="border rounded-lg px-2 py-1.5 text-sm block mt-0.5 bg-white w-full sm:w-auto"><option value="">Todas</option>{% for cl in clasificaciones %}<option {% if clasificacion==cl %}selected{% endif %}>{{ cl }}</option>{% endfor %}</select>
+    </label>
+    <label class="block text-sm">Buscar
+      <input name="q" value="{{ q }}" placeholder="Nombre, RUC/DNI, teléfono…" class="border rounded-lg px-3 py-1.5 text-sm block mt-0.5 w-full sm:w-56">
+    </label>
+    <button class="bg-borgo text-white rounded-lg px-3 py-1.5 text-sm font-semibold sm:self-end">Buscar</button>
+  </form>
+</div>
+{% if tab == 'empresas' %}
+{% if error == 'nombre_requerido' %}
+<div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2 mb-3 text-sm">⚠️ El nombre comercial es obligatorio.</div>
+{% endif %}
+{% if warn == 'ruc' %}
+<div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-2 mb-3 text-sm">⚠️ Empresa guardada, pero el RUC no pasó la verificación SUNAT (11 dígitos + verificador). Revísalo antes de facturar.</div>
+{% endif %}
+<div class="bg-white rounded-xl shadow p-4 mb-4 border-t-2 border-[#C5A880]">
+  <h2 class="font-bold mb-2 text-sm">Nueva empresa B2B</h2>
+  <form method="post" action="/comercial/clientes/empresa" class="grid grid-cols-2 md:grid-cols-7 gap-2 text-sm items-end">
+    <label class="block md:col-span-2">Nombre comercial *
+      <input name="nombre_comercial" required placeholder="Textil Andina SAC" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">RUC
+      <input name="ruc" placeholder="Flexible: no bloquea el guardado" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Teléfono / WhatsApp
+      <input name="telefono" placeholder="999 888 777" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Distrito
+      <input name="distrito" placeholder="Fiscal / despacho" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <label class="block">Clasificación
+      <select name="clasificacion" class="border rounded px-3 py-1.5 w-full mt-0.5 bg-white">{% for cl in clasificaciones %}<option>{{ cl }}</option>{% endfor %}</select>
+    </label>
+    <label class="block">Desc. %
+      <input name="descuento_pct" type="number" step="0.5" min="0" value="0" class="border rounded px-3 py-1.5 w-full mt-0.5">
+    </label>
+    <button class="bg-borgo text-white rounded-lg px-3 py-1.5 font-semibold self-end">+ Empresa</button>
+  </form>
+</div>
+{% else %}
+<div x-data="{ open: false }">
+  <button @click="open = !open" class="mb-3 bg-borgo text-white rounded-lg px-4 py-2 text-sm font-semibold">+ Nueva persona</button>
+  <form x-show="open" method="post" action="/comercial/clientes/persona" class="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm items-end border-t-2 border-[#C5A880]">
+    <label class="block">Nombres *
+      <input name="nombre" required placeholder="Rosa" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Apellidos / Razón *
+      <input name="apellidos" required placeholder="Pérez" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Tipo doc.
+      <select name="tipo_doc" class="border rounded px-3 py-2 w-full mt-0.5 bg-white"><option>DNI</option><option>RUC</option><option>CE</option><option>PASAPORTE</option></select>
+    </label>
+    <label class="block">N° documento
+      <input name="nro_doc" placeholder="12345678" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Teléfono / WhatsApp
+      <input name="telefono" placeholder="999 888 777" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Distrito
+      <input name="distrito" placeholder="Miraflores" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block">Clasificación
+      <select name="clasificacion" class="border rounded px-3 py-2 w-full mt-0.5 bg-white">{% for cl in clasificaciones %}<option>{{ cl }}</option>{% endfor %}</select>
+    </label>
+    <label class="block">Email
+      <input name="email" type="email" placeholder="rosa@mail.com" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <label class="block col-span-2 md:col-span-4">Concepto / Detalle del servicio
+      <input name="concepto" placeholder="Ej. Terno 2 piezas para matrimonio (llega a la ficha y al pedido)" class="border rounded px-3 py-2 w-full mt-0.5">
+    </label>
+    <button class="col-span-2 md:col-span-4 bg-borgo text-white rounded-lg py-2 font-semibold">Guardar (va a su ficha de medidas)</button>
+  </form>
+</div>
+{% endif %}
+<div class="w-full overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
+  <div class="p-4">
+  <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+    <h2 class="font-bold text-sm">{% if tab == 'empresas' %}Empresas{% else %}Personas{% endif %} <span class="font-normal text-slate-400">({% if tab == 'empresas' %}{{ empresas|length }}{% else %}{{ personas|length }}{% endif %})</span></h2>
+    <input id="filtro-clientes" oninput="filtrarClientes(this.value)" placeholder="🔍 Filtrar en esta vista…" class="border rounded-lg px-3 py-1.5 text-xs w-full sm:w-56" aria-label="Filtrar clientes en tiempo real">
+  </div>
+  </div>
+  <table class="w-full text-sm" id="tabla-clientes">
+    <thead class="text-xs text-slate-500"><tr>
+      <th class="text-left px-3 py-1 whitespace-nowrap min-w-[140px]">Nombre</th><th class="text-left px-3 py-1 whitespace-nowrap min-w-[100px]">Documento</th>
+      <th class="text-left px-3 py-1 whitespace-nowrap min-w-[100px]">Teléfono</th><th class="text-left px-3 py-1 whitespace-nowrap min-w-[100px]">Distrito</th>
+      <th class="text-left px-3 py-1 whitespace-nowrap min-w-[100px]">Clasificación</th><th class="text-right px-3 py-1 whitespace-nowrap min-w-[140px]">Acciones</th>
+    </tr></thead>
+    <tbody class="font-mono tabular-nums">
+    {% if tab == 'empresas' %}
+      {% for e in empresas %}
+      <tr class="border-b hover:bg-marfil" data-buscar="{{ (e.nombre_comercial ~ ' ' ~ (e.ruc or '') ~ ' ' ~ (e.telefono or ''))|lower }}">
+        <td class="px-3 py-2 font-medium whitespace-nowrap font-sans">🏢 {{ e.nombre_comercial }}</td>
+        <td class="text-xs whitespace-nowrap px-3 py-2">{{ e.doc_label }}</td>
+        <td class="text-xs whitespace-nowrap px-3 py-2">{{ e.telefono or '—' }}</td>
+        <td class="text-xs whitespace-nowrap px-3 py-2 font-sans">{{ e.distrito or '—' }}</td>
+        <td class="whitespace-nowrap px-3 py-2 font-sans">{{ badge(e.clasificacion, "laton" if e.clasificacion=='VIP' else "info") }}{% if e.descuento_pct %} <span class="text-xs font-semibold text-emerald-700">-{{ e.descuento_pct }}%</span>{% endif %}</td>
+        <td class="text-right whitespace-nowrap px-3 py-2 font-sans"><a href="/comercial/clientes/detalle?tipo=empresa&id={{ e.id }}" class="font-semibold underline" style="color:#370003">Ver ficha →</a> · <a href="/comercial/clientes/empresa/{{ e.id }}/editar" class="font-semibold underline text-laton-dark">✏️ Editar</a></td>
+      </tr>
+      {% else %}<tr><td colspan="6" class="p-4 text-sm text-slate-500">Sin empresas.</td></tr>{% endfor %}
+    {% else %}
+      {% for c in personas %}
+      <tr class="border-b hover:bg-marfil" data-buscar="{{ (c.nombre ~ ' ' ~ c.apellidos ~ ' ' ~ (c.telefono or ''))|lower }}">
+        <td class="px-3 py-2 font-medium whitespace-nowrap font-sans">{{ c.nombre }} {{ c.apellidos }}</td>
+        <td class="text-xs whitespace-nowrap px-3 py-2">{{ c.doc_label }}</td>
+        <td class="text-xs whitespace-nowrap px-3 py-2">{{ c.telefono or '—' }}</td>
+        <td class="text-xs whitespace-nowrap px-3 py-2 font-sans">{{ c.distrito or '—' }}</td>
+        <td class="whitespace-nowrap px-3 py-2 font-sans">{{ badge(c.clasificacion, "laton" if c.clasificacion=='VIP' else "info") }}{% if c.vip %} {{ badge("VIP","warning") }}{% endif %}</td>
+        <td class="text-right whitespace-nowrap px-3 py-2 font-sans"><a href="/comercial/clientes/detalle?tipo=persona&id={{ c.id }}" class="font-semibold underline" style="color:#370003">Ver ficha →</a> · <a href="/comercial/clientes/persona/{{ c.id }}/editar" class="font-semibold underline text-laton-dark">✏️ Editar</a></td>
+      </tr>
+      {% else %}<tr><td colspan="6" class="p-4 text-sm text-slate-400">Sin resultados.</td></tr>{% endfor %}
+    {% endif %}
+    </tbody>
+  </table>
+  <p id="clientes-sin-resultados" class="hidden p-4 text-sm text-slate-500">Sin coincidencias en esta vista. Ajusta el filtro o usa Buscar (servidor).</p>
+</div>
+</div>
+<script>
+function filtrarClientes(q) {
+  q = (q || '').toLowerCase().trim();
+  var n = 0;
+  document.querySelectorAll('#tabla-clientes tbody tr[data-buscar]').forEach(function (tr) {
+    var ok = !q || tr.getAttribute('data-buscar').indexOf(q) !== -1;
+    tr.style.display = ok ? '' : 'none';
+    if (ok) n++;
+  });
+  document.getElementById('clientes-sin-resultados').classList.toggle('hidden', n > 0);
+}
+</script>
+{% endblock %}

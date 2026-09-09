@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>{% block title %}Suit Elans ERP{% endblock %}</title>
+<meta name="theme-color" content="#370003">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" href="/static/icons/icon-192.png">
+<link rel="stylesheet" href="/static/app.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js" defer></script>
+<script src="/static/app.js" defer></script>
+<script>
+tailwind.config = { theme: { extend: { colors: {
+  borgo: '#370003', borgo2: '#52040a', ink: '#1F1112', marfil: '#FAF8F5', laton: '#C5A880', laton2: '#a9885e'
+}, fontFamily: {
+  serif: ['Georgia', 'Times New Roman', 'serif'],
+  sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
+} } } }
+</script>
+<style>
+/* Tipografía estándar Suit Elans: cuerpo sans + títulos serif + códigos mono */
+body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+h1 { font-family: Georgia, 'Times New Roman', serif; }
+.text-laton-dark { color: #a9885e; }
+.bg-borgo { background-color: #370003; }
+.bg-ink { background-color: #1F1112; }
+.bg-marfil { background-color: #FAF8F5; }
+[x-cloak] { display: none !important; }
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+</style>
+</head>
+<body class="bg-marfil text-slate-900 min-h-screen">
+{# Navegación centralizada: sidebar.html es única fuente de verdad. Bottom nav reutiliza mismas reglas RBAC. #}
+{% if user %}
+<aside class="hidden lg:block fixed inset-y-0 left-0 w-64 bg-ink text-white z-40 overflow-y-auto">
+  <div class="px-4 pt-4 pb-2 border-b border-white/10">
+    <a href="/dashboard" class="font-serif text-lg tracking-wide">SUIT <span class="text-laton">ELANS</span></a>
+    <p class="text-xs text-slate-400">{{ user.full_name }} · {{ user.role }}</p>
+  </div>
+  {% include "components/sidebar.html" %}
+  <div class="p-3"><a href="/auth/logout" class="block text-center text-sm text-red-300 border border-white/20 rounded-lg py-1.5 hover:bg-white/10">Salir</a></div>
+</aside>
+{% endif %}
+<div class="{% if user %}lg:ml-64{% endif %}">
+{% include "components/topbar.html" %}
+<main class="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-6">
+  {% block content %}{% endblock %}
+</main>
+</div>
+{% if user %}
+{# Mobile bottom nav — 5 accesos máximos; el resto vive en el drawer (sidebar) #}
+<div x-data="{ drawer: false }">
+{% set _path = (request.url.path if request is defined and request else "") %}
+{% set _main_on = _path == '/' or _path.startswith('/dashboard') or _path.startswith('/ventas/pos') or _path.startswith('/produccion') or _path.startswith('/rendimiento') %}
+<nav class="lg:hidden fixed bottom-0 inset-x-0 bg-ink text-white flex justify-around py-2 text-[11px] z-40" style="padding-bottom: env(safe-area-inset-bottom)">
+  {% macro mlink(href, icon, label, roles, prefixes) -%}
+  {% set _p2 = (request.url.path if request is defined and request else "") %}
+  {% set _on = namespace(v=(_p2 == '/')) %}{% for x in prefixes %}{% if x != '/' and _p2.startswith(x) %}{% set _on.v = true %}{% endif %}{% endfor %}
+  {% if user and (user.role|lower == 'admin' or user.role in roles or user.role|lower in roles|map('lower') ) %}<a href="{{ href }}" class="p-2 whitespace-nowrap text-center min-w-[56px] {% if _on.v %}text-laton font-bold{% endif %}">{{ icon }}<br>{{ label }}</a>{% endif %}
+  {%- endmacro %}
+  {{ mlink('/dashboard', '📊', 'Panel', ['VENTA','SASTRE-MAESTRO','SASTRE-ASISTENTE','ALMACEN','FINANZAS','ventas','sastre','taller','almacen','gerente','contador'], ['/dashboard', '/']) }}
+  {{ mlink('/ventas/pos', '🛒', 'POS', ['VENTA','SASTRE-MAESTRO','ventas'], ['/ventas/pos', '/ventas/ordenes', '/ventas/facturacion', '/ventas/comprobantes']) }}
+  {{ mlink('/produccion/kanban', '🧵', 'Taller', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre'], ['/produccion']) }}
+  {{ mlink('/rendimiento/registro', '⚡', 'Rendimiento', ['SASTRE-MAESTRO','SASTRE-ASISTENTE','taller','sastre'], ['/rendimiento']) }}
+  <button @click="drawer = true" class="p-2 whitespace-nowrap text-center min-w-[56px] {% if not _main_on %}text-laton font-bold{% endif %}" aria-label="Abrir menú">☰<br>Menú</button>
+</nav>
+<div x-show="drawer" x-cloak class="lg:hidden fixed inset-0 z-50">
+  <div class="absolute inset-0 bg-black/60" @click="drawer = false"></div>
+  <aside class="absolute left-0 inset-y-0 w-72 max-w-[85vw] bg-ink text-white overflow-y-auto">
+    <div class="flex items-center justify-between px-4 pt-4 pb-2 border-b border-white/10">
+      <span class="font-serif text-lg">SUIT <span class="text-laton">ELANS</span></span>
+      <button @click="drawer = false" class="text-slate-300 border border-white/20 rounded-full w-8 h-8" aria-label="Cerrar menú">✕</button>
+    </div>
+    {% include "components/sidebar.html" %}
+    <div class="p-3"><a href="/auth/logout" class="block text-center text-sm text-red-300 border border-white/20 rounded-lg py-1.5">Salir</a></div>
+  </aside>
+</div>
+</div>
+{% endif %}
+<script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/static/service-worker.js'); }
+</script>
+</body>
+</html>

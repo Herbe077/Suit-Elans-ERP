@@ -1,0 +1,4 @@
+{# Formato moneda nacional: S/ 1,250.00 #}
+{% macro soles(x, cero="S/ 0.00") -%}
+{% if x is none %}{{ cero }}{% else %}S/ {{ "{:,.2f}".format(x|float) }}{% endif %}
+{%- endmacro %}

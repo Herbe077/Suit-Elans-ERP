@@ -1,0 +1,54 @@
+{% extends "finanzas/base_finanzas.html" %}
+{% block title %}Flujo de Caja{% endblock %}
+{% block finanzas %}
+<h1 class="text-2xl font-bold mb-1 font-serif" style="color:#370003">💹 Flujo de Caja Consolidado</h1>
+<p class="text-sm text-slate-500 mb-3">Transacciones reales liquidadas: caja chica POS + cuentas bancarias, por actividad.</p>
+<div class="grid md:grid-cols-4 gap-3 mb-4">
+  <div class="bg-white rounded-xl p-4 shadow border-t-2 border-[#C5A880]"><p class="text-xs text-slate-500">Ingresos totales</p><p class="text-xl font-bold text-emerald-700">S/ {{ "{:,.2f}".format(total_ing) }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow border-t-2 border-[#C5A880]"><p class="text-xs text-slate-500">Egresos totales</p><p class="text-xl font-bold text-red-700">S/ {{ "{:,.2f}".format(total_egr) }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow border-t-2 border-[#C5A880]"><p class="text-xs text-slate-500">Liquidez (Saldo)</p><p class="text-xl font-bold {% if liquidez>=0 %}text-emerald-700{% else %}text-red-700{% endif %}">S/ {{ "{:,.2f}".format(liquidez) }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow border-t-2 border-[#C5A880]"><p class="text-xs text-slate-500">Apertura turnos (Caja)</p><p class="text-xl font-bold">S/ {{ "{:,.2f}".format(apertura) }}</p></div>
+</div>
+{% if flujo_act %}
+<div class="grid md:grid-cols-3 gap-3 mb-4">
+  {% for act in ['OPERATIVA','INVERSION','FINANCIAMIENTO'] %}
+  <div class="bg-white rounded-xl p-4 shadow border-t-2 border-[#C5A880]">
+    <p class="text-xs font-bold uppercase" style="color:#370003">Flujo {{ act|capitalize }}</p>
+    <p class="text-xs text-slate-500">Ingresos <b class="text-emerald-700">S/ {{ "{:,.2f}".format(flujo_act.por_actividad[act].ingresos) }}</b> · Egresos <b class="text-red-700">S/ {{ "{:,.2f}".format(flujo_act.por_actividad[act].egresos) }}</b></p>
+    <p class="text-lg font-bold {% if flujo_act.neto[act]>=0 %}text-emerald-700{% else %}text-red-700{% endif %}">Neto S/ {{ "{:,.2f}".format(flujo_act.neto[act]) }}</p>
+  </div>
+  {% endfor %}
+</div>
+<div class="grid md:grid-cols-2 gap-3 mb-4">
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Caja chica POS (ingresos − egresos)</p><p class="text-lg font-bold">S/ {{ "{:,.2f}".format(flujo_act.caja.ingresos - flujo_act.caja.egresos) }}</p></div>
+  <div class="bg-white rounded-xl p-4 shadow"><p class="text-xs text-slate-500">Cuentas bancarias (ingresos − egresos)</p><p class="text-lg font-bold">S/ {{ "{:,.2f}".format(flujo_act.bancos.ingresos - flujo_act.bancos.egresos) }}</p></div>
+</div>
+{% endif %}
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold text-sm mb-2">Ingresos vs Egresos mensuales (últimos 6 meses)</h2>
+    <table class="w-full text-xs">
+      <thead class="text-slate-500"><tr><th class="text-left">Mes</th><th class="text-right">Ingresos</th><th class="text-right">Egresos</th><th class="text-right">Neto</th></tr></thead>
+      <tbody>
+      {% for m in monthly %}
+        <tr class="border-b"><td>{{ m.mes }}</td><td class="text-right text-emerald-700">S/ {{ "%.2f"|format(m.ingresos) }}</td><td class="text-right text-red-700">S/ {{ "%.2f"|format(m.egresos) }}</td><td class="text-right font-bold">S/ {{ "%.2f"|format(m.ingresos - m.egresos) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="text-xs text-slate-400 mt-1">Gráfico/Tabla mensual con desglose por categoría: Venta de Trajes, Compra de Telas y Avíos, Pago de Planilla / Personal, Costos Operativos / Servicios</p>
+  </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <h2 class="font-bold text-sm mb-2">Desglose por categoría</h2>
+    {% for cat, monto in cats %}
+      <div class="flex justify-between text-xs border-b py-1"><span>{{ cat or 'Sin categoría' }}</span><b>S/ {{ "%.2f"|format(monto) }}</b></div>
+    {% else %}<p class="text-xs text-slate-400">Sin movimientos por categoría.</p>{% endfor %}
+    <p class="text-xs text-slate-400 mt-2">Categorías: Venta de Trajes, Compra de Telas y Avíos, Pago de Planilla / Personal, Costos Operativos / Servicios</p>
+  </div>
+</div>
+<div class="bg-white rounded-xl shadow p-4">
+  <h2 class="font-bold text-sm mb-2">Consolidados — Últimos movimientos financieros</h2>
+  {% for m in movs %}
+    <div class="text-xs border-b py-1 flex justify-between"><span>{{ m.fecha }} · {{ m.tipo }} {{ m.categoria }} · {{ m.cuenta_origen }} {{ m.comprobante_ref or '' }}</span><b class="{% if m.tipo=='INGRESO' %}text-emerald-700{% else %}text-red-700{% endif %}">S/ {{ "%.2f"|format(m.monto) }}</b></div>
+  {% else %}<p class="text-xs text-slate-400">Sin movimientos financieros.</p>{% endfor %}
+</div>
+{% endblock %}

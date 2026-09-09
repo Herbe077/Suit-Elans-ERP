@@ -1,0 +1,9 @@
+{# Stats card KPI — usa paleta #370003 #C5A880 #FAF8F5 #1F1112 #}
+{% macro stats_card(label, value, sub="", tone="default") -%}
+{% set tone_class = "border-[#C5A880]/40" if tone=="default" else "border-emerald-200" if tone=="success" else "border-red-200" if tone=="danger" else "border-amber-200" %}
+<div class="bg-white rounded-xl p-4 shadow border {{ tone_class }}">
+  <p class="text-xs text-slate-500">{{ label }}</p>
+  <p class="text-xl font-bold" style="{% if tone=='danger' %}color:#991b1b{% elif tone=='success' %}color:#065f46{% else %}color:#370003{% endif %}">{{ value }}</p>
+  {% if sub %}<p class="text-xs text-slate-400">{{ sub }}</p>{% endif %}
+</div>
+{%- endmacro %}
