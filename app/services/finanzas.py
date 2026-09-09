@@ -87,23 +87,39 @@ def ensure_column(db: Session, tabla: str, columna: str,
                   ddl_pg: str, ddl_sqlite: str) -> None:
     """Nivelación de esquema idempotente y agnóstica de dialecto.
 
-    PostgreSQL no tiene PRAGMA: se inspecciona vía SQLAlchemy y se emite
-    `ADD COLUMN IF NOT EXISTS` en PG o `ADD COLUMN` (tras verificar) en
-    SQLite. Nunca lanza: acompaña la transacción del llamante.
+    Ejecuta el DDL a ciegas (PG: `ADD COLUMN IF NOT EXISTS`; SQLite:
+    `ADD COLUMN` tragando "duplicate column") en vez de confiar en
+    `inspect`: las conexiones pooleadas pueden servir caché de esquema
+    stale y saltar la nivelación justo cuando más se necesita.
+    Nunca lanza: acompaña la transacción del llamante.
     """
     try:
-        from sqlalchemy import inspect as _inspect
         from sqlalchemy import text as _text
         bind = db.get_bind()
-        try:
-            cols = {c["name"] for c in _inspect(bind).get_columns(tabla)}
-        except Exception:
-            cols = set()
-        if columna not in cols:
-            if bind.dialect.name == "postgresql":
-                db.execute(_text(ddl_pg))
-            else:
+        if bind.dialect.name == "postgresql":
+            db.execute(_text(ddl_pg))
+        else:
+            try:
                 db.execute(_text(ddl_sqlite))
+            except Exception as e:
+                if "duplicate column" not in str(e).lower():
+                    raise
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
+def _refrescar_pool(db: Session) -> None:
+    """Descarta conexiones pooleadas con caché de esquema stale (SQLite).
+
+    Tras DDL, las conexiones del pool pueden seguir viendo el esquema
+    viejo; al disponer el pool, las siguientes se reconectan limpias.
+    """
+    try:
+        db.get_bind().dispose()
     except Exception:
         pass
 
@@ -388,6 +404,7 @@ def ensure_runtime_schema(db: Session) -> dict:
         ensure_caja_turnos_table(db)
         ensure_caja_columns(db)
         estado["caja"] = True
+        _refrescar_pool(db)
         try:
             bind = db.get_bind()
             if bind.dialect.name == "postgresql":

@@ -10,6 +10,7 @@
 {% if error == 'turno' %}<div class="bg-amber-50 border border-amber-300 text-amber-900 rounded-xl p-3 mb-4 text-sm">⚠️ Necesitas un <b>turno de caja ABIERTA</b> para cobrar. <a href="/ventas/caja" class="underline">Abrir turno →</a></div>{% endif %}
 {% if error == 'monto' %}<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ Monto inválido o excede el saldo pendiente.</div>{% endif %}
 {% if error == 'sunat' %}<div class="bg-red-50 border border-red-300 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ Según normativa SUNAT, para ventas desde S/ 700.00 es obligatorio registrar los datos del cliente (DNI/CE y Nombres).</div>{% endif %}
+{% if error == 'interno' %}<div class="bg-red-50 border border-red-300 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ Error interno al cargar las órdenes (revisa los logs del servidor). {{ msg }}</div>{% endif %}
 <div class="flex gap-2 mb-3 text-sm flex-wrap">
   <a href="/ventas/ordenes" class="px-3 py-1 rounded-full {{ 'bg-borgo text-white' if not estado else 'bg-white' }} shadow">Todas</a>
   {% for e in ['cotizado','confirmado','en_produccion','entregado','cancelado'] %}

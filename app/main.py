@@ -3,7 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.cors import CORSMiddleware
@@ -44,13 +44,32 @@ app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    """Red de seguridad: imprime el traceback completo en logs y devuelve 500.
+    """Red de seguridad: traceback completo a logs; respuesta según cliente.
 
+    - API/fetch (Accept: application/json o ruta /api*): JSON 500.
+    - Navegador (vistas HTML): página 500 amigable en vez de JSON crudo.
     Los handlers específicos (HTTPException, validación) siguen teniendo
-    prioridad; esto solo captura errores no controlados (ej. SQL por
-    columna faltante en producción) para diagnosticarlos en Render/Neon.
+    prioridad.
     """
     log.exception("500 %s %s: %s", request.method, request.url.path, exc)
+    accept = request.headers.get("accept", "")
+    quiere_html = "text/html" in accept and not request.url.path.startswith("/api")
+    if quiere_html:
+        return HTMLResponse(
+            status_code=500,
+            content="""<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Error interno — Suit Elans ERP</title></head>
+<body style="font-family:system-ui,sans-serif;background:#FAF8F5;color:#333;
+display:flex;align-items:center;justify-content:center;min-height:90vh;margin:0">
+<main style="max-width:520px;background:#fff;border:1px solid #e5ddd2;
+border-radius:16px;padding:32px;text-align:center">
+<h1 style="margin:0 0 8px">⚠️ Error interno del servidor</h1>
+<p>Ocurrió un problema inesperado. El equipo ya fue notificado
+(revisa los logs del servidor).</p>
+<p><a href="/" style="color:#7a0c2e;font-weight:bold">← Volver al inicio</a></p>
+</main></body></html>""",
+        )
     return JSONResponse(
         status_code=500,
         content={"detail": "Error interno del servidor (revisa los logs)."},

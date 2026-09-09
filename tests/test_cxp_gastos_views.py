@@ -51,18 +51,23 @@ def test_ensure_retencion_usa_ddl_postgres():
     assert "PRAGMA" not in ddl
 
 
-def test_ensure_retencion_noop_si_columna_existe():
-    from unittest.mock import MagicMock, patch
+def test_ensure_retencion_idempotente_si_columna_existe():
+    """El DDL se emite a ciegas (idempotente): el inspect puede servir
+    caché stale desde el pool, así que 'columna existe' no exime el ADD.
+    En SQLite, 'duplicate column' se traga con rollback y la sesión
+    queda usable."""
+    from unittest.mock import MagicMock
+    from sqlalchemy.exc import OperationalError
     from app.services import finanzas as f
     fake_bind = MagicMock()
     fake_bind.dialect.name = "sqlite"
     fake_db = MagicMock()
     fake_db.get_bind.return_value = fake_bind
-    fake_inspect = MagicMock()
-    fake_inspect.return_value.get_columns.return_value = [{"name": "retencion"}]
-    with patch("sqlalchemy.inspect", fake_inspect):
-        f.ensure_gasto_retencion_column(fake_db)
-    fake_db.execute.assert_not_called()
+    fake_db.execute.side_effect = OperationalError(
+        "ALTER TABLE", None, Exception("duplicate column name: retencion"))
+    f.ensure_gasto_retencion_column(fake_db)  # no lanza
+    fake_db.execute.assert_called_once()
+    fake_db.rollback.assert_called()
 
 
 def test_cxp_200_con_huerfanos_y_rxh(client, auth_cookies):

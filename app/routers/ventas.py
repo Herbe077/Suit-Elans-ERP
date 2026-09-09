@@ -122,25 +122,42 @@ def _igv(db: Session) -> float:
 @router.get("/pos", response_class=HTMLResponse)
 def pos(request: Request, ok: str = "", error: str = "",
         db: Session = Depends(get_db), user=Auth):
-    empresas = db.query(Company).order_by(Company.nombre_comercial).all()
-    colabs: dict[int, list] = {}
-    for c in db.query(Client).filter(Client.company_id.is_not(None)).all():
-        colabs.setdefault(c.company_id, []).append(c)
-    variantes = db.query(ProductVariant).filter(ProductVariant.stock > 0).order_by(
-        ProductVariant.sku).limit(200).all()
-    prods = {p.id: p.nombre for p in db.query(Product).all()}
-    return templates.TemplateResponse(request, "ventas/pos.html", {
-        "user": user, "ok": ok, "error": error,
-        "turno": ventas_svc.turno_abierto(db, user.id),
-        "min_anticipo": ventas_svc.anticipo_min_pct(db),
-        "clientes": db.query(Client).order_by(Client.apellidos).limit(200).all(),
-        "empresas": empresas, "colabs": colabs,
-        "variantes": variantes, "nombres_prod": prods,
-        "telas": db.query(Fabric).filter(Fabric.stock_metros > 0).order_by(
-            Fabric.codigo).limit(200).all(),
-        "tipos": GARMENT_TYPES, "tipos_labels": GARMENT_LABELS,
-        "conjuntos": GARMENT_SETS,
-        "recientes": db.query(Order).order_by(Order.id.desc()).limit(10).all()})
+    import logging as _logging
+    try:
+        empresas = db.query(Company).order_by(Company.nombre_comercial).all()
+        colabs: dict[int, list] = {}
+        for c in db.query(Client).filter(Client.company_id.is_not(None)).all():
+            colabs.setdefault(c.company_id, []).append(c)
+        variantes = db.query(ProductVariant).filter(ProductVariant.stock > 0).order_by(
+            ProductVariant.sku).limit(200).all()
+        prods = {p.id: p.nombre for p in db.query(Product).all()}
+        return templates.TemplateResponse(request, "ventas/pos.html", {
+            "user": user, "ok": ok, "error": error,
+            "turno": ventas_svc.turno_abierto(db, user.id),
+            "min_anticipo": ventas_svc.anticipo_min_pct(db),
+            "clientes": db.query(Client).order_by(Client.apellidos).limit(200).all(),
+            "empresas": empresas, "colabs": colabs,
+            "variantes": variantes, "nombres_prod": prods,
+            "telas": db.query(Fabric).filter(Fabric.stock_metros > 0).order_by(
+                Fabric.codigo).limit(200).all(),
+            "tipos": GARMENT_TYPES, "tipos_labels": GARMENT_LABELS,
+            "conjuntos": GARMENT_SETS,
+            "recientes": db.query(Order).order_by(Order.id.desc()).limit(10).all()})
+    except Exception as e:
+        # Vista HTML: jamás JSON crudo; banner amigable + log completo.
+        _logging.getLogger(__name__).exception("500 GET /ventas/pos: %s", e)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return templates.TemplateResponse(request, "ventas/pos.html", {
+            "user": user, "ok": "", "error": "interno",
+            "turno": None, "min_anticipo": 50,
+            "clientes": [], "empresas": [], "colabs": {},
+            "variantes": [], "nombres_prod": {},
+            "telas": [], "tipos": GARMENT_TYPES,
+            "tipos_labels": GARMENT_LABELS, "conjuntos": GARMENT_SETS,
+            "recientes": []}, status_code=500)
 
 
 @router.post("/pos/cliente-rapido")
@@ -343,6 +360,28 @@ def vender(client_id: str = Form(""), company_id: str = Form(""),
 def ordenes(request: Request, estado: str = "", error: str = "", msg: str = "",
             cliente_id: str = "", concepto: str = "",
             db: Session = Depends(get_db), user=Auth):
+    import logging as _logging
+    try:
+        return _ordenes_ok(request, estado, error, msg, cliente_id, concepto,
+                           db, user)
+    except Exception as e:
+        _logging.getLogger(__name__).exception("500 GET /ventas/ordenes: %s", e)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        tpl = "ventas/ordenes_listado.html" if (BASE_DIR / "app" / "templates" / "ventas" / "ordenes_listado.html").exists() else "ventas/ordenes.html"
+        return templates.TemplateResponse(request, tpl, {
+            "user": user, "ordenes": [], "nombres": {}, "taller_ok": {},
+            "estado": estado, "error": "interno", "msg": "Error interno al cargar las órdenes.",
+            "mapa": ESTADO_VENTA, "min_anticipo": 50, "facturas_activas": {},
+            "cliente_id": cliente_id, "concepto_sugerido": concepto,
+            "clientes": []}, status_code=500)
+
+
+def _ordenes_ok(request: Request, estado: str, error: str, msg: str,
+                cliente_id: str, concepto: str,
+                db: Session, user):
     q = db.query(Order)
     if estado:
         q = q.filter(Order.estado == estado)

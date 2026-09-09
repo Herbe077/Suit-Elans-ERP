@@ -13,7 +13,8 @@ import time
 
 log = logging.getLogger("suitelans")
 
-CRITICAL_TABLES = ("users", "cuentas_contables", "asientos_contables")
+CRITICAL_TABLES = ("users", "cuentas_contables", "asientos_contables",
+                   "caja_turnos", "cash_movements", "clients", "orders")
 
 
 def _alembic_cfg():
@@ -96,6 +97,17 @@ def init_production_db() -> dict:
             status["pcge"] = "ok"
             return status
         status["migrations"] = _upgrade_with_retries()
+        if status["migrations"].startswith("failed"):
+            # Alembic estancado (versión previa corrupta/conflictiva):
+            # fuerza el sello a head para no quedar bloqueado y deja que
+            # ensure_runtime_schema sanee el DDL real abajo.
+            try:
+                from alembic import command
+                command.stamp(_alembic_cfg(), "head")
+                status["migrations"] += " | forced stamp head"
+                log.warning("alembic con fallo: stamp head forzado")
+            except Exception as e:
+                log.warning("forced stamp omitido: %s", e)
         missing = _missing_tables()
         status["tables"] = missing
         if missing:

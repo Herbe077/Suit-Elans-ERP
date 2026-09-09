@@ -50,6 +50,30 @@ def test_endpoint_abrir_nunca_500(client, auth_cookies):
     assert "Error interno del servidor" not in (r.text or "")
 
 
+def test_vista_html_degradada_no_muestra_json_crudo(client, auth_cookies):
+    """Regresión: ante excepción en vista web se sirve HTML amigable, no JSON."""
+    from sqlalchemy import text
+    from app.core.database import engine
+    with engine.begin() as c:
+        c.execute(text("DROP INDEX IF EXISTS ix_clients_es_corporativo"))
+        c.execute(text("ALTER TABLE clients DROP COLUMN es_corporativo"))
+    try:
+        r = client.get("/ventas/pos", cookies=auth_cookies,
+                       headers={"Accept": "text/html,application/xhtml+xml"})
+        assert r.status_code == 500
+        assert "<html" in r.text.lower() and "Error interno" in r.text
+        assert not r.text.strip().startswith("{")
+    finally:
+        db = _db()
+        from app.services.finanzas import ensure_caja_columns
+        ensure_caja_columns(db)
+        db.commit()
+        with engine.begin() as c:
+            c.execute(text("CREATE INDEX IF NOT EXISTS "
+                            "ix_clients_es_corporativo ON clients (es_corporativo)"))
+        db.close()
+
+
 def test_ensure_nivela_columna_faltante():
     """Regresión: BD longeva sin clients.es_corporativo se nivela sin 500."""
     from sqlalchemy import inspect, text
