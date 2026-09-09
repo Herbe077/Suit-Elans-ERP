@@ -128,30 +128,65 @@ def _vinculos(db: Session, uid: int) -> list[str]:
     return out
 
 
+MSG_VINCULOS = ("No se puede eliminar el usuario porque tiene registros "
+                "vinculados. Utilice la opción Desactivar.")
+
+
+def _quiere_json(request: Request) -> bool:
+    """True si el cliente es fetch/AJAX (espera JSON, no redirect)."""
+    if request.headers.get("x-requested-with", "").lower() == "fetch":
+        return True
+    return "application/json" in request.headers.get("accept", "")
+
+
+@router.get("/usuarios/{uid}/eliminar")
+def eliminar_usuario_get(uid: int, user=Auth):
+    """Red de seguridad: navegar directo a esta URL nunca muestra JSON crudo."""
+    return RedirectResponse("/admin/usuarios", status_code=303)
+
+
 @router.post("/usuarios/{uid}/eliminar")
-def eliminar_usuario(uid: int, db: Session = Depends(get_db), user=Auth):
+def eliminar_usuario(uid: int, request: Request, db: Session = Depends(get_db),
+                     user=Auth):
     target = db.get(User, uid)
+    fetch = _quiere_json(request)
     if not target:
+        if fetch:
+            return JSONResponse({"detail": "Usuario no encontrado."}, status_code=404)
         return RedirectResponse("/admin/usuarios", status_code=303)
     if uid == user.id:
+        if fetch:
+            return JSONResponse({"detail": "No puedes eliminar tu propio usuario."},
+                                status_code=400)
         return RedirectResponse("/admin/usuarios?error=propio", status_code=303)
     otros_admin = db.query(User).filter(func.lower(User.role) == "admin", User.is_active.is_(True),
                                         User.id != uid).count()
     if _is_admin_role(target.role) and not otros_admin:
+        if fetch:
+            return JSONResponse({"detail": "No puedes eliminar al último administrador activo."},
+                                status_code=400)
         return RedirectResponse("/admin/usuarios?error=ultimo", status_code=303)
-    if _vinculos(db, uid):
+    detalle = _vinculos(db, uid)
+    if detalle:
+        if fetch:
+            return JSONResponse({"detail": f"{MSG_VINCULOS} Detalle: {'; '.join(detalle)}.",
+                                 "vinculos": detalle}, status_code=400)
         return RedirectResponse(f"/admin/usuarios?error=vinculos&uid={uid}",
                                 status_code=303)
     try:
         db.delete(target)
         db.commit()
     except Exception:
-        # Red de seguridad: cualquier FK no contemplada (o futura) no debe
-        # devolver 500 "Error interno del servidor", sino el aviso de vínculos.
+        # Integridad referencial (FK en PG) u otro fallo: jamás 500.
+        # Borrado lógico alternativo disponible vía toggle (Desactivar).
         db.rollback()
         logger.exception("eliminar_usuario uid=%s bloqueado por FK", uid)
+        if fetch:
+            return JSONResponse({"detail": MSG_VINCULOS}, status_code=400)
         return RedirectResponse(f"/admin/usuarios?error=vinculos&uid={uid}",
                                 status_code=303)
+    if fetch:
+        return JSONResponse({"ok": True, "detail": "Usuario eliminado."})
     return RedirectResponse("/admin/usuarios?ok=eliminado", status_code=303)
 
 

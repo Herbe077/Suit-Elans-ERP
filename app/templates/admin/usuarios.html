@@ -21,6 +21,7 @@
 <div class="grid md:grid-cols-2 gap-4">
 <div class="bg-white rounded-xl shadow p-4">
   <h2 class="font-bold mb-2 text-sm">Usuarios y roles (RBAC)</h2>
+  <div id="msg-usuarios" class="hidden rounded-xl p-3 mb-3 text-sm"></div>
   <form method="post" action="/admin/usuarios" class="grid grid-cols-2 gap-1 text-xs mb-3">
     <input name="email" type="email" required placeholder="Email" class="border rounded px-2 py-1">
     <input name="full_name" required placeholder="Nombre" class="border rounded px-2 py-1">
@@ -28,10 +29,49 @@
     <select name="role" class="border rounded px-2 py-1">{% for r in roles|default(['ADMIN','VENTA','SASTRE-MAESTRO','SASTRE-ASISTENTE','ALMACEN','FINANZAS'], true) %}<option value="{{ r }}">{{ r }}</option>{% else %}<option value="ADMIN">ADMIN</option><option value="VENTA">VENTA</option><option value="SASTRE-MAESTRO">SASTRE-MAESTRO</option><option value="SASTRE-ASISTENTE">SASTRE-ASISTENTE</option><option value="ALMACEN">ALMACEN</option><option value="FINANZAS">FINANZAS</option>{% endfor %}</select>
     <button class="col-span-2 bg-slate-900 text-white rounded py-1">Crear usuario</button>
   </form>
-  {% for u in usuarios %}<div class="text-xs border-b py-1 flex justify-between items-center"><span>{{ u.email }} {% if u.id == user.id %}<span class="text-[#C5A880]">(tú)</span>{% endif %} {% if not u.is_active %}<span class="bg-slate-300 rounded px-1">inactivo</span>{% endif %}</span><span class="flex gap-2 items-center">{{ u.role }}
+  {% for u in usuarios %}<div class="text-xs border-b py-1 flex justify-between items-center" data-fila-usuario="{{ u.id }}"><span>{{ u.email }} {% if u.id == user.id %}<span class="text-[#C5A880]">(tú)</span>{% endif %} {% if not u.is_active %}<span class="bg-slate-300 rounded px-1">inactivo</span>{% endif %}</span><span class="flex gap-2 items-center">{{ u.role }}
   {% if u.id != user.id %}
   <form method="post" action="/admin/usuarios/{{ u.id }}/toggle"><button class="underline">{{ 'Desactivar' if u.is_active else 'Activar' }}</button></form>
-  <form method="post" action="/admin/usuarios/{{ u.id }}/eliminar" onsubmit="return confirm('¿Eliminar al usuario {{ u.email }}? Solo si no tiene historial.')"><button class="text-red-700 underline">Eliminar</button></form>
+  <button class="text-red-700 underline" data-eliminar-usuario="{{ u.id }}" data-email="{{ u.email }}">Eliminar</button>
   {% endif %}</span></div>{% endfor %}
 </div>
+<script>
+(function () {
+  var box = document.getElementById('msg-usuarios');
+  function avisa(ok, texto) {
+    box.classList.remove('hidden');
+    box.className = ok
+      ? 'bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-3 text-sm'
+      : 'bg-red-50 border border-red-200 text-red-800 rounded-xl p-3 mb-3 text-sm';
+    box.textContent = texto;
+    box.scrollIntoView({ block: 'nearest' });
+  }
+  document.querySelectorAll('[data-eliminar-usuario]').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      var uid = btn.getAttribute('data-eliminar-usuario');
+      var email = btn.getAttribute('data-email');
+      if (!confirm('¿Eliminar al usuario ' + email + '? Solo si no tiene historial.')) return;
+      btn.disabled = true;
+      try {
+        var r = await fetch('/admin/usuarios/' + uid + '/eliminar', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'fetch', 'Accept': 'application/json' }
+        });
+        var data = await r.json().catch(function () { return {}; });
+        if (r.ok) {
+          var fila = document.querySelector('[data-fila-usuario="' + uid + '"]');
+          if (fila) fila.remove();
+          avisa(true, data.detail || '✓ Usuario eliminado.');
+        } else {
+          avisa(false, '⚠️ ' + (data.detail || 'No se pudo eliminar el usuario.'));
+        }
+      } catch (e) {
+        avisa(false, '⚠️ Error de red al eliminar el usuario.');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}
