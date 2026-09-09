@@ -63,29 +63,57 @@ def usuarios(request: Request, error: str = "", ok: str = "", uid: str = "",
 
 
 def _vinculos(db: Session, uid: int) -> list[str]:
-    """Historial que impide borrar al usuario."""
+    """Historial que impide borrar al usuario.
+
+    Cubre TODAS las FKs hacia users.id: si falta alguna, el DELETE
+    revienta con IntegrityError en PostgreSQL (prod) y el handler
+    global devuelve 500 "Error interno del servidor".
+    """
     from app.models.appointment import Appointment
-    from app.models.billing import CashMovement, Invoice
-    from app.models.crm import Lead, Quotation
+    from app.models.billing import CajaTurno, CashMovement, Invoice
+    from app.models.crm import Interaccion, Lead, Quotation
+    from app.models.finanzas import LineaAsientoContable, MovimientoFinanciero
+    from app.models.inventario import MovimientoKardex
     from app.models.inventory import StockMovement
     from app.models.measurement import Measurement
     from app.models.order import ControlCalidad, Order, Payment, WorkLog
+    from app.models.personnel import Empleado
+    from app.models.produccion import ControlCalidad as ControlCalidadProd
+    from app.models.produccion import OrdenProduccion
     from app.models.purchasing import PurchaseOrder
     from app.models.taller import TallerCierreJornada
+    from app.models.ventas import OrdenVenta
+    from app.modules.rendimiento.models import RegistroJornada
     reglas = [
         (Order, Order.sastre_id, "pedidos como sastre/responsable"),
+        (OrdenVenta, OrdenVenta.sastre_id, "órdenes de venta como sastre"),
+        (OrdenProduccion, OrdenProduccion.sastre_asignado_id,
+         "órdenes de producción asignadas"),
         (Lead, Lead.vendedor_id, "leads asignados"),
         (Quotation, Quotation.vendedor_id, "cotizaciones emitidas"),
+        (Interaccion, Interaccion.usuario_id, "interacciones CRM"),
         (WorkLog, WorkLog.operario_id, "fichajes de taller"),
+        (RegistroJornada, RegistroJornada.operario_id,
+         "registros de rendimiento"),
         (TallerCierreJornada, TallerCierreJornada.user_id, "cierres de jornada"),
+        (CajaTurno, CajaTurno.usuario_id, "turnos de caja"),
         (CashMovement, CashMovement.usuario_id, "movimientos de caja"),
+        (MovimientoFinanciero, MovimientoFinanciero.usuario_id,
+         "movimientos financieros"),
         (Payment, Payment.usuario_id, "pagos registrados"),
         (Invoice, Invoice.usuario_id, "comprobantes emitidos"),
         (Appointment, Appointment.sastre_id, "citas asignadas"),
         (Measurement, Measurement.sastre_id, "tomas de medidas"),
         (ControlCalidad, ControlCalidad.aprobado_por, "controles de calidad"),
+        (ControlCalidadProd, ControlCalidadProd.revisado_por_id,
+         "revisiones de calidad (producción)"),
         (PurchaseOrder, PurchaseOrder.usuario_id, "órdenes de compra"),
         (StockMovement, StockMovement.usuario_id, "movimientos de kardex"),
+        (MovimientoKardex, MovimientoKardex.usuario_id,
+         "movimientos de kardex (inventario)"),
+        (LineaAsientoContable, LineaAsientoContable.trabajador_id,
+         "líneas contables como trabajador"),
+        (Empleado, Empleado.user_id, "ficha de personal vinculada"),
     ]
     out = []
     for model, field, label in reglas:
@@ -114,8 +142,16 @@ def eliminar_usuario(uid: int, db: Session = Depends(get_db), user=Auth):
     if _vinculos(db, uid):
         return RedirectResponse(f"/admin/usuarios?error=vinculos&uid={uid}",
                                 status_code=303)
-    db.delete(target)
-    db.commit()
+    try:
+        db.delete(target)
+        db.commit()
+    except Exception:
+        # Red de seguridad: cualquier FK no contemplada (o futura) no debe
+        # devolver 500 "Error interno del servidor", sino el aviso de vínculos.
+        db.rollback()
+        logger.exception("eliminar_usuario uid=%s bloqueado por FK", uid)
+        return RedirectResponse(f"/admin/usuarios?error=vinculos&uid={uid}",
+                                status_code=303)
     return RedirectResponse("/admin/usuarios?ok=eliminado", status_code=303)
 
 
