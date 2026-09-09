@@ -3,10 +3,12 @@
 Idempotente: si la tabla `users` no existe o ya hay usuarios, no hace nada.
 Uso manual:  .venv/bin/python seed_admin.py
 Automático:   lifespan de FastAPI lo invoca en producción con BD vacía.
-		
-Configuración por entorno (con valores por defecto solo para desarrollo):
-  ADMIN_EMAIL     (default: suit@elans)
-  ADMIN_PASSWORD  (default: elans123)
+
+Configuración por entorno:
+  ADMIN_EMAIL     (default: admin@elans.com)
+  ADMIN_PASSWORD  (default: admin — SOLO para acceso inicial; cámbiala
+                  tras el primer login y define una clave segura vía
+                  variables de entorno en producción)
   ADMIN_ROLE      (default: admin)
   ADMIN_NAME      (default: Administrador)
 """
@@ -36,13 +38,16 @@ def ensure_admin(session=None, email=None, password=None, role=None, name=None) 
             return "no_table"
         if total > 0:
             return "exists"
-        email = (email or os.environ.get("ADMIN_EMAIL", "suit@elans")).lower().strip()
-        password = password or os.environ.get("ADMIN_PASSWORD")
+        email = (email or os.environ.get("ADMIN_EMAIL", "admin@elans.com")).lower().strip()
+        password = password or os.environ.get("ADMIN_PASSWORD", "admin")
         role = role or os.environ.get("ADMIN_ROLE", "admin")
         name = name or os.environ.get("ADMIN_NAME", "Administrador")
         if not email or not password:
             log.warning("seed admin omitido: ADMIN_EMAIL/ADMIN_PASSWORD son obligatorios")
             return "exists"
+        if "ADMIN_PASSWORD" not in os.environ and password == "admin":
+            log.warning("SEGURIDAD: admin creado con clave por defecto 'admin' "
+                        "(%s). Cámbiala tras el primer login.", email)
         session.add(User(email=email, full_name=name,
                          hashed_password=security.hash_password(password),
                          role=role, is_active=True))

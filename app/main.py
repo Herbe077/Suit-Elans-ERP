@@ -25,6 +25,14 @@ async def lifespan(app: FastAPI):
     # Prod (PostgreSQL/Neon): ejecuta `alembic upgrade head` automáticamente.
     if settings.is_sqlite:
         Base.metadata.create_all(bind=engine)
+        try:
+            import sys
+            if str(BASE_DIR) not in sys.path:
+                sys.path.insert(0, str(BASE_DIR))
+            from seed_admin import ensure_admin
+            ensure_admin()
+        except Exception:
+            log.warning("seed admin omitido", exc_info=True)
     else:
         # Prod: pipeline auto-reparable (migraciones + PCGE + admin). Nunca tumba el boot.
         from app.core.startup import init_production_db

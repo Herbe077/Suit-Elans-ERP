@@ -94,6 +94,14 @@ def init_production_db() -> dict:
                 status["admin"] = "exists" if db.query(User).first() else "skipped"
             finally:
                 db.close()
+            if status["admin"] == "skipped":
+                # BD reseteada en dev: siembra admin inicial para acceso inmediato.
+                import sys
+                from app.core.config import BASE_DIR
+                if str(BASE_DIR) not in sys.path:
+                    sys.path.insert(0, str(BASE_DIR))
+                from seed_admin import ensure_admin
+                status["admin"] = ensure_admin()
             status["pcge"] = "ok"
             return status
         status["migrations"] = _upgrade_with_retries()

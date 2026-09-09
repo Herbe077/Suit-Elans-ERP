@@ -16,6 +16,6 @@ services:
       - key: COOKIE_SECURE
         value: true
       - key: ADMIN_EMAIL
-        value: suit@elans
+        value: admin@elans.com
       - key: ADMIN_PASSWORD
-        generateValue: true
+        value: admin
