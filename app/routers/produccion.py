@@ -77,9 +77,10 @@ def _card(db: Session, g: Garment) -> dict:
             "next": KANBAN_STATES[idx + 1] if idx < len(KANBAN_STATES) - 1 else None}
 
 
-# Solo taller real: VENTA_CONFIRMADA (confirmado) o COMPLETADA (entregado).
+# Taller real: VENTA_CONFIRMADA (confirmado), EN_PRODUCCION (B2B
+# auto-aprobado sin adelanto) o COMPLETADA (entregado).
 # Cotizaciones (cotizado) y cancelados JAMÁS generan tarjetas en el Kanban.
-ESTADOS_TALLER_ORDEN = ("confirmado", "entregado")
+ESTADOS_TALLER_ORDEN = ("confirmado", "en_produccion", "entregado")
 
 
 def _board(db: Session) -> dict:

@@ -118,6 +118,14 @@ def confirmar_si_corresponde(db: Session, order: Order) -> bool:
         order.estado = "confirmado"  # = VENTA_CONFIRMADA
         db.commit()
         _reservar_telas(db, order)
+        try:
+            _asegurar_orden_produccion(db, order)
+            db.commit()
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
         return True
     return False
 
@@ -136,12 +144,75 @@ def es_pedido_corporativo(db: Session, order: Order) -> bool:
     return False
 
 
+def _asegurar_orden_produccion(db: Session, order: Order) -> int:
+    """Crea el espejo spec OrdenProduccion por cada Garment del pedido.
+
+    Idempotente: si ya existe una fila con el mismo codigo_qr o con el
+    mismo (orden_venta_id + garment vinculado por QR), no duplica.
+    Retorna cuántas filas creó. El Kanban lee Garments, pero la tabla
+    spec orden_produccion alimenta inventario/WIP, APIs y trazabilidad QR.
+    """
+    creadas = 0
+    try:
+        from app.models.produccion import OrdenProduccion
+    except Exception:
+        return 0
+    try:
+        prendas = db.query(Garment).filter(Garment.order_id == order.id).all()
+        for g in prendas:
+            # Asegura QR en Garment primero
+            if not g.codigo_qr:
+                try:
+                    from app.services.taller import codigo_qr as _qr
+                    g.codigo_qr = _qr(order.folio, g.id)
+                    db.flush()
+                except Exception:
+                    pass
+            existe = None
+            if g.codigo_qr:
+                existe = db.query(OrdenProduccion).filter(
+                    OrdenProduccion.codigo_qr == g.codigo_qr).first()
+            if existe is None:
+                existe = db.query(OrdenProduccion).filter(
+                    OrdenProduccion.orden_venta_id == order.id).all()
+                # si hay tantas OPs como prendas, asume ya espejado
+                if existe and len(existe) >= len(prendas):
+                    continue
+                existe = None
+            if existe is not None:
+                continue
+            estado_op = (g.estado_taller or "POR_CORTAR")
+            db.add(OrdenProduccion(
+                orden_venta_id=order.id,
+                codigo_qr=g.codigo_qr,
+                estado=estado_op,
+                sastre_asignado_id=g.artesano_id or order.sastre_id,
+                fecha_limite_entrega=g.fecha_limite_entrega or order.fecha_entrega,
+            ))
+            creadas += 1
+        if creadas:
+            db.flush()
+    except Exception:
+        pass
+    return creadas
+
+
 def aprobar_produccion(db: Session, order: Order) -> Order:
     """Aprobación automática B2B: pasa el pedido a EN_PRODUCCION y reserva
     telas para taller, sin requerir confirmación manual de pago/adelanto."""
     order.estado = "en_produccion"  # = EN_PRODUCCION (espejo)
     db.commit()
     _reservar_telas(db, order)
+    # Espejo spec: cada prenda visible en Kanban tiene su fila en
+    # orden_produccion (idempotente, no duplica).
+    try:
+        _asegurar_orden_produccion(db, order)
+        db.commit()
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
     db.refresh(order)
     return order
 

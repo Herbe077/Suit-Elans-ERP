@@ -39,7 +39,7 @@ def migrar(dry_run: bool = False) -> dict:
     Base.metadata.create_all(bind=engine)
     _ensure_flag()
     db = SessionLocal()
-    movidos, espejos = [], 0
+    movidos, espejos, ops_creadas = [], 0, 0
     try:
         pendientes = db.query(Order).filter(
             Order.estado == "cotizado").all()
@@ -66,10 +66,28 @@ def migrar(dry_run: bool = False) -> dict:
                     espejos += 1
         if not dry_run:
             db.commit()
+        # Backfill: asegura espejo orden_produccion para todo pedido ya en
+        # taller (confirmado/en_produccion/entregado) aunque se creó antes
+        # del espejo automático (p. ej. SE-2026-0001 en Render).
+        if not dry_run:
+            try:
+                taller = db.query(Order).filter(
+                    Order.estado.in_(["confirmado", "en_produccion", "entregado"])).all()
+                for o in taller:
+                    try:
+                        ops_creadas += ventas_svc._asegurar_orden_produccion(db, o)
+                    except Exception:
+                        pass
+                db.commit()
+            except Exception:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
     finally:
         db.close()
     return {"pedidos_movidos": len(movidos), "espejos": espejos,
-            "folios": movidos}
+            "folios": movidos, "ops_creadas": ops_creadas}
 
 
 if __name__ == "__main__":

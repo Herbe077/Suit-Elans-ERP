@@ -84,6 +84,16 @@ def convert_to_order(db: Session, qid: int, user_id: int | None) -> Order:
         try:
             from app.services import ventas as ventas_svc
             ventas_svc._reservar_telas(db, order)
+            ventas_svc._asegurar_orden_produccion(db, order)
+            db.commit()
+        except Exception:
+            pass
+    else:
+        # B2C confirmado: también espeja a orden_produccion para Kanban/WIP.
+        try:
+            from app.services import ventas as ventas_svc
+            ventas_svc._asegurar_orden_produccion(db, order)
+            db.commit()
         except Exception:
             pass
     db.refresh(order)
