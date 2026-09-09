@@ -351,6 +351,53 @@ def ensure_caja_turnos_table(db: Session) -> None:
         pass
 
 
+def ensure_empleados_planilla_columns(db: Session) -> None:
+    """Nivelación idempotente de columnas de planilla en empleados.
+
+    Si la migración c6d7 no corrió en una BD longeva, la vista Personal
+    revienta con UndefinedColumn (sueldo_basico, ...). DDL ciego e
+    idempotente; nunca lanza.
+    """
+    ensure_column(
+        db, "empleados", "sueldo_basico",
+        "ALTER TABLE empleados ADD COLUMN IF NOT EXISTS sueldo_basico FLOAT DEFAULT 0",
+        "ALTER TABLE empleados ADD COLUMN sueldo_basico FLOAT DEFAULT 0")
+    ensure_column(
+        db, "empleados", "asignacion_familiar",
+        "ALTER TABLE empleados ADD COLUMN IF NOT EXISTS asignacion_familiar BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE empleados ADD COLUMN asignacion_familiar BOOLEAN DEFAULT FALSE")
+    ensure_column(
+        db, "empleados", "sistema_pensiones",
+        "ALTER TABLE empleados ADD COLUMN IF NOT EXISTS sistema_pensiones VARCHAR(20) DEFAULT 'ONP'",
+        "ALTER TABLE empleados ADD COLUMN sistema_pensiones VARCHAR(20) DEFAULT 'ONP'")
+    ensure_column(
+        db, "empleados", "regimen_laboral",
+        "ALTER TABLE empleados ADD COLUMN IF NOT EXISTS regimen_laboral VARCHAR(20) DEFAULT 'General'",
+        "ALTER TABLE empleados ADD COLUMN regimen_laboral VARCHAR(20) DEFAULT 'General'")
+
+
+def ensure_configuracion_table(db: Session) -> None:
+    """Crea la tabla configuracion y siembra DEFAULTS si está vacía.
+
+    Sin esto, /admin/configuracion muestra campos vacíos y el guardado
+    falla por esquema (UndefinedTable) en BDs donde la migración 60288cb
+    no corrió.
+    """
+    try:
+        from app.models.config import Configuracion
+        Configuracion.__table__.create(db.get_bind(), checkfirst=True)
+    except Exception:
+        pass
+    try:
+        from app.services import config as config_svc
+        config_svc.seed_defaults(db)
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
 def ensure_caja_columns(db: Session) -> None:
     """Nivelación idempotente de caja/turnos y flag corporativo.
 
@@ -393,7 +440,7 @@ def ensure_runtime_schema(db: Session) -> dict:
     Con commit propio; nunca lanza.
     """
     estado: dict = {"columnas": True, "origen_40": False, "empleados": False,
-                    "caja": False}
+                    "caja": False, "personal": False, "config": False}
     try:
         ensure_gasto_retencion_column(db)
         ensure_cxp_tipo_comprobante_column(db)
@@ -404,6 +451,10 @@ def ensure_runtime_schema(db: Session) -> dict:
         ensure_caja_turnos_table(db)
         ensure_caja_columns(db)
         estado["caja"] = True
+        ensure_empleados_planilla_columns(db)
+        estado["personal"] = True
+        ensure_configuracion_table(db)
+        estado["config"] = True
         _refrescar_pool(db)
         try:
             bind = db.get_bind()

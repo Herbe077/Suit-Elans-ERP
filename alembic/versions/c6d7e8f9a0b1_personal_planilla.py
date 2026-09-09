@@ -26,19 +26,22 @@ def _has_column(conn, table: str, column: str) -> bool:
 def upgrade() -> None:
     conn = op.get_bind()
     tables = set(sa.inspect(conn).get_table_names())
-    with op.batch_alter_table("empleados") as batch:
-        if not _has_column(conn, "empleados", "sueldo_basico"):
-            batch.add_column(sa.Column("sueldo_basico", sa.Float(),
-                                       nullable=True, server_default="0"))
-        if not _has_column(conn, "empleados", "asignacion_familiar"):
-            batch.add_column(sa.Column("asignacion_familiar", sa.Boolean(),
-                                       nullable=True, server_default="0"))
-        if not _has_column(conn, "empleados", "sistema_pensiones"):
-            batch.add_column(sa.Column("sistema_pensiones", sa.String(20),
-                                       nullable=True, server_default="ONP"))
-        if not _has_column(conn, "empleados", "regimen_laboral"):
-            batch.add_column(sa.Column("regimen_laboral", sa.String(20),
-                                       nullable=True, server_default="General"))
+    # Si empleados no existe (cadena parcial), no se aborta el upgrade:
+    # el boot (ensure_empleados_table + planilla columns) crea/nivela.
+    if "empleados" in tables:
+        with op.batch_alter_table("empleados") as batch:
+            if not _has_column(conn, "empleados", "sueldo_basico"):
+                batch.add_column(sa.Column("sueldo_basico", sa.Float(),
+                                           nullable=True, server_default="0"))
+            if not _has_column(conn, "empleados", "asignacion_familiar"):
+                batch.add_column(sa.Column("asignacion_familiar", sa.Boolean(),
+                                           nullable=True, server_default="0"))
+            if not _has_column(conn, "empleados", "sistema_pensiones"):
+                batch.add_column(sa.Column("sistema_pensiones", sa.String(20),
+                                           nullable=True, server_default="ONP"))
+            if not _has_column(conn, "empleados", "regimen_laboral"):
+                batch.add_column(sa.Column("regimen_laboral", sa.String(20),
+                                           nullable=True, server_default="General"))
     if "planilla_cabecera" not in tables:
         op.create_table(
             "planilla_cabecera",

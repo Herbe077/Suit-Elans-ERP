@@ -218,18 +218,39 @@ def crear_usuario(email: str = Form(...), full_name: str = Form(...),
 
 
 @router.get("/configuracion", response_class=HTMLResponse)
-def configuracion(request: Request, db: Session = Depends(get_db), user=Auth):
+def configuracion(request: Request, error: str = "", ok: str = "",
+                  db: Session = Depends(get_db), user=Auth):
+    try:
+        vals = {k: config_svc.get(db, k, v) for k, v in DEFAULTS.items()}
+    except Exception:
+        # Esquema degradado (tabla configuracion ausente): muestra defaults.
+        logger.exception("GET /admin/configuracion degradado")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        vals = dict(DEFAULTS)
+        error = error or "interno"
     return templates.TemplateResponse(request, "admin/configuracion.html", {
-        "user": user,
-        "vals": {k: config_svc.get(db, k, v) for k, v in DEFAULTS.items()}})
+        "user": user, "error": error, "ok": ok, "vals": vals})
 
 
 @router.post("/configuracion")
 async def guardar_config(request: Request, db: Session = Depends(get_db), user=Auth):
-    form = await request.form()
-    for clave in DEFAULTS:
-        config_svc.set(db, clave, form.get(clave) or "")
-    return RedirectResponse("/admin/configuracion", status_code=303)
+    try:
+        form = await request.form()
+        for clave in DEFAULTS:
+            config_svc.set(db, clave, form.get(clave) or "")
+    except Exception:
+        # Fallo de transacción/esquema: rollback + aviso, jamás 500.
+        logger.exception("POST /admin/configuracion fallido")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return RedirectResponse("/admin/configuracion?error=interno",
+                                status_code=303)
+    return RedirectResponse("/admin/configuracion?ok=1", status_code=303)
 
 
 # ---------- Personal y Contratos ----------

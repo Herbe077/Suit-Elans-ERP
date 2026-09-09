@@ -9,6 +9,8 @@
 ]) }}
 <h1 class="text-2xl font-bold mb-1 font-serif">⚙️ Configuración de la sede</h1>
 <p class="text-sm text-slate-500 mb-4">Datos que aparecen en comprobantes y reportes. El IGV se aplica al facturar.</p>
+{% if ok %}<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 mb-4 text-sm">✓ Configuración guardada.</div>{% endif %}
+{% if error == 'interno' %}<div class="bg-red-50 border border-red-300 text-red-800 rounded-xl p-3 mb-4 text-sm">⚠️ Error interno al guardar la configuración (revisa los logs del servidor).</div>{% endif %}
 <div class="bg-white rounded-xl shadow p-4 max-w-xl">
   <form method="post" action="/admin/configuracion" class="grid gap-3 text-sm">
     <label>Nombre de sede<input name="sede_nombre" value="{{ vals.sede_nombre }}" class="w-full border rounded px-3 py-1.5"></label>
