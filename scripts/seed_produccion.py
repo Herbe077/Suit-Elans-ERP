@@ -162,9 +162,10 @@ def reset_users_and_config(engine, admin_email: str, admin_password: str,
             c.execute(text("PRAGMA foreign_keys=ON"))
         # --- admin único con hash bcrypt (nunca en plano) ---
         hashed = security.hash_password(admin_password)
+        active = "TRUE" if is_pg else "1"
         c.execute(
-            text('INSERT INTO "users" (email, full_name, hashed_password, role, is_active) '
-                 'VALUES (:email, :name, :hp, :role, 1)'),
+            text(f'INSERT INTO "users" (email, full_name, hashed_password, role, is_active) '
+                 f'VALUES (:email, :name, :hp, :role, {active})'),
             {"email": admin_email, "name": admin_name, "hp": hashed, "role": ADMIN_ROLE},
         )
         # --- configuracion: reseteo total a DEFAULTS ---
