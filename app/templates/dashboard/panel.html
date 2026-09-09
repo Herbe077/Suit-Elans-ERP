@@ -78,6 +78,7 @@
       <div class="border-b py-2 text-sm flex justify-between items-center">
         <span class="font-mono">{{ o.folio }}</span>
         {% if o.estado == 'entregado' %}{{ badge("COMPLETADA","success") }}
+        {% elif o.estado == 'en_produccion' %}{{ badge("EN_PRODUCCION","success") }}
         {% elif o.estado == 'confirmado' %}{{ badge("VENTA_CONFIRMADA","warning") }}
         {% elif o.estado == 'cotizado' %}{{ badge("COTIZACION","info") }}
         {% else %}{{ badge(o.estado, "default") }}{% endif %}

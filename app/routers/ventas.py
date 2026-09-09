@@ -29,8 +29,9 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 Auth = Depends(require_roles("VENTA", "SASTRE-MAESTRO"))  # ADMIN pasa siempre
 
 ESTADO_VENTA = {"cotizado": "COTIZACION", "confirmado": "VENTA_CONFIRMADA",
+                 "en_produccion": "EN_PRODUCCION",
                  "entregado": "COMPLETADA", "cancelado": "CANCELADA"}
-INV_ESTADO_MAP = {"COTIZACION": "cotizado", "VENTA_CONFIRMADA": "confirmado", "COMPLETADA": "entregado", "CANCELADA": "cancelado"}
+INV_ESTADO_MAP = {"COTIZACION": "cotizado", "VENTA_CONFIRMADA": "confirmado", "EN_PRODUCCION": "en_produccion", "COMPLETADA": "entregado", "CANCELADA": "cancelado"}
 
 
 def _sync_orden_venta(db: Session, order: Order):
@@ -316,6 +317,13 @@ def vender(client_id: str = Form(""), company_id: str = Form(""),
                 except Exception:
                     pass
     db.commit()
+    # B2B: aprobación automática a producción (sin esperar adelanto).
+    try:
+        order = db.get(Order, order.id)
+        if order is not None and ventas_svc.es_pedido_corporativo(db, order):
+            ventas_svc.aprobar_produccion(db, order)
+    except Exception:
+        pass
     _sync_orden_venta(db, order)
     if monto_cobro > 0:
         try:
@@ -392,6 +400,12 @@ def crear_orden(client_id: str = Form(""), concepto: str = Form(...),
     from app.services.taller import codigo_qr as _qr
     g.codigo_qr = _qr(o.folio, g.id)
     db.commit()
+    # B2B: aprobación automática a producción (sin esperar adelanto).
+    try:
+        if ventas_svc.es_pedido_corporativo(db, o):
+            ventas_svc.aprobar_produccion(db, o)
+    except Exception:
+        pass
     _sync_orden_venta(db, o)
     return RedirectResponse("/ventas/ordenes", status_code=303)
 

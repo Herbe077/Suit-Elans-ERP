@@ -103,9 +103,16 @@ def _reservar_telas(db: Session, order: Order) -> None:
 
 def confirmar_si_corresponde(db: Session, order: Order) -> bool:
     """Al alcanzar el anticipo mínimo: confirma la venta y reserva telas.
-    Retorna True si confirmó en esta llamada."""
+    Retorna True si confirmó en esta llamada.
+
+    Clientes corporativos (B2B): aprobación automática a EN_PRODUCCION sin
+    esperar adelanto — el cobro se gestiona como CxC posterior.
+    """
     if order.estado != "cotizado" or not order.total:
         return False
+    if es_pedido_corporativo(db, order):
+        aprobar_produccion(db, order)
+        return True
     pct = order.anticipo / order.total * 100
     if pct + 1e-9 >= anticipo_min_pct(db):
         order.estado = "confirmado"  # = VENTA_CONFIRMADA
@@ -113,6 +120,30 @@ def confirmar_si_corresponde(db: Session, order: Order) -> bool:
         _reservar_telas(db, order)
         return True
     return False
+
+
+def es_pedido_corporativo(db: Session, order: Order) -> bool:
+    """True si el pedido es B2B: empresa vinculada, colaborador de empresa
+    o cliente natural marcado con flag corporativo."""
+    from app.models.client import Client
+    from app.models.company import Company
+    if order.company_id and db.get(Company, order.company_id):
+        return True
+    if order.client_id:
+        cli = db.get(Client, order.client_id)
+        if cli and (cli.es_corporativo or cli.company_id):
+            return True
+    return False
+
+
+def aprobar_produccion(db: Session, order: Order) -> Order:
+    """Aprobación automática B2B: pasa el pedido a EN_PRODUCCION y reserva
+    telas para taller, sin requerir confirmación manual de pago/adelanto."""
+    order.estado = "en_produccion"  # = EN_PRODUCCION (espejo)
+    db.commit()
+    _reservar_telas(db, order)
+    db.refresh(order)
+    return order
 
 
 def registrar_cobro(db: Session, order_id: int, monto: float, metodo: str,
@@ -145,7 +176,8 @@ def registrar_cobro(db: Session, order_id: int, monto: float, metodo: str,
 
 
 ESTADO_OV_MAP = {"cotizado": "COTIZACION", "confirmado": "VENTA_CONFIRMADA",
-                 "entregado": "COMPLETADA", "cancelado": "CANCELADA"}
+                  "en_produccion": "EN_PRODUCCION",
+                  "entregado": "COMPLETADA", "cancelado": "CANCELADA"}
 
 
 def sincronizar_espejo_ventas(db: Session) -> dict:
@@ -217,6 +249,8 @@ def sincronizar_espejo_ventas(db: Session) -> dict:
 def puede_entregar(db: Session, order: Order) -> tuple[bool, str]:
     if order.estado == "entregado":
         return False, "El pedido ya fue entregado"
+    # Nota: en_produccion (B2B auto-aprobado) fluye igual que confirmado;
+    # la entrega sigue exigiendo saldo 0 y taller CALIDAD_OK.
     if round(order.total - order.anticipo, 2) > 0:
         return False, f"Bloqueado: saldo pendiente S/ {order.total - order.anticipo:.2f}"
     # Validación taller: todas las prendas deben estar CALIDAD_OK (listo para entregar)

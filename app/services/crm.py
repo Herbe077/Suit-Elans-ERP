@@ -46,6 +46,21 @@ def convert_to_order(db: Session, qid: int, user_id: int | None) -> Order:
     )
     db.add(order)
     db.flush()
+    # B2B: la cotización corporativa aprobada entra directo a producción.
+    try:
+        from app.models.crm import Lead as _Lead
+        from app.models.client import Client as _Client
+        es_b2b = bool(q.company_id)
+        if not es_b2b and q.client_id:
+            _cli = db.get(_Client, q.client_id)
+            es_b2b = bool(_cli and (_cli.es_corporativo or _cli.company_id))
+        if not es_b2b and q.lead_id:
+            _lead = db.get(_Lead, q.lead_id)
+            es_b2b = bool(_lead and _lead.tipo_cliente == "corporativo")
+        if es_b2b:
+            order.estado = "en_produccion"
+    except Exception:
+        pass
     for l in db.query(QuotationLine).filter(QuotationLine.quotation_id == qid).all():
         if l.categoria == "prenda_medida" and l.garment_tipo:
             g = Garment(order_id=order.id, tipo=l.garment_tipo, precio=l.precio_unitario)
@@ -64,5 +79,12 @@ def convert_to_order(db: Session, qid: int, user_id: int | None) -> Order:
     # El pedido conserva el total cotizado (con descuento corporativo incluido)
     order.total = q.total
     db.commit()
+    # B2B en producción: reserva telas para taller (como la confirmación B2C).
+    if order.estado == "en_produccion":
+        try:
+            from app.services import ventas as ventas_svc
+            ventas_svc._reservar_telas(db, order)
+        except Exception:
+            pass
     db.refresh(order)
     return order
